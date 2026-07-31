@@ -1,0 +1,2949 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AMADESU RALLYS — Resultados y Cronometraje en Vivo</title>
+  <meta name="description" content="Sigue en vivo las carreras de rally: clasificaciones por prueba especial, tiempos de pilotos, velocidades promedio y resultados finales por categoría." />
+  <meta name="robots" content="index, follow" />
+  <!-- Reemplaza [TU-DOMINIO] por el dominio real donde se publique el sitio -->
+  <link rel="canonical" href="https://[TU-DOMINIO]/" />
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23E63946'/%3E%3Cpath d='M6 16s1-1 3.5-1 4 1.5 6.5 1.5 3-1 3-1V6s-.8.8-3 .8-4-1.5-6.5-1.5-3.5 1-3.5 1z' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='6' y1='19' x2='6' y2='6' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E" />
+
+  <!-- Open Graph / redes sociales -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="AMADESU RALLYS" />
+  <meta property="og:title" content="AMADESU RALLYS — Resultados y Cronometraje en Vivo" />
+  <meta property="og:description" content="Sigue en vivo las carreras de rally: clasificaciones por prueba especial, tiempos de pilotos, velocidades promedio y resultados finales por categoría." />
+  <meta property="og:locale" content="es_BO" />
+  <meta property="og:url" content="https://[TU-DOMINIO]/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="AMADESU RALLYS — Resultados y Cronometraje en Vivo" />
+  <meta name="twitter:description" content="Sigue en vivo las carreras de rally: clasificaciones, tiempos y resultados por categoría." />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "AMADESU RALLYS",
+    "description": "Portal de seguimiento y resultados de rallys en vivo.",
+    "inLanguage": "es"
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+
+  <style>
+    /* ==========================================================
+       TOKENS & VARIABLES — AMADESU RALLYS
+       Sistema "Stage Broadcast": timing en vivo de motorsport real
+       (WRC/F1), no plantilla generica. Un solo acento (rojo) para
+       marca/accion primaria; el resto son señales semanticas.
+       ========================================================== */
+    :root {
+      /* Superficies (rampa de 4 pasos, no solo 2) */
+      --bg-void: #030303;
+      --bg-base: #0a0a0a;
+      --bg-surface: #131313;
+      --bg-surface-elevated: #1c1c1c;
+
+      --accent-primary: #E63946;
+      /* Rojo carrera — marca y accion primaria, nunca decorativo */
+      --accent-hover: #ff4d5a;
+      --accent-glow: rgba(230, 57, 70, 0.4);
+
+      --live-green: #00F5A0;
+      /* Bandera verde / en vivo */
+      --live-glow: rgba(0, 245, 160, 0.3);
+
+      --status-finished: #FFD166;
+      /* Oro — podio / finalizado */
+      --status-upcoming: #00E5FF;
+      /* Cian — proximo / informativo */
+      --danger: #ff4d5a;
+
+      /* Rampa de grises (6 pasos) en vez de 3 */
+      --text-main: #F8F9FA;
+      --text-1: #F8F9FA;
+      --text-2: #C7CDD6;
+      --text-muted: #8E9BAE;
+      --text-3: #8E9BAE;
+      --text-dim: #546071;
+      --text-4: #3A4453;
+
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-strong: rgba(255, 255, 255, 0.15);
+
+      /* Tipografia: familia condensada para display/UI densa,
+         misma superfamilia para body (cohesion), mono solo para datos. */
+      --font-body: 'Barlow', sans-serif;
+      --font-display: 'Barlow Condensed', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Espaciado 8pt */
+      --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+      --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-16: 64px;
+
+      /* Escala de z-index documentada */
+      --z-sticky: 10; --z-dropdown: 20; --z-modal: 100; --z-confirm: 5000; --z-toast: 9999;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-void);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-void);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-surface-elevated);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-dim);
+    }
+
+    /* Ambient Glow Effect */
+    .bg-glow {
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(230, 57, 70, 0.15) 0%, transparent 60%);
+      filter: blur(100px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Film grain — breaks up flat dark surfaces, adds tactile texture */
+    .bg-grain {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.05;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ==========================================================
+       TOPBAR & NAV
+       ========================================================== */
+    .topbar {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(6, 6, 6, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--accent-primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .brand-text {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
+
+    .brand-text span {
+      display: block;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .filter-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .filter-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .custom-select {
+      appearance: none;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 10px 40px 10px 16px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238E9BAE' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .custom-select:hover,
+    .custom-select:focus {
+      border-color: var(--border-strong);
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .custom-select option {
+      background: var(--bg-surface-elevated);
+      color: var(--text-main);
+    }
+
+    /* Accessible focus ring, consistent across interactive elements */
+    a:focus-visible,
+    button:focus-visible,
+    select:focus-visible,
+    .action-btn:focus-visible {
+      outline: 2px solid var(--accent-primary);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+
+    /* ==========================================================
+       HERO / STATUS STRIP
+       ========================================================== */
+    .status-strip {
+      position: relative;
+      overflow: hidden;
+      padding: 28px 40px;
+      border-bottom: 1px solid var(--border-subtle);
+      background:
+        repeating-linear-gradient(-45deg, rgba(230, 57, 70, 0.05) 0 2px, transparent 2px 40px),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+    }
+
+    .status-strip-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .status-strip::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -10%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(230, 57, 70, 0.06));
+      clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+      pointer-events: none;
+    }
+
+    .status-headline {
+      font-family: var(--font-display);
+      font-size: 22px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: var(--text-main);
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .status-headline .checker {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      background-image: conic-gradient(var(--text-main) 0.25turn, transparent 0.25turn 0.5turn, var(--text-main) 0.5turn 0.75turn, transparent 0.75turn);
+      background-size: 6px 6px;
+      border-radius: 3px;
+      opacity: 0.6;
+    }
+
+    .status-tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .status-stats {
+      display: flex;
+      gap: 28px;
+    }
+
+    .status-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 64px;
+    }
+
+    .status-stat-value {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1;
+    }
+
+    .status-stat.is-live .status-stat-value {
+      color: var(--live-green);
+      text-shadow: 0 0 12px var(--live-glow);
+    }
+
+    .status-stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+    }
+
+    @media (max-width: 768px) {
+      .status-strip {
+        padding: 20px;
+      }
+
+      .status-stats {
+        gap: 20px;
+      }
+    }
+
+    /* ==========================================================
+       MAIN GRID
+       ========================================================== */
+    .main-content {
+      flex: 1;
+      padding: 40px;
+      position: relative;
+      z-index: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 32px;
+    }
+
+    /* ==========================================================
+       RALLY CARD
+       ========================================================== */
+    @keyframes cardReveal {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .rally-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
+      position: relative;
+      animation: cardReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+      animation-delay: calc(var(--i, 0) * 70ms);
+    }
+
+    .rally-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      border-color: var(--border-strong);
+    }
+
+    .card-banner {
+      height: 200px;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-surface-elevated);
+    }
+
+    .card-banner img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.7s ease;
+    }
+
+    .rally-card:hover .card-banner img {
+      transform: scale(1.05);
+    }
+
+    /* Diagonal shine sweep across the banner on hover — livery-style highlight */
+    .card-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%);
+      transform: translateX(-120%);
+      transition: transform 0.7s ease;
+      pointer-events: none;
+    }
+
+    .rally-card:hover .card-banner::before {
+      transform: translateX(120%);
+    }
+
+    /* Gradient overlay for text readability */
+    .card-banner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, var(--bg-surface) 0%, transparent 60%);
+    }
+
+    .card-flag-corner {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px 7px 20px;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      clip-path: polygon(20px 0, 100% 0, 100% 100%, 0 100%);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .card-flag-corner img {
+      height: 12px;
+      width: auto;
+      border-radius: 2px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Skeleton loading state */
+    .skeleton-shimmer {
+      background: linear-gradient(100deg, var(--bg-surface-elevated) 30%, rgba(255, 255, 255, 0.06) 50%, var(--bg-surface-elevated) 70%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 150% 0;
+      }
+
+      100% {
+        background-position: -50% 0;
+      }
+    }
+
+    .rally-card.skeleton .card-banner {
+      background: var(--bg-surface-elevated);
+    }
+
+    .rally-card.skeleton .skel-line {
+      height: 14px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .rally-card,
+      .skeleton-shimmer,
+      .card-banner::before {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    .card-badges {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 2;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+    }
+
+    .badge-rally {
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .badge-status.vivo {
+      color: var(--live-green);
+      border-color: rgba(0, 245, 160, 0.3);
+      box-shadow: 0 0 10px var(--live-glow);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--live-green);
+      border-radius: 50%;
+      animation: pulse-anim 1.5s infinite;
+    }
+
+    @keyframes pulse-anim {
+      0% {
+        box-shadow: 0 0 0 0 rgba(0, 245, 160, 0.7);
+      }
+
+      70% {
+        box-shadow: 0 0 0 6px rgba(0, 245, 160, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(0, 245, 160, 0);
+      }
+    }
+
+    .badge-status.finalizo {
+      color: var(--status-finished);
+      border-color: rgba(255, 209, 102, 0.3);
+    }
+
+    .badge-status.proximo {
+      color: var(--status-upcoming);
+      border-color: rgba(0, 229, 255, 0.3);
+    }
+
+    .card-content {
+      padding: 20px;
+      position: relative;
+      z-index: 2;
+      margin-top: -30px;
+      /* Pull content up over the gradient */
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 32px;
+      line-height: 1.1;
+      margin-bottom: 6px;
+      color: white;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+    }
+
+    .card-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Actions Footer */
+    .card-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 8px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all 0.2s;
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    .action-btn:last-child {
+      border-right: none;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    /* Highlight Tiempos button if live */
+    .rally-card.is-live .action-btn.btn-tiempos {
+      color: var(--live-green);
+      background: rgba(0, 245, 160, 0.05);
+    }
+
+    .rally-card.is-live .action-btn.btn-tiempos:hover {
+      background: rgba(0, 245, 160, 0.1);
+    }
+
+    .action-icon {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+    }
+
+    .action-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Missing info placeholder */
+    .no-results {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+      padding: 72px 24px;
+      color: var(--text-muted);
+      background: var(--bg-surface);
+      border-radius: 16px;
+      border: 1px dashed var(--border-strong);
+    }
+
+    .no-results svg {
+      width: 40px;
+      height: 40px;
+      stroke: var(--text-dim);
+    }
+
+    .no-results strong {
+      font-size: 17px;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .no-results span {
+      font-size: 14px;
+    }
+
+    /* ==========================================================
+       FOOTER
+       ========================================================== */
+    .site-footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border-subtle);
+      padding: 28px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .site-footer .brand-text {
+      font-size: 16px;
+    }
+
+    .footer-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.03em;
+    }
+
+    .footer-meta .pulse-dot {
+      width: 5px;
+      height: 5px;
+    }
+
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 0 20px;
+        flex-direction: column;
+        height: auto;
+        padding-top: 20px;
+        padding-bottom: 20px;
+        gap: 16px;
+      }
+
+      .main-content {
+        padding: 20px;
+      }
+
+      .grid-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Secret Admin Trigger */
+    .admin-trigger {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      opacity: 0.3;
+      cursor: default;
+      z-index: 100;
+      transition: opacity 0.3s;
+    }
+
+    .admin-trigger:hover {
+      opacity: 0.8;
+      color: var(--text-muted);
+    }
+
+    /* ==========================================================
+       MODALS
+       ========================================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 32px;
+      width: 900px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--text-muted);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      margin-bottom: 24px;
+      color: var(--accent-primary);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .data-table th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .data-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .stats-container { display: block; }
+
+    .stat-kpi-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .stat-kpi-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 6px;
+    }
+    .stat-kpi-value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--text-main); }
+    .stat-kpi-value.positive { color: var(--live-green, #00F5A0); }
+    .stat-kpi-value.negative { color: var(--accent-primary); }
+    .stat-kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    @media (max-width: 768px) {
+      #stats-content > div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    .pilot-selector {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .pilot-selector option {
+      background: var(--bg-surface-elevated);
+    }
+
+    /* PILOTS GRID STYLES */
+    .pilots-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .pilots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .pilot-card {
+      background: linear-gradient(135deg, rgba(30, 30, 30, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .pilot-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-primary);
+      box-shadow: 0 0 15px var(--accent-primary);
+    }
+
+    .pilot-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(230, 57, 70, 0.15);
+      border-color: rgba(230, 57, 70, 0.3);
+    }
+
+    .pilot-number-watermark {
+      position: absolute;
+      right: -10px;
+      bottom: -20px;
+      font-family: var(--font-display);
+      font-size: 110px;
+      color: rgba(255, 255, 255, 0.02);
+      line-height: 1;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .pilot-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      position: relative;
+      z-index: 1;
+    }
+
+    .pilot-number-large {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--accent-primary);
+      line-height: 1;
+      text-shadow: 0 2px 10px rgba(230, 57, 70, 0.3);
+    }
+
+    .pilot-cat-badge {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      backdrop-filter: blur(4px);
+    }
+
+    .pilot-card-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .pilot-person-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pilot-card-label {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .pilot-card-value {
+      color: var(--text-main);
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-body);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .pilot-footer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 8px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+      z-index: 1;
+    }
+
+    .pilot-footer-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pilot-footer-label {
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .pilot-footer-value {
+      color: #F8F9FA;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    /* TIMES MODAL TABS */
+    .t-tab {
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: -2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .t-tab svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* Insignia de posición (reemplaza medallas emoji: mismo lenguaje visual
+       en cualquier SO/navegador, y comunica el numero, no solo el simbolo) */
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .rank-badge.gold { background: rgba(255, 209, 102, 0.15); color: var(--status-finished); border: 1px solid rgba(255, 209, 102, 0.4); }
+    .rank-badge.silver { background: rgba(199, 205, 214, 0.12); color: #C7CDD6; border: 1px solid rgba(199, 205, 214, 0.35); }
+    .rank-badge.bronze { background: rgba(205, 127, 50, 0.15); color: #CD7F32; border: 1px solid rgba(205, 127, 50, 0.4); }
+
+    /* ==========================================================
+       IMPRESIÓN / PDF DE TIEMPOS Y STATS (horizontal)
+       Solo se imprime el modal que esté ".active" (el que el usuario tiene abierto).
+       ========================================================== */
+    @media print {
+      @page { size: landscape; }
+      body * { visibility: hidden; }
+
+      #modal-tiempos.active, #modal-tiempos.active * { visibility: visible; }
+      #modal-tiempos.active {
+        position: absolute; left: 0; top: 0; width: 100%; height: auto;
+        display: block !important; background: #fff !important;
+      }
+      #modal-tiempos.active .modal-content {
+        width: 100%; max-width: 100%; max-height: none; box-shadow: none; background: #fff !important;
+      }
+      #modal-tiempos .modal-close,
+      #tiempos-cat-filter,
+      #btn-tiempos-pdf {
+        display: none !important;
+      }
+      #modal-tiempos .modal-title,
+      #modal-tiempos p { color: #000 !important; }
+      #modal-tiempos .acc-item { border: 1px solid #ccc !important; background: #fff !important; }
+      #modal-tiempos .acc-header { color: #000 !important; border-left-color: #999 !important; background: #f2f2f2 !important; }
+      #modal-tiempos .acc-wrap { grid-template-rows: 1fr !important; }
+      #modal-tiempos .acc-chevron { display: none !important; }
+      #modal-tiempos .data-table th,
+      #modal-tiempos .data-table td { color: #000 !important; border: 1px solid #999 !important; }
+      #modal-tiempos .rank-badge { border: 1px solid #999 !important; color: #000 !important; background: transparent !important; }
+
+      #modal-stats.active, #modal-stats.active * { visibility: visible; }
+      #modal-stats.active {
+        position: absolute; left: 0; top: 0; width: 100%; height: auto;
+        display: block !important; background: #fff !important;
+      }
+      #modal-stats.active .modal-content {
+        width: 100%; max-width: 100%; max-height: none; box-shadow: none; background: #fff !important;
+      }
+      #modal-stats .modal-close,
+      #stats-pilot-selector,
+      #btn-stats-pdf {
+        display: none !important;
+      }
+      #modal-stats .modal-title,
+      #modal-stats p,
+      #modal-stats h3 { color: #000 !important; }
+      #modal-stats .stat-kpi-card { border: 1px solid #ccc !important; background: #fff !important; }
+      #modal-stats .stat-kpi-label,
+      #modal-stats .stat-kpi-sub { color: #555 !important; }
+      #modal-stats .stat-kpi-value { color: #000 !important; }
+      #modal-stats .data-table th,
+      #modal-stats .data-table td { color: #000 !important; border: 1px solid #999 !important; }
+    }
+
+    /* ==========================================================
+       ACORDEÓN DE TIEMPOS (Shakedown / General / Etapas > PEs)
+       ========================================================== */
+    .acc-item { border-radius: 10px; overflow: hidden; border: 1px solid var(--border-subtle); margin-bottom: 10px; background: var(--bg-surface-elevated); }
+    .acc-header {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 14px 18px; background: transparent; border: none; cursor: pointer; text-align: left;
+      font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: 0.03em;
+      text-transform: uppercase; color: var(--text-main); border-left: 4px solid transparent;
+      transition: background 0.2s;
+    }
+    .acc-header:hover { background: rgba(255, 255, 255, 0.05); }
+    .acc-chevron { flex-shrink: 0; transition: transform 0.25s ease; }
+    .acc-header.open .acc-chevron { transform: rotate(180deg); }
+    .acc-header-shakedown { border-left-color: var(--live-green, #00F5A0); }
+    .acc-header-general { border-left-color: #FFD166; }
+    .acc-header-etapa { border-left-color: var(--accent-primary); }
+    .acc-header-pe {
+      font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: normal;
+      padding: 12px 18px 12px 34px; border-left-color: var(--status-upcoming, #00E5FF); background: rgba(0, 0, 0, 0.15);
+    }
+    .acc-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+    .acc-wrap.open { grid-template-rows: 1fr; }
+    .acc-wrap > .acc-clip { overflow: hidden; }
+    .acc-body { padding: 4px 18px 18px; }
+    .acc-etapa-children { padding: 0 0 4px; }
+    .acc-etapa-summary { padding: 0 18px 12px; }
+    .acc-empty { color: var(--text-muted); text-align: center; padding: 20px; font-size: 13px; }
+
+    .t-tab:hover {
+      color: var(--text-main);
+    }
+
+    .t-tab.active {
+      color: var(--text-main);
+      border-bottom-color: var(--accent-primary);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-glow"></div>
+  <div class="bg-grain"></div>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a href="#" class="brand">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+          <line x1="4" y1="22" x2="4" y2="15"></line>
+        </svg>
+      </div>
+      <div class="brand-text">
+        AMADESU
+        <span>RALLY SYSTEM</span>
+      </div>
+    </a>
+
+    <div class="filter-container">
+      <span class="filter-label">Tipo de Carrera</span>
+      <select id="filtro-estado" class="custom-select">
+        <option value="TODAS">TODAS</option>
+        <option value="VIVO">EN VIVO</option>
+        <option value="FINALIZO">FINALIZADAS</option>
+        <option value="PROXIMO">PRÓXIMAS</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- STATUS STRIP -->
+  <section class="status-strip">
+    <div class="status-strip-inner">
+      <div>
+        <h1 class="status-headline"><span class="checker"></span> Centro de Resultados</h1>
+        <div class="status-tagline">Cronometraje y clasificaciones en tiempo real</div>
+      </div>
+      <div class="status-stats">
+        <div class="status-stat is-live">
+          <div class="status-stat-value" id="status-live">–</div>
+          <div class="status-stat-label">En vivo</div>
+        </div>
+        <div class="status-stat">
+          <div class="status-stat-value" id="status-upcoming">–</div>
+          <div class="status-stat-label">Próximas</div>
+        </div>
+        <div class="status-stat">
+          <div class="status-stat-value" id="status-total">–</div>
+          <div class="status-stat-label">Total Rallys</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN WRAPPER -->
+  <main class="main-content">
+    <div class="grid-container" id="rally-grid">
+      <!-- Los Rallies se cargarán aquí por JS -->
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="brand-text">AMADESU<span>RALLY SYSTEM</span></div>
+    <div class="footer-meta">
+      <div class="pulse-dot"></div> Datos en vivo vía Supabase
+    </div>
+  </footer>
+
+  <!-- SECRET ADMIN TRIGGER -->
+  <div class="admin-trigger" id="admin-trigger" title="Panel de Control">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+  </div>
+
+  <!-- MODALS -->
+  <!-- MODAL PILOTOS -->
+  <div id="modal-pilotos" class="modal-overlay">
+    <div class="modal-content" style="width: 1200px;">
+      <button class="modal-close" onclick="closeModal('modal-pilotos')">Cerrar</button>
+      <div class="pilots-header">
+        <h2 class="modal-title" id="pilotos-title" style="margin:0;">Pilotos Inscritos <span id="pilotos-count"
+            style="color:var(--text-muted); font-size: 16px;"></span></h2>
+        <select id="pilotos-filter" class="custom-select" style="width: 250px;">
+          <option value="TODAS">TODAS LAS CLASES</option>
+        </select>
+      </div>
+      <div class="pilots-grid" id="pilotos-grid"></div>
+    </div>
+  </div>
+
+  <!-- MODAL TIEMPOS -->
+  <div id="modal-tiempos" class="modal-overlay">
+    <div class="modal-content" style="width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
+      <button class="modal-close" onclick="closeModal('modal-tiempos')">Cerrar</button>
+      <h2 class="modal-title" id="tiempos-title">Tiempos & Clasificación</h2>
+
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px; flex-wrap: wrap;">
+        <select id="tiempos-cat-filter" class="pilot-selector" style="width:auto; min-width:220px; margin-bottom:0;" onchange="window.filtrarAccordionTiempos()">
+          <option value="ALL">Todas las Categorías</option>
+        </select>
+        <button id="btn-tiempos-pdf" style="display:none; align-items:center; gap:8px; background: var(--accent-primary); color:#fff; border:none; border-radius:8px; padding:10px 18px; font-size:13px; font-weight:700; font-family: var(--font-body); cursor:pointer;" onclick="window.printTiempos()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Descargar PDF (horizontal)
+        </button>
+      </div>
+
+      <!-- ACORDEÓN: Shakedown / General / Etapas > PEs -->
+      <div id="tiempos-accordion" style="overflow-y: auto; flex: 1;">
+        <p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL STATS -->
+  <div id="modal-stats" class="modal-overlay">
+    <div class="modal-content" style="width: 1200px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+      
+      <!-- HEADER FIJO DEL MODAL -->
+      <div style="padding: 24px 32px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <h2 class="modal-title" id="stats-title" style="margin-bottom: 8px;">Telemetría & Estadísticas</h2>
+          <p style="color:var(--text-muted); font-size:13px; margin:0; max-width: 600px;">Análisis de rendimiento tramo a tramo. Compara tiempos, velocidades y evolución de posiciones contra el líder de clase.</p>
+        </div>
+        <button class="modal-close" style="position: static;" onclick="closeModal('modal-stats')">Cerrar</button>
+      </div>
+
+      <!-- CONTROLES -->
+      <div style="padding: 20px 32px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-subtle); display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+        <select id="stats-pilot-selector" class="pilot-selector" style="width:auto; min-width:320px; margin-bottom:0; font-size: 15px;">
+          <option value="">Selecciona un Piloto...</option>
+        </select>
+        <button id="btn-stats-pdf" style="display:none; align-items:center; gap:8px; background: rgba(255,255,255,0.05); color:var(--text-main); border: 1px solid var(--border-strong); border-radius:8px; padding:10px 18px; font-size:13px; font-weight:600; font-family: var(--font-body); cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" onclick="window.printStats()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Exportar PDF
+        </button>
+      </div>
+
+      <!-- ÁREA SCROLLEABLE -->
+      <div class="stats-container" id="stats-content" style="display: none; overflow-y: auto; flex: 1; padding: 32px; background: var(--bg-base);">
+        
+        <!-- BANNER DEL PILOTO -->
+        <div id="stats-pilot-banner" style="display: flex; gap: 24px; align-items: center; background: linear-gradient(135deg, rgba(30, 30, 30, 0.6) 0%, rgba(10, 10, 10, 0.8) 100%); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px; margin-bottom: 32px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent-primary); box-shadow: 0 0 15px var(--accent-primary);"></div>
+          
+          <div id="stats-banner-number" style="font-family: var(--font-display); font-size: 64px; font-weight: 900; color: var(--accent-primary); line-height: 1; text-shadow: 0 2px 10px rgba(230, 57, 70, 0.3); min-width: 90px; text-align: center;"></div>
+          
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+              <h3 id="stats-banner-name" style="font-size: 28px; font-family: var(--font-display); text-transform: uppercase; margin: 0; letter-spacing: 0.02em;"></h3>
+              <div id="stats-banner-cat" class="pilot-cat-badge"></div>
+            </div>
+            
+            <div style="display: flex; gap: 24px; color: var(--text-muted); font-size: 13px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span id="stats-banner-nav"></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
+                <span id="stats-banner-car"></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span id="stats-banner-team"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs GRID -->
+        <div id="stats-kpi-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:32px;"></div>
+
+        <!-- CHARTS Y TABLA -->
+        <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
+          
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h3 style="font-size: 16px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Diferencia al Líder de Categoría (segundos)
+              </h3>
+            </div>
+            <div style="position: relative; height: 250px; width: 100%;">
+              <canvas id="gapChart"></canvas>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+              <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                Velocidad Promedio (km/h)
+              </h3>
+              <div style="position: relative; height: 220px; width: 100%;">
+                <canvas id="speedChart"></canvas>
+              </div>
+            </div>
+            
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+              <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD166" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Evolución de Posición en Clase
+              </h3>
+              <div style="position: relative; height: 220px; width: 100%;">
+                <canvas id="positionChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; overflow-x: auto;">
+            <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+              Desglose Tramo a Tramo
+            </h3>
+            <table class="data-table" id="stats-detail-table">
+              <thead>
+                <tr>
+                  <th>Prueba Especial</th>
+                  <th>Distancia</th>
+                  <th>Tiempo Tramo</th>
+                  <th>Acumulado</th>
+                  <th>Ritmo (Gap)</th>
+                  <th>Velocidad</th>
+                  <th>Pos. General</th>
+                  <th>Pos. Clase</th>
+                  <th>Gap Tramo (Cat)</th>
+                  <th>Gap Acum. (Cat)</th>
+                </tr>
+              </thead>
+              <tbody id="stats-table-tbody"></tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CLASIFICACIÓN (circuitos): ranking por vueltas + telemetría, igual que Stats pero de la Clasificación -->
+  <div id="modal-clasificacion" class="modal-overlay">
+    <div class="modal-content" style="width: 1200px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+
+      <div style="padding: 24px 32px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <h2 class="modal-title" id="clasif-title" style="margin-bottom: 8px;">Clasificación</h2>
+          <p style="color:var(--text-muted); font-size:13px; margin:0; max-width: 600px;">Sesión de práctica no oficial (no afecta el tiempo oficial de la carrera). Ranking por vueltas y telemetría por piloto.</p>
+        </div>
+        <button class="modal-close" style="position: static;" onclick="closeModal('modal-clasificacion')">Cerrar</button>
+      </div>
+
+      <div style="overflow-y: auto; flex: 1; padding: 32px; background: var(--bg-base);">
+
+        <!-- RANKING POR CATEGORÍA (suma de todas las vueltas) -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+          <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            Ranking (suma de vueltas)
+          </h3>
+          <div id="clasif-ranking-container"><p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p></div>
+        </div>
+
+        <!-- CONTROLES: selector de piloto para la telemetría -->
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin-bottom: 24px;">
+          <select id="clasif-pilot-selector" class="pilot-selector" style="width:auto; min-width:320px; margin-bottom:0; font-size: 15px;">
+            <option value="">Selecciona un Piloto...</option>
+          </select>
+        </div>
+
+        <div id="clasif-content" style="display: none;">
+
+          <!-- BANNER DEL PILOTO -->
+          <div id="clasif-pilot-banner" style="display: flex; gap: 24px; align-items: center; background: linear-gradient(135deg, rgba(30, 30, 30, 0.6) 0%, rgba(10, 10, 10, 0.8) 100%); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px; margin-bottom: 32px; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent-primary); box-shadow: 0 0 15px var(--accent-primary);"></div>
+            <div id="clasif-banner-number" style="font-family: var(--font-display); font-size: 64px; font-weight: 900; color: var(--accent-primary); line-height: 1; text-shadow: 0 2px 10px rgba(230, 57, 70, 0.3); min-width: 90px; text-align: center;"></div>
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <h3 id="clasif-banner-name" style="font-size: 28px; font-family: var(--font-display); text-transform: uppercase; margin: 0; letter-spacing: 0.02em;"></h3>
+                <div id="clasif-banner-cat" class="pilot-cat-badge"></div>
+              </div>
+              <div style="display: flex; gap: 24px; color: var(--text-muted); font-size: 13px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                  <span id="clasif-banner-nav"></span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
+                  <span id="clasif-banner-car"></span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                  <span id="clasif-banner-team"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPIs GRID -->
+          <div id="clasif-kpi-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:32px;"></div>
+
+          <!-- CHARTS Y TABLA -->
+          <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
+
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+              <h3 style="font-size: 16px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Diferencia al Líder de Categoría (segundos)
+              </h3>
+              <div style="position: relative; height: 250px; width: 100%;">
+                <canvas id="clasifGapChart"></canvas>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+                <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                  Velocidad Promedio (km/h)
+                </h3>
+                <div style="position: relative; height: 220px; width: 100%;">
+                  <canvas id="clasifSpeedChart"></canvas>
+                </div>
+              </div>
+
+              <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+                <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD166" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                  Evolución de Posición en Clase
+                </h3>
+                <div style="position: relative; height: 220px; width: 100%;">
+                  <canvas id="clasifPositionChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; overflow-x: auto;">
+              <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                Desglose Vuelta a Vuelta
+              </h3>
+              <table class="data-table" id="clasif-detail-table">
+                <thead>
+                  <tr>
+                    <th>Vuelta</th>
+                    <th>Distancia</th>
+                    <th>Tiempo Vuelta</th>
+                    <th>Acumulado</th>
+                    <th>Ritmo (Gap)</th>
+                    <th>Velocidad</th>
+                    <th>Pos. General</th>
+                    <th>Pos. Clase</th>
+                    <th>Gap Vuelta (Cat)</th>
+                    <th>Gap Acum. (Cat)</th>
+                  </tr>
+                </thead>
+                <tbody id="clasif-table-tbody"></tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from './supabase_config.js';
+
+    const gridContainer = document.getElementById('rally-grid');
+    const filtroSelect = document.getElementById('filtro-estado');
+
+    // SVGs para los botones
+    const iconInfo = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+    const iconPilotos = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+    const iconTiempos = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+    const iconStats = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
+    const iconClasif = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>`;
+    const iconCategory = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41l9.58 9.59a2 2 0 0 0 2.82 0l4.6-4.6a2 2 0 0 0 0-2.82Z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg>`;
+
+    let allRallies = [];
+    let countryCodeMap = {};
+
+    // Cargar mapa de países una sola vez al inicio
+    fetch('https://restcountries.com/v3.1/all?fields=translations,name,cca2')
+      .then(res => res.json())
+      .then(data => {
+        data.forEach(c => {
+          const nameEs = c.translations?.spa?.common || c.name.common;
+          countryCodeMap[nameEs.toUpperCase()] = c.cca2.toLowerCase();
+          countryCodeMap[c.name.common.toUpperCase()] = c.cca2.toLowerCase();
+        });
+      })
+      .catch(err => console.error("Error loading countries:", err));
+
+    // Esqueletos de carga — visibles de inmediato mientras llegan los datos de Supabase.
+    function renderSkeletons(count = 6) {
+      gridContainer.innerHTML = Array.from({ length: count }).map(() => `
+        <article class="rally-card skeleton">
+          <div class="card-banner skeleton-shimmer"></div>
+          <div class="card-content" style="margin-top:0; padding-top: 20px;">
+            <div class="skel-line skeleton-shimmer" style="width: 70%; height: 24px;"></div>
+            <div class="skel-line skeleton-shimmer" style="width: 45%;"></div>
+          </div>
+        </article>
+      `).join('');
+    }
+    renderSkeletons();
+
+    function updateStatusStrip() {
+      const live = allRallies.filter(r => r.estado === 'en_curso').length;
+      const upcoming = allRallies.filter(r => r.estado === 'planificado' || r.estado === 'confirmado').length;
+      document.getElementById('status-live').textContent = live;
+      document.getElementById('status-upcoming').textContent = upcoming;
+      document.getElementById('status-total').textContent = allRallies.length;
+    }
+
+    // 1. Fetch Rallies
+    async function fetchRallies() {
+      const { data, error } = await supabase.schema('rally').from('rallies').select('*').is('deleted_at', null).order('fecha_inicio', { ascending: false });
+      if (error) {
+        console.error("Error fetching rallies:", error);
+        gridContainer.innerHTML = `<div class="no-results"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg><span>No se pudo conectar con el servidor. Intenta recargar la página.</span></div>`;
+        return;
+      }
+      allRallies = data;
+      updateStatusStrip();
+      renderRallies();
+    }
+
+    function renderStatusBadge(estado) {
+      if (estado === 'en_curso') return `<div class="badge badge-status vivo"><div class="pulse-dot"></div> VIVO</div>`;
+      if (estado === 'finalizado') return `<div class="badge badge-status finalizo">FINALIZÓ</div>`;
+      if (estado === 'planificado' || estado === 'confirmado') return `<div class="badge badge-status proximo">PRÓXIMO</div>`;
+      return `<div class="badge badge-status proximo">${estado.toUpperCase()}</div>`;
+    }
+
+    const iconFlag = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>`;
+
+    function renderRallies(filtro = 'TODAS') {
+      const ralliesFiltrados = allRallies.filter(r => {
+        if (filtro === 'TODAS') return true;
+        if (filtro === 'VIVO' && r.estado === 'en_curso') return true;
+        if (filtro === 'FINALIZO' && r.estado === 'finalizado') return true;
+        if (filtro === 'PROXIMO' && (r.estado === 'planificado' || r.estado === 'confirmado')) return true;
+        return false;
+      });
+
+      if (ralliesFiltrados.length === 0) {
+        gridContainer.innerHTML = `<div class="no-results">
+          ${iconFlag}
+          <strong>Sin carreras en esta categoría</strong>
+          <span>Prueba con otro filtro o vuelve más tarde.</span>
+        </div>`;
+        return;
+      }
+
+      const cardsHtml = ralliesFiltrados.map((rally, i) => {
+        const isLive = rally.estado === 'en_curso';
+        const img = rally.imagen_url || 'https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=800';
+        const flagHtml = rally.pais ? getFlagHtml(rally.pais) : '';
+
+        return `
+          <article class="rally-card ${isLive ? 'is-live' : ''}" style="--i:${i};">
+            <div class="card-banner">
+              <div class="card-badges">
+                <div class="badge badge-rally">${rally.tipo_evento === 'circuito' ? 'CIRCUITO' : 'RALLY'}</div>
+                ${renderStatusBadge(rally.estado)}
+                <div class="badge badge-date">${rally.fecha_inicio}</div>
+              </div>
+              ${flagHtml ? `<div class="card-flag-corner">${flagHtml} ${rally.pais}</div>` : ''}
+              <img src="${img}" alt="${rally.nombre}" onerror="this.src='https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=800';">
+            </div>
+
+            <div class="card-content">
+              <h2 class="card-title">${rally.nombre}</h2>
+              <p class="card-subtitle">${rally.descripcion || rally.ciudad + ', ' + rally.pais}</p>
+            </div>
+
+            <div class="card-actions">
+              <a href="#" class="action-btn">
+                ${iconInfo}
+                <span class="action-label">Info</span>
+              </a>
+              <a href="#" class="action-btn" onclick="window.openPilotos('${rally.id}'); return false;">
+                ${iconPilotos}
+                <span class="action-label">Pilotos</span>
+              </a>
+              <a href="#" class="action-btn btn-tiempos" onclick="window.openTiempos('${rally.id}'); return false;">
+                ${iconTiempos}
+                <span class="action-label">Tiempos</span>
+              </a>
+              <a href="#" class="action-btn" onclick="window.openStats('${rally.id}'); return false;">
+                ${iconStats}
+                <span class="action-label">Stats</span>
+              </a>
+              ${rally.tipo_evento === 'circuito' ? `
+              <a href="#" class="action-btn" onclick="window.openClasificacion('${rally.id}'); return false;">
+                ${iconClasif}
+                <span class="action-label">Clasificación</span>
+              </a>` : ''}
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      gridContainer.innerHTML = cardsHtml;
+    }
+
+    filtroSelect.addEventListener('change', (e) => {
+      renderRallies(e.target.value);
+    });
+
+    fetchRallies();
+
+    // 2. Modals Logic
+    window.closeModal = function (id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    // --- PILOTOS ---
+    let currentPilotosData = [];
+
+    window.openPilotos = async function (rallyId) {
+      document.getElementById('modal-pilotos').classList.add('active');
+      const grid = document.getElementById('pilotos-grid');
+      const filter = document.getElementById('pilotos-filter');
+
+      grid.innerHTML = '<div style="text-align:center; grid-column: 1 / -1;">Cargando...</div>';
+      filter.innerHTML = '<option value="TODAS">TODAS LAS CLASES</option>';
+      document.getElementById('pilotos-count').innerText = '';
+
+      const { data, error } = await supabase.schema('rally').from('inscripciones').select('numero, piloto:pilotos(nombre, apellido, pais, celular), navegante:navegantes(nombre, apellido, pais, celular), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre), asociacion:asociaciones(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
+
+      if (error || !data || data.length === 0) {
+        grid.innerHTML = '<div style="text-align:center; grid-column: 1 / -1; color: var(--text-muted);">No hay pilotos inscritos.</div>';
+        return;
+      }
+
+      currentPilotosData = data;
+
+      const categories = [...new Set(data.map(d => d.categoria?.nombre).filter(Boolean))];
+      categories.forEach(c => {
+        filter.innerHTML += `<option value="${c}">${c}</option>`;
+      });
+
+      renderPilotosCards('TODAS');
+    };
+
+    document.getElementById('pilotos-filter').addEventListener('change', (e) => {
+      renderPilotosCards(e.target.value);
+    });
+
+    function getFlagHtml(countryName) {
+      if (!countryName) return '';
+      const countries = [{ "code": "ar", "name": "Argentina" }, { "code": "bo", "name": "Bolivia" }, { "code": "br", "name": "Brasil" }, { "code": "ca", "name": "Canadá" }, { "code": "cl", "name": "Chile" }, { "code": "cn", "name": "China" }, { "code": "co", "name": "Colombia" }, { "code": "cr", "name": "Costa Rica" }, { "code": "cu", "name": "Cuba" }, { "code": "ec", "name": "Ecuador" }, { "code": "sv", "name": "El Salvador" }, { "code": "es", "name": "España" }, { "code": "us", "name": "Estados Unidos" }, { "code": "fr", "name": "Francia" }, { "code": "gt", "name": "Guatemala" }, { "code": "hn", "name": "Honduras" }, { "code": "it", "name": "Italia" }, { "code": "jp", "name": "Japón" }, { "code": "mx", "name": "México" }, { "code": "ni", "name": "Nicaragua" }, { "code": "pa", "name": "Panamá" }, { "code": "py", "name": "Paraguay" }, { "code": "pe", "name": "Perú" }, { "code": "pr", "name": "Puerto Rico" }, { "code": "gb", "name": "Reino Unido" }, { "code": "do", "name": "República Dominicana" }, { "code": "uy", "name": "Uruguay" }, { "code": "ve", "name": "Venezuela" }];
+      const match = countries.find(c => c.name.toLowerCase() === countryName.toLowerCase());
+      if (match) {
+        return `<img src="https://flagcdn.com/${match.code}.svg" style="height: 16px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);" alt="${match.name}" title="${match.name}">`;
+      }
+      return `<span style="font-size:12px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">${countryName}</span>`;
+    }
+
+    function renderPilotosCards(categoriaFiltro) {
+      const grid = document.getElementById('pilotos-grid');
+      grid.innerHTML = '';
+
+      const filtered = currentPilotosData.filter(ins => {
+        if (categoriaFiltro === 'TODAS') return true;
+        return ins.categoria?.nombre === categoriaFiltro;
+      });
+
+      document.getElementById('pilotos-count').innerText = `(${filtered.length})`;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="text-align:center; grid-column: 1 / -1; color: var(--text-muted);">No hay pilotos en esta clase.</div>';
+        return;
+      }
+
+      filtered.forEach((ins, index) => {
+        const p = ins.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : 'Desconocido';
+        const pFlag = getFlagHtml(ins.piloto?.pais || 'Bolivia');
+        const n = ins.navegante ? `${ins.navegante.nombre} ${ins.navegante.apellido}` : '-';
+        const nFlag = ins.navegante ? getFlagHtml(ins.navegante?.pais || 'Bolivia') : '';
+        const v = ins.vehiculo ? `${ins.vehiculo.marca} ${ins.vehiculo.modelo}` : 'N/A';
+        const c = ins.categoria ? ins.categoria.nombre : 'N/A';
+        const team = ins.equipo ? ins.equipo.nombre : 'Sin Equipo';
+        const asoc = ins.asociacion ? ins.asociacion.nombre : 'Independiente';
+
+        grid.innerHTML += `
+          <div class="pilot-card">
+            <div class="pilot-number-watermark">#${ins.numero}</div>
+            
+            <div class="pilot-card-top">
+              <div class="pilot-number-large">#${ins.numero}</div>
+              <div class="pilot-cat-badge">${c}</div>
+            </div>
+            
+            <div class="pilot-card-content">
+              <div class="pilot-person-group">
+                <div class="pilot-card-label">Piloto</div>
+                <div class="pilot-card-value">${p} ${pFlag}</div>
+              </div>
+              
+              <div class="pilot-person-group">
+                <div class="pilot-card-label">Navegante</div>
+                <div class="pilot-card-value" style="color: var(--text-muted);">${n} ${nFlag}</div>
+              </div>
+            </div>
+            
+            <div class="pilot-footer-grid">
+              <div class="pilot-footer-item">
+                <div class="pilot-footer-label">Team / Marca</div>
+                <div class="pilot-footer-value">${team}<br><span style="color:var(--text-dim);">${v}</span></div>
+              </div>
+              <div class="pilot-footer-item">
+                <div class="pilot-footer-label">Asociación</div>
+                <div class="pilot-footer-value">${asoc}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // --- TIEMPOS (acordeón: Shakedown / General / Etapas > PEs) ---
+
+    window.toggleAcordeon = function (id) {
+      const header = document.getElementById('acc-header-' + id);
+      const wrap = document.getElementById('acc-wrap-' + id);
+      if (!header || !wrap) return;
+      const opening = !wrap.classList.contains('open');
+      wrap.classList.toggle('open', opening);
+      header.classList.toggle('open', opening);
+    };
+
+    function intervalToMsPublic(iv) {
+      if (iv === null || iv === undefined || iv === '') return 0;
+      if (typeof iv === 'number') return iv * 1000;
+      let str = String(iv).trim();
+      let dayMs = 0;
+      const dayMatch = str.match(/(-?\d+)\s+days?/i);
+      if (dayMatch) {
+        dayMs = parseInt(dayMatch[1], 10) * 86400000;
+        str = str.replace(/(-?\d+)\s+days?/i, '').trim();
+      }
+      if (!str) return dayMs;
+      const isNeg = str.startsWith('-');
+      if (isNeg) str = str.slice(1);
+      const parts = str.split(':');
+      let h = 0, m = 0, s = 0, ms = 0;
+      if (parts.length >= 3) {
+        h = parseInt(parts[0], 10) || 0;
+        m = parseInt(parts[1], 10) || 0;
+        const secParts = parts[2].split('.');
+        s = parseInt(secParts[0], 10) || 0;
+        if (secParts[1]) ms = parseInt(secParts[1].padEnd(3, '0').slice(0, 3), 10) || 0;
+      }
+      const total = (h * 3600000) + (m * 60000) + (s * 1000) + ms;
+      return dayMs + (isNeg ? -total : total);
+    }
+
+    function msToIntervalStrPublic(ms) {
+      if (ms === null || ms === undefined) return null;
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = (ms % 60000) / 1000;
+      return `${h}:${String(m).padStart(2, '0')}:${s.toFixed(3)}`;
+    }
+
+    function fmtInterval(val) {
+      if (!val) return '-';
+      // Postgres interval viene como string: "0:05:23.456" o "00:05:23"
+      const str = String(val);
+      const parts = str.split(':');
+      if (parts.length === 3) {
+        const h = parseInt(parts[0], 10);
+        const m = parts[1].padStart(2, '0');
+        const s = parseFloat(parts[2]).toFixed(3).replace('.', ',');
+        return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
+      }
+      return str;
+    }
+
+    function buildResultTable(rows) {
+      if (!rows || rows.length === 0) return '<p style="color:var(--text-muted); text-align:center; padding: 24px;">Sin datos registrados.</p>';
+      return `<div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr>
+            <th style="width:50px;">Pos</th>
+            <th>#</th>
+            <th>Piloto</th>
+            <th>Tiempo</th>
+            <th>+Diferencia</th>
+          </tr></thead>
+          <tbody>${rows.map((r, i) => {
+        const pos = r.pos !== undefined ? r.pos : (i + 1);
+        const rankClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+        const rowStyle = pos === 1 ? 'background: rgba(255,209,102,0.05);' : '';
+        const posCell = rankClass
+          ? `<span class="rank-badge ${rankClass}">${pos}</span>`
+          : `<span style="font-family:var(--font-mono); font-size:15px; color:var(--text-muted); padding-left:6px;">${pos}</span>`;
+        return `<tr style="${rowStyle}">
+              <td>${posCell}</td>
+              <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
+              <td style="font-weight:600;">${r.name}</td>
+              <td style="font-family:var(--font-mono); font-weight:bold; color:var(--text-main);">${fmtInterval(r.tiempo)}</td>
+              <td style="font-family:var(--font-mono); color:var(--text-muted);">${r.dif ? '+' + fmtInterval(r.dif) : '—'}</td>
+            </tr>`;
+      }).join('')}</tbody>
+        </table></div>`;
+    }
+
+    // ==========================================
+    // SHAKEDOWN: usado únicamente por el acordeón del modal de Tiempos (no tiene botón/modal propio).
+    // ==========================================
+
+    // Devuelve null si el rally no tiene Shakedown configurado o no tiene tiempos aún.
+    async function obtenerShakedownFilas(rallyId) {
+      const { data: etapa } = await supabase.schema('rally').from('etapas')
+        .select('id').eq('rally_id', rallyId).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
+      if (!etapa) return null;
+
+      const { data: recorrido } = await supabase.schema('rally').from('recorridos')
+        .select('id').eq('etapa_id', etapa.id).is('deleted_at', null).maybeSingle();
+      if (!recorrido) return null;
+
+      const { data: tiempos, error } = await supabase.schema('rally').from('tiempos')
+        .select('inscripcion_id, tiempo_bruto, inscripcion:inscripciones(numero, piloto:pilotos(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
+        .eq('recorrido_id', recorrido.id).is('deleted_at', null);
+      if (error || !tiempos || tiempos.length === 0) return null;
+
+      const porInscripcion = {};
+      tiempos.forEach(t => {
+        const entry = porInscripcion[t.inscripcion_id] || { inscripcion: t.inscripcion, sumMs: 0, tieneBruto: false };
+        const ms = intervalToMsPublic(t.tiempo_bruto);
+        if (ms) { entry.sumMs += ms; entry.tieneBruto = true; }
+        porInscripcion[t.inscripcion_id] = entry;
+      });
+
+      const filas = Object.values(porInscripcion).filter(e => e.tieneBruto);
+      return filas.length > 0 ? filas : null;
+    }
+
+    window.printTiempos = function () {
+      window.print();
+    };
+
+    const chevronSvg = `<svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
+    function accordionItem(id, label, headerClass, bodyHtml) {
+      return `
+        <div class="acc-item">
+          <button class="acc-header ${headerClass}" id="acc-header-${id}" onclick="window.toggleAcordeon('${id}')">
+            <span>${label}</span>
+            ${chevronSvg}
+          </button>
+          <div class="acc-wrap" id="acc-wrap-${id}"><div class="acc-clip"><div class="acc-body">${bodyHtml}</div></div></div>
+        </div>`;
+    }
+
+    // Agrupa un array de { inscripcion, ms } por categoría y arma la tabla de posiciones (ascendente).
+    function agruparPorCategoriaYClasificar(entries) {
+      const byCat = {};
+      entries.forEach(e => {
+        const cat = e.inscripcion?.categoria?.nombre || 'Sin Categoría';
+        if (!byCat[cat]) byCat[cat] = [];
+        byCat[cat].push(e);
+      });
+      const out = {};
+      for (const [cat, arr] of Object.entries(byCat)) {
+        const sorted = [...arr].sort((a, b) => a.ms - b.ms);
+        const liderMs = sorted[0].ms;
+        out[cat] = sorted.map((e, i) => ({
+          pos: i + 1,
+          num: e.inscripcion?.numero || '-',
+          name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
+          tiempo: msToIntervalStrPublic(e.ms),
+          dif: i === 0 ? null : msToIntervalStrPublic(e.ms - liderMs)
+        }));
+      }
+      return out;
+    }
+
+    function renderCategoriasHtml(byCat) {
+      const cats = Object.keys(byCat);
+      if (cats.length === 0) return '<p class="acc-empty">Sin tiempos registrados aún.</p>';
+      return cats.sort().map(cat => `
+        <div style="margin-bottom: 16px;">
+          <h4 style="margin-bottom:8px; color: var(--accent-primary); font-size: 14px; display:flex; align-items:center; gap:6px;">${iconCategory}${cat}</h4>
+          ${buildResultTable(byCat[cat])}
+        </div>`).join('');
+    }
+
+    // Suma el tiempo de un vehículo en un recorrido. Normalmente hay 1 sola fila (rally clásico) y
+    // se usa tiempo_neto (ya incluye penalización); si hay varias filas (circuito, una por vuelta)
+    // se suman los tiempo_bruto de todas (ver [[project-shakedown-feature]] para la misma lógica).
+    function sumarTiempoRecorridoInscripcion(rows) {
+      if (rows.length === 1) return intervalToMsPublic(rows[0].tiempo_neto) || null;
+      let sum = 0, tiene = false;
+      rows.forEach(r => { const ms = intervalToMsPublic(r.tiempo_bruto); if (ms) { sum += ms; tiene = true; } });
+      return tiene ? sum : null;
+    }
+
+    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito) {
+      const pasaFiltro = (ins) => !catFilter || catFilter === 'ALL' || (ins?.categoria?.nombre || 'Sin Categoría') === catFilter;
+
+      const porRecorridoInscripcion = {};
+      tiemposRally.forEach(t => {
+        if (!pasaFiltro(t.inscripcion)) return;
+        const key = t.recorrido_id + '||' + t.inscripcion_id;
+        if (!porRecorridoInscripcion[key]) {
+          porRecorridoInscripcion[key] = { inscripcion: t.inscripcion, recorrido_id: t.recorrido_id, inscripcion_id: t.inscripcion_id, rows: [] };
+        }
+        porRecorridoInscripcion[key].rows.push(t);
+      });
+      const entradas = Object.values(porRecorridoInscripcion)
+        .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ms: sumarTiempoRecorridoInscripcion(e.rows) }))
+        .filter(e => e.ms !== null);
+
+      let html = '';
+
+      // --- SHAKEDOWN ---
+      const shakeFilasFiltradas = (shakeFilas || []).filter(f => pasaFiltro(f.inscripcion));
+      if (shakeFilasFiltradas.length > 0) {
+        const shakeByCat = agruparPorCategoriaYClasificar(shakeFilasFiltradas.map(f => ({ inscripcion: f.inscripcion, ms: f.sumMs })));
+        const shakeLabel = esCircuito ? 'Clasificación' : 'Shakedown';
+        html += accordionItem('shakedown', shakeLabel, 'acc-header-shakedown', renderCategoriasHtml(shakeByCat));
+      }
+
+      // --- GENERAL (suma de todas las PEs de todas las etapas, por inscripción) ---
+      const generalPorInscripcion = {};
+      entradas.forEach(e => {
+        const g = generalPorInscripcion[e.inscripcion_id] || { inscripcion: e.inscripcion, ms: 0, tiene: false };
+        g.ms += e.ms; g.tiene = true;
+        generalPorInscripcion[e.inscripcion_id] = g;
+      });
+      const generalFilas = Object.values(generalPorInscripcion).filter(g => g.tiene);
+      const generalHtml = generalFilas.length > 0
+        ? renderCategoriasHtml(agruparPorCategoriaYClasificar(generalFilas))
+        : '<p class="acc-empty">Sin tiempos registrados aún.</p>';
+      html += accordionItem('general', 'General', 'acc-header-general', generalHtml);
+
+      // --- ETAPAS > PEs ---
+      if (etapas.length === 0) {
+        html += accordionItem('sin-etapas', 'Etapas', 'acc-header-etapa', '<p class="acc-empty">No hay etapas ni pruebas especiales registradas aún.</p>');
+      } else {
+        etapas.forEach(etapa => {
+          const recorridoIdsEtapa = etapa.recorridos.map(r => r.id);
+          const entradasEtapa = entradas.filter(e => recorridoIdsEtapa.includes(e.recorrido_id));
+
+          const acumPorInscripcion = {};
+          entradasEtapa.forEach(e => {
+            const a = acumPorInscripcion[e.inscripcion_id] || { inscripcion: e.inscripcion, ms: 0, tiene: false };
+            a.ms += e.ms; a.tiene = true;
+            acumPorInscripcion[e.inscripcion_id] = a;
+          });
+          const acumFilas = Object.values(acumPorInscripcion).filter(a => a.tiene);
+          const acumHtml = acumFilas.length > 0
+            ? `<div class="acc-etapa-summary"><h4 style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:10px;">Acumulado de la Etapa</h4>${renderCategoriasHtml(agruparPorCategoriaYClasificar(acumFilas))}</div>`
+            : '';
+
+          let pesHtml = '';
+          etapa.recorridos.forEach(rec => {
+            const entradasPE = entradas.filter(e => e.recorrido_id === rec.id);
+            const peBodyHtml = entradasPE.length > 0
+              ? renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasPE))
+              : '<p class="acc-empty">Sin tiempos registrados en esta PE.</p>';
+            const peId = 'pe-' + rec.id;
+            pesHtml += `
+              <div class="acc-item" style="margin: 0 0 8px 12px;">
+                <button class="acc-header acc-header-pe" id="acc-header-${peId}" onclick="window.toggleAcordeon('${peId}')">
+                  <span>PE${rec.numero}: ${rec.nombre}</span>
+                  ${chevronSvg}
+                </button>
+                <div class="acc-wrap" id="acc-wrap-${peId}"><div class="acc-clip"><div class="acc-body">${peBodyHtml}</div></div></div>
+              </div>`;
+          });
+
+          html += `
+            <div class="acc-item">
+              <button class="acc-header acc-header-etapa" id="acc-header-etapa-${etapa.id}" onclick="window.toggleAcordeon('etapa-${etapa.id}')">
+                <span>ETAPA: ${etapa.nombre}</span>
+                ${chevronSvg}
+              </button>
+              <div class="acc-wrap" id="acc-wrap-etapa-${etapa.id}"><div class="acc-clip"><div class="acc-body"><div class="acc-etapa-children">
+                ${acumHtml}
+                ${pesHtml}
+              </div></div></div></div>
+            </div>`;
+        });
+      }
+
+      return html;
+    }
+
+    window.tiemposAccordionData = null;
+
+    window.filtrarAccordionTiempos = function () {
+      if (!window.tiemposAccordionData) return;
+      const { etapas, tiemposRally, shakeFilas, esCircuito } = window.tiemposAccordionData;
+      const catFilter = document.getElementById('tiempos-cat-filter').value;
+      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito);
+    };
+
+    window.openTiempos = async function (rallyId) {
+      document.getElementById('modal-tiempos').classList.add('active');
+      const container = document.getElementById('tiempos-accordion');
+      container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
+      document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Categorías</option>';
+      document.getElementById('btn-tiempos-pdf').style.display = 'none';
+
+      const { data: etapasDb } = await supabase.schema('rally').from('etapas')
+        .select('id, numero, nombre, recorridos(id, numero, nombre, distancia_km, deleted_at)')
+        .eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero');
+
+      const etapas = (etapasDb || [])
+        .map(e => ({ ...e, recorridos: (e.recorridos || []).filter(r => !r.deleted_at).sort((a, b) => a.numero - b.numero) }))
+        .sort((a, b) => a.numero - b.numero);
+
+      const recorridoIds = etapas.flatMap(e => e.recorridos.map(r => r.id));
+
+      let tiemposRally = [];
+      if (recorridoIds.length > 0) {
+        const { data } = await supabase.schema('rally').from('tiempos')
+          .select('recorrido_id, inscripcion_id, tiempo_bruto, tiempo_neto, inscripcion:inscripciones(numero, piloto:pilotos(nombre,apellido), categoria:categorias(nombre))')
+          .in('recorrido_id', recorridoIds).is('deleted_at', null);
+        tiemposRally = data || [];
+      }
+
+      const shakeFilas = await obtenerShakedownFilas(rallyId);
+      const esCircuito = allRallies.find(r => r.id === rallyId)?.tipo_evento === 'circuito';
+
+      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito };
+
+      const hayDatos = tiemposRally.length > 0 || (shakeFilas && shakeFilas.length > 0);
+      if (hayDatos) {
+        document.getElementById('btn-tiempos-pdf').style.display = 'inline-flex';
+
+        const categorias = new Set();
+        tiemposRally.forEach(t => categorias.add(t.inscripcion?.categoria?.nombre || 'Sin Categoría'));
+        (shakeFilas || []).forEach(f => categorias.add(f.inscripcion?.categoria?.nombre || 'Sin Categoría'));
+
+        const catSelect = document.getElementById('tiempos-cat-filter');
+        let catHtml = '<option value="ALL">Todas las Categorías</option>';
+        [...categorias].sort().forEach(c => { catHtml += `<option value="${c}">${c}</option>`; });
+        catSelect.innerHTML = catHtml;
+      }
+
+      window.filtrarAccordionTiempos();
+    };
+
+    // --- STATS ---
+    let currentRallyStats = null;
+    let gapChartInstance = null;
+    let speedChartInstance = null;
+    let positionChartInstance = null;
+    window.statsRallyData = null; // { recorridoInfo, tiemposRally }
+
+    window.printStats = function () {
+      window.print();
+    };
+
+    // Agrupa las filas crudas de 'tiempos' por recorrido, y dentro de cada recorrido calcula
+    // puesto general, puesto por categoría y diferencia al líder (general y de categoría) —
+    // calculado 100% en el cliente porque las columnas puesto_categoria/puesto_general de la BD
+    // nunca se llenan (ver [[project-shakedown-feature]]).
+    function calcularRankingsPorRecorrido(tiemposRally) {
+      const porRecorridoInscripcion = {};
+      tiemposRally.forEach(t => {
+        const key = t.recorrido_id + '||' + t.inscripcion_id;
+        if (!porRecorridoInscripcion[key]) {
+          porRecorridoInscripcion[key] = { inscripcion: t.inscripcion, inscripcion_id: t.inscripcion_id, recorrido_id: t.recorrido_id, rows: [] };
+        }
+        porRecorridoInscripcion[key].rows.push(t);
+      });
+      const entradas = Object.values(porRecorridoInscripcion)
+        .map(e => ({ ...e, ms: sumarTiempoRecorridoInscripcion(e.rows) }))
+        .filter(e => e.ms !== null);
+
+      const porRecorrido = {};
+      entradas.forEach(e => { (porRecorrido[e.recorrido_id] = porRecorrido[e.recorrido_id] || []).push(e); });
+
+      const resultado = {};
+      for (const [recId, arr] of Object.entries(porRecorrido)) {
+        const sortedGeneral = [...arr].sort((a, b) => a.ms - b.ms);
+        const liderMs = sortedGeneral[0].ms;
+        const posGeneralMap = {};
+        sortedGeneral.forEach((e, i) => posGeneralMap[e.inscripcion_id] = i + 1);
+
+        const byCat = {};
+        arr.forEach(e => {
+          const cat = e.inscripcion?.categoria?.nombre || 'Sin Categoría';
+          (byCat[cat] = byCat[cat] || []).push(e);
+        });
+        const posCatMap = {}, catLiderMs = {};
+        for (const [cat, catArr] of Object.entries(byCat)) {
+          const sortedCat = [...catArr].sort((a, b) => a.ms - b.ms);
+          catLiderMs[cat] = sortedCat[0].ms;
+          sortedCat.forEach((e, i) => posCatMap[e.inscripcion_id] = i + 1);
+        }
+
+        resultado[recId] = {};
+        arr.forEach(e => {
+          const cat = e.inscripcion?.categoria?.nombre || 'Sin Categoría';
+          resultado[recId][e.inscripcion_id] = {
+            inscripcion: e.inscripcion,
+            ms: e.ms,
+            posGeneral: posGeneralMap[e.inscripcion_id], totalGeneral: arr.length,
+            posCategoria: posCatMap[e.inscripcion_id], totalCategoria: byCat[cat].length,
+            difLiderGeneral: e.ms - liderMs, difLiderCategoria: e.ms - catLiderMs[cat]
+          };
+        });
+      }
+      return resultado;
+    }
+
+    // Igual que arriba pero sumando TODAS las PEs del rally por inscripción (clasificación general del rally).
+    function calcularRankingGeneralRally(tiemposRally) {
+      const porRecorridoInscripcion = {};
+      tiemposRally.forEach(t => {
+        const key = t.recorrido_id + '||' + t.inscripcion_id;
+        if (!porRecorridoInscripcion[key]) {
+          porRecorridoInscripcion[key] = { inscripcion: t.inscripcion, inscripcion_id: t.inscripcion_id, rows: [] };
+        }
+        porRecorridoInscripcion[key].rows.push(t);
+      });
+      const entradas = Object.values(porRecorridoInscripcion)
+        .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, ms: sumarTiempoRecorridoInscripcion(e.rows) }))
+        .filter(e => e.ms !== null);
+
+      const porInscripcion = {};
+      entradas.forEach(e => {
+        const g = porInscripcion[e.inscripcion_id] || { inscripcion_id: e.inscripcion_id, inscripcion: e.inscripcion, ms: 0, tiene: false };
+        g.ms += e.ms; g.tiene = true;
+        porInscripcion[e.inscripcion_id] = g;
+      });
+      const filas = Object.values(porInscripcion).filter(g => g.tiene);
+      if (filas.length === 0) return {};
+
+      const sortedGeneral = [...filas].sort((a, b) => a.ms - b.ms);
+      const liderMsGeneral = sortedGeneral[0].ms;
+      const posGeneralMap = {};
+      sortedGeneral.forEach((f, i) => posGeneralMap[f.inscripcion_id] = i + 1);
+
+      const byCat = {};
+      filas.forEach(f => { const cat = f.inscripcion?.categoria?.nombre || 'Sin Categoría'; (byCat[cat] = byCat[cat] || []).push(f); });
+      const posCatMap = {}, catLiderMs = {};
+      for (const [cat, arr] of Object.entries(byCat)) {
+        const sorted = [...arr].sort((a, b) => a.ms - b.ms);
+        catLiderMs[cat] = sorted[0].ms;
+        sorted.forEach((f, i) => posCatMap[f.inscripcion_id] = i + 1);
+      }
+
+      const resultado = {};
+      filas.forEach(f => {
+        const cat = f.inscripcion?.categoria?.nombre || 'Sin Categoría';
+        resultado[f.inscripcion_id] = {
+          ms: f.ms, posGeneral: posGeneralMap[f.inscripcion_id], totalGeneral: filas.length,
+          posCategoria: posCatMap[f.inscripcion_id], totalCategoria: byCat[cat].length,
+          difLiderGeneral: f.ms - liderMsGeneral, difLiderCategoria: f.ms - catLiderMs[cat]
+        };
+      });
+      return resultado;
+    }
+
+    // Velocidad promedio de la categoría (todos los demás pilotos de esa clase) por recorrido.
+    function promedioVelocidadCategoriaPorRecorrido(tiemposRally, categoria) {
+      const acc = {};
+      tiemposRally.forEach(t => {
+        const cat = t.inscripcion?.categoria?.nombre || 'Sin Categoría';
+        if (cat !== categoria) return;
+        const v = parseFloat(t.velocidad_promedio_kmh);
+        if (!v) return;
+        if (!acc[t.recorrido_id]) acc[t.recorrido_id] = { sum: 0, count: 0 };
+        acc[t.recorrido_id].sum += v;
+        acc[t.recorrido_id].count += 1;
+      });
+      const out = {};
+      for (const [recId, { sum, count }] of Object.entries(acc)) out[recId] = sum / count;
+      return out;
+    }
+
+    window.openStats = async function (rallyId) {
+      document.getElementById('modal-stats').classList.add('active');
+      document.getElementById('stats-content').style.display = 'none';
+      document.getElementById('btn-stats-pdf').style.display = 'none';
+      const selector = document.getElementById('stats-pilot-selector');
+      selector.innerHTML = '<option value="">Cargando pilotos...</option>';
+      selector.disabled = true; // Disable until everything is loaded
+
+      currentRallyStats = rallyId;
+      window.statsRallyData = null;
+
+      const { data, error } = await supabase.schema('rally').from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido, pais), navegante:navegantes(nombre, apellido, pais), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
+
+      if (error || !data || data.length === 0) {
+        selector.innerHTML = '<option value="">No hay pilotos inscritos.</option>';
+        selector.disabled = false;
+        return;
+      }
+
+      selector.innerHTML = '<option value="">Selecciona un Piloto...</option>';
+      data.forEach(ins => {
+        const p = ins.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : 'Desc.';
+        // Save the full pilot info in the option as a JSON string
+        selector.innerHTML += `<option value="${ins.id}" data-info='${JSON.stringify(ins)}'>#${ins.numero} - ${p}</option>`;
+      });
+
+      // Prefetch de TODOS los tiempos del rally (todas las inscripciones), necesario para
+      // calcular posiciones y diferencias al líder — no solo los del piloto seleccionado.
+      const { data: etapasDb } = await supabase.schema('rally').from('etapas')
+        .select('id, numero, nombre, recorridos(id, numero, nombre, distancia_km, deleted_at)')
+        .eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero');
+
+      const etapas = (etapasDb || [])
+        .map(e => ({ ...e, recorridos: (e.recorridos || []).filter(r => !r.deleted_at).sort((a, b) => a.numero - b.numero) }))
+        .sort((a, b) => a.numero - b.numero);
+
+      const recorridoInfo = {};
+      const recorridoOrden = [];
+      etapas.forEach(et => et.recorridos.forEach(r => {
+        recorridoInfo[r.id] = { numero: r.numero, nombre: r.nombre, etapaNombre: et.nombre, distancia_km: r.distancia_km };
+        recorridoOrden.push(r.id);
+      }));
+
+      let tiemposRally = [];
+      if (recorridoOrden.length > 0) {
+        const { data: td } = await supabase.schema('rally').from('tiempos')
+          .select('recorrido_id, inscripcion_id, tiempo_bruto, tiempo_neto, velocidad_promedio_kmh, inscripcion:inscripciones(numero, piloto:pilotos(nombre,apellido), categoria:categorias(nombre))')
+          .in('recorrido_id', recorridoOrden).is('deleted_at', null);
+        tiemposRally = td || [];
+      }
+
+      window.statsRallyData = { recorridoInfo, recorridoOrden, tiemposRally };
+      
+      // Now that all data is loaded, enable the selector
+      selector.disabled = false;
+    };
+
+    function kpiCard(label, value, sub, cls) {
+      return `<div class="stat-kpi-card">
+        <div class="stat-kpi-label">${label}</div>
+        <div class="stat-kpi-value ${cls || ''}">${value}</div>
+        ${sub ? `<div class="stat-kpi-sub">${sub}</div>` : ''}
+      </div>`;
+    }
+
+    document.getElementById('stats-pilot-selector').addEventListener('change', async (e) => {
+      const insId = e.target.value;
+      const content = document.getElementById('stats-content');
+      const pdfBtn = document.getElementById('btn-stats-pdf');
+
+      if (!insId || !window.statsRallyData) {
+        content.style.display = 'none';
+        pdfBtn.style.display = 'none';
+        return;
+      }
+
+      const { recorridoInfo, recorridoOrden, tiemposRally } = window.statsRallyData;
+      const rankingsPorPE = calcularRankingsPorRecorrido(tiemposRally);
+      const rankingGeneral = calcularRankingGeneralRally(tiemposRally);
+      const miGeneral = rankingGeneral[insId];
+
+      const filasPiloto = recorridoOrden
+        .map(recId => {
+          const info = rankingsPorPE[recId]?.[insId];
+          if (!info) return null;
+          return { recId, ...recorridoInfo[recId], ...info };
+        })
+        .filter(Boolean);
+
+      if (filasPiloto.length === 0) {
+        content.style.display = 'block';
+        pdfBtn.style.display = 'none';
+        document.getElementById('stats-kpi-grid').innerHTML = '';
+        document.getElementById('stats-table-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center; color: var(--text-muted); padding: 32px 0;">Sin tiempos registrados aún.</td></tr>';
+        if (gapChartInstance) { gapChartInstance.destroy(); gapChartInstance = null; }
+        if (speedChartInstance) { speedChartInstance.destroy(); speedChartInstance = null; }
+        if (positionChartInstance) { positionChartInstance.destroy(); positionChartInstance = null; }
+        return;
+      }
+
+      content.style.display = 'block';
+      pdfBtn.style.display = 'inline-flex';
+      
+      const selectedOption = e.target.options[e.target.selectedIndex];
+      const pilotInfo = JSON.parse(selectedOption.getAttribute('data-info') || '{}');
+      
+      // Populate banner
+      document.getElementById('stats-banner-number').textContent = `#${pilotInfo.numero || '-'}`;
+      document.getElementById('stats-banner-name').textContent = pilotInfo.piloto ? `${pilotInfo.piloto.nombre} ${pilotInfo.piloto.apellido}` : 'Desconocido';
+      document.getElementById('stats-banner-cat').textContent = pilotInfo.categoria ? pilotInfo.categoria.nombre : 'Sin Clase';
+      
+      document.getElementById('stats-banner-nav').textContent = pilotInfo.navegante ? `${pilotInfo.navegante.nombre} ${pilotInfo.navegante.apellido}` : 'Sin Navegante';
+      document.getElementById('stats-banner-car').textContent = pilotInfo.vehiculo ? `${pilotInfo.vehiculo.marca} ${pilotInfo.vehiculo.modelo}` : 'Vehículo N/A';
+      document.getElementById('stats-banner-team').textContent = pilotInfo.equipo ? pilotInfo.equipo.nombre : 'Independiente';
+
+      const categoriaPiloto = pilotInfo.categoria ? pilotInfo.categoria.nombre : 'Sin Categoría';
+      const promCatPorRec = promedioVelocidadCategoriaPorRecorrido(tiemposRally, categoriaPiloto);
+
+      // --- KPIs ---
+      const mejorPE = [...filasPiloto].sort((a, b) => a.difLiderCategoria - b.difLiderCategoria)[0];
+      const peorPE = [...filasPiloto].sort((a, b) => b.difLiderCategoria - a.difLiderCategoria)[0];
+      
+      let totalDistancia = 0;
+      let totalPenalidadesMs = 0;
+      
+      const misVelocidades = filasPiloto.map(f => {
+        const row = tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === insId);
+        if (f.distancia_km) totalDistancia += parseFloat(f.distancia_km);
+        if (row) {
+           const msNeto = intervalToMsPublic(row.tiempo_neto);
+           const msBruto = intervalToMsPublic(row.tiempo_bruto);
+           if (msNeto > msBruto) {
+              totalPenalidadesMs += (msNeto - msBruto);
+           }
+        }
+        return row ? parseFloat(row.velocidad_promedio_kmh) || 0 : 0;
+      }).filter(v => v > 0);
+      const velPromedioGeneral = misVelocidades.length ? (misVelocidades.reduce((a, b) => a + b, 0) / misVelocidades.length) : 0;
+      
+      // Tramos ganados (difLiderCategoria == 0)
+      const tramosGanados = filasPiloto.filter(f => f.difLiderCategoria <= 0).length;
+
+      let kpiHtml = '';
+      if (miGeneral) {
+        kpiHtml += kpiCard('Pos. Clase', `${miGeneral.posCategoria}°`, `de ${miGeneral.totalCategoria} vehículos`, 'positive');
+        kpiHtml += kpiCard('Pos. General', `${miGeneral.posGeneral}°`, `de ${miGeneral.totalGeneral}`);
+        kpiHtml += kpiCard('Tiempo Total', msToIntervalStrPublic(miGeneral.ms).split('.')[0], 'acumulado');
+        kpiHtml += kpiCard('Dif. Líder Clase', miGeneral.difLiderCategoria > 0 ? '+' + fmtInterval(msToIntervalStrPublic(miGeneral.difLiderCategoria)) : 'LÍDER', 'en la categoría', miGeneral.difLiderCategoria > 0 ? 'negative' : 'positive');
+      }
+      kpiHtml += kpiCard('Distancia', `${totalDistancia.toFixed(2)} km`, 'recorridos en PEs');
+      kpiHtml += kpiCard('Vel. Promedio', velPromedioGeneral.toFixed(1) + ' km/h', 'promedio en ruta');
+      kpiHtml += kpiCard('Penalizaciones', totalPenalidadesMs > 0 ? `+${(totalPenalidadesMs/1000).toFixed(1)}s` : '0.0s', 'tiempo añadido', totalPenalidadesMs > 0 ? 'negative' : 'positive');
+      kpiHtml += kpiCard('Tramos Ganados', `${tramosGanados}`, `de ${filasPiloto.length} disputados`, tramosGanados > 0 ? 'positive' : '');
+      
+      document.getElementById('stats-kpi-grid').innerHTML = kpiHtml;
+
+      // Calculate accumulated times for all drivers in the category to find the real accumulated gap
+      const catDrivers = new Set(tiemposRally.filter(t => t.inscripcion?.categoria?.nombre === categoriaPiloto).map(t => t.inscripcion_id));
+      const accumulatedTimesByCategoryDriver = {};
+      let acumuladoMs = 0;
+
+      document.getElementById('stats-table-tbody').innerHTML = filasPiloto.map((f, i) => {
+        acumuladoMs += f.ms;
+        const speed = (tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === insId)?.velocidad_promedio_kmh ? parseFloat(tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === insId).velocidad_promedio_kmh).toFixed(2) : '-');
+        
+        // Update accumulated times for all drivers in category up to this PE
+        catDrivers.forEach(dId => {
+           const tRow = tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === dId);
+           if (!accumulatedTimesByCategoryDriver[dId]) accumulatedTimesByCategoryDriver[dId] = 0;
+           if (tRow) {
+               // Use sumarTiempoRecorridoInscripcion to handle correct bruto/neto logic as in Rankings
+               const ms = sumarTiempoRecorridoInscripcion([tRow]);
+               if (ms) accumulatedTimesByCategoryDriver[dId] += ms;
+           }
+        });
+        
+        let minAccumulatedMs = Infinity;
+        catDrivers.forEach(dId => {
+           if (accumulatedTimesByCategoryDriver[dId] > 0 && accumulatedTimesByCategoryDriver[dId] < minAccumulatedMs) {
+               minAccumulatedMs = accumulatedTimesByCategoryDriver[dId];
+           }
+        });
+        
+        // But f.ms was calculated using sumarTiempoRecorridoInscripcion, let's just use the current driver's accumulatedMs vs the minAccumulatedMs.
+        const gapAcumuladoMs = (minAccumulatedMs !== Infinity) ? (acumuladoMs - minAccumulatedMs) : 0;
+        
+        const isLeader = f.difLiderCategoria <= 0;
+        const isAcumLeader = gapAcumuladoMs <= 0;
+        
+        // Trend indicators for position
+        let trendHtml = '';
+        if (i > 0) {
+           const prevF = filasPiloto[i-1];
+           if (f.posCategoria < prevF.posCategoria) trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
+           else if (f.posCategoria > prevF.posCategoria) trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E63946" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+           else trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+        }
+        
+        let paceHtml = '-';
+        if (f.distancia_km && parseFloat(f.distancia_km) > 0) {
+            const gapSecs = f.difLiderCategoria / 1000;
+            const pace = gapSecs / parseFloat(f.distancia_km);
+            if (gapSecs > 0) {
+               paceHtml = `+${pace.toFixed(2)} <span style="font-size:10px; color:var(--text-dim);">s/km</span>`;
+            } else if (gapSecs === 0) {
+               paceHtml = `<span style="color:var(--live-green); font-size:12px;">LÍDER</span>`;
+            }
+        }
+
+        return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+          <td style="font-weight:600; padding: 12px 16px;">PE${f.numero}: ${f.nombre}</td>
+          <td style="color: var(--text-muted); padding: 12px 16px;">${f.distancia_km ? parseFloat(f.distancia_km).toFixed(2) + ' km' : '-'}</td>
+          <td style="font-family: var(--font-mono); color: var(--accent-primary); font-weight: bold; padding: 12px 16px;">${fmtInterval(msToIntervalStrPublic(f.ms))}</td>
+          <td style="font-family: var(--font-mono); color: var(--text-muted); padding: 12px 16px;">${fmtInterval(msToIntervalStrPublic(acumuladoMs))}</td>
+          <td style="font-family: var(--font-mono); padding: 12px 16px; color: #FFD166;">${paceHtml}</td>
+          <td style="font-family: var(--font-mono); padding: 12px 16px;">${speed}</td>
+          <td style="padding: 12px 16px; color: var(--text-muted);">${f.posGeneral}° <span style="font-size:11px;">/ ${f.totalGeneral}</span></td>
+          <td style="padding: 12px 16px; font-weight: 600; color: var(--text-main);">${f.posCategoria}° ${trendHtml}</td>
+          <td style="font-family: var(--font-mono); padding: 12px 16px; color: ${isLeader ? 'var(--live-green)' : 'var(--text-muted)'}; font-weight: ${isLeader ? '700' : '400'};">
+            ${isLeader ? 'LÍDER' : '+' + fmtInterval(msToIntervalStrPublic(f.difLiderCategoria))}
+          </td>
+          <td style="font-family: var(--font-mono); padding: 12px 16px; color: ${isAcumLeader ? 'var(--live-green)' : 'var(--text-muted)'}; font-weight: ${isAcumLeader ? '700' : '400'};">
+             ${isAcumLeader ? 'LÍDER' : '+' + fmtInterval(msToIntervalStrPublic(gapAcumuladoMs))}
+          </td>
+        </tr>`;
+      }).join('');
+
+      const labels = filasPiloto.map(f => `PE${f.numero}`);
+
+      // --- Gráfico: diferencia al líder de categoría (segundos) ---
+      const gapData = filasPiloto.map(f => Math.round(f.difLiderCategoria / 1000 * 10) / 10);
+      const ctxGap = document.getElementById('gapChart').getContext('2d');
+      if (gapChartInstance) gapChartInstance.destroy();
+      gapChartInstance = new Chart(ctxGap, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Segundos detrás del líder de tu categoría', data: gapData, backgroundColor: gapData.map(v => v <= 0 ? 'rgba(0,245,160,0.8)' : 'rgba(230,57,70,0.8)'), borderRadius: 6 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, suggestedMax: 10, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-mono)' } }, title: { display: false } },
+            x: { grid: { display: false }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-display)', weight: 'bold' } } }
+          },
+          plugins: { 
+            legend: { display: false },
+            tooltip: { backgroundColor: 'rgba(10,10,10,0.9)', titleFont: { family: 'var(--font-display)' }, bodyFont: { family: 'var(--font-mono)' }, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 12 }
+          }
+        }
+      });
+
+      // --- Gráfico: velocidad promedio (piloto vs. promedio de su categoría) ---
+      const misVelSerie = filasPiloto.map(f => {
+        const row = tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === insId);
+        return row ? parseFloat(row.velocidad_promedio_kmh) || null : null;
+      });
+      const catVelSerie = filasPiloto.map(f => promCatPorRec[f.recId] ? Math.round(promCatPorRec[f.recId] * 10) / 10 : null);
+
+      const ctxSpeed = document.getElementById('speedChart').getContext('2d');
+      if (speedChartInstance) speedChartInstance.destroy();
+      
+      // Gradients
+      const gradientSpeed = ctxSpeed.createLinearGradient(0, 0, 0, 220);
+      gradientSpeed.addColorStop(0, 'rgba(230,57,70,0.3)');
+      gradientSpeed.addColorStop(1, 'rgba(230,57,70,0.0)');
+      
+      speedChartInstance = new Chart(ctxSpeed, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Tu velocidad', data: misVelSerie, borderColor: '#E63946', backgroundColor: gradientSpeed, borderWidth: 3, pointBackgroundColor: '#00F5A0', pointBorderColor: '#0A0A0A', pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 7, fill: true, tension: 0.4 },
+            { label: 'Promedio Categoría', data: catVelSerie, borderColor: 'rgba(142,155,174,0.5)', borderDash: [6, 4], borderWidth: 2, pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-mono)' } } },
+            x: { grid: { display: false }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-display)', weight: 'bold' } } }
+          },
+          plugins: { 
+            legend: { position: 'top', align: 'end', labels: { color: '#F8F9FA', font: { family: 'var(--font-body)' }, boxWidth: 12, usePointStyle: true } },
+            tooltip: { backgroundColor: 'rgba(10,10,10,0.9)', titleFont: { family: 'var(--font-display)' }, bodyFont: { family: 'var(--font-mono)' }, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 12 }
+          }
+        }
+      });
+
+      // --- Gráfico: evolución de posición en categoría (eje invertido: 1° arriba) ---
+      const posSerie = filasPiloto.map(f => f.posCategoria);
+      const maxPos = Math.max(...posSerie, miGeneral?.totalCategoria || 1, 2); // At least 2 so the Y axis doesn't collapse to a single line
+      const ctxPos = document.getElementById('positionChart').getContext('2d');
+      if (positionChartInstance) positionChartInstance.destroy();
+      
+      const gradientPos = ctxPos.createLinearGradient(0, 0, 0, 220);
+      gradientPos.addColorStop(0, 'rgba(255,209,102,0.3)');
+      gradientPos.addColorStop(1, 'rgba(255,209,102,0.0)');
+      
+      positionChartInstance = new Chart(ctxPos, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Posición en tu clase', data: posSerie, borderColor: '#FFD166', backgroundColor: gradientPos, borderWidth: 3, pointBackgroundColor: '#FFD166', pointBorderColor: '#0A0A0A', pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 7, fill: true, stepped: true, tension: 0 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { top: 10, bottom: 10 } }, // Extra padding so line doesn't clip
+          scales: {
+            y: { reverse: true, min: 1, max: maxPos, ticks: { stepSize: 1, color: '#8E9BAE', font: { family: 'var(--font-mono)', weight: 'bold' } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { grid: { display: false }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-display)', weight: 'bold' } } }
+          },
+          plugins: { 
+            legend: { display: false },
+            tooltip: { backgroundColor: 'rgba(10,10,10,0.9)', titleFont: { family: 'var(--font-display)' }, bodyFont: { family: 'var(--font-mono)' }, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 12 }
+          }
+        }
+      });
+    });
+
+    // ==========================================
+    // CLASIFICACIÓN (circuitos): mismo formato que Stats (ranking + telemetría),
+    // pero con recorrido_id remapeado a "vuelta_N" para reutilizar tal cual las
+    // funciones de ranking/velocidad/gráficas ya escritas para Stats -- ahí donde
+    // Stats agrupa por Prueba Especial, acá se agrupa por vuelta de la Clasificación.
+    // ==========================================
+    let clasifGapChartInstance = null;
+    let clasifSpeedChartInstance = null;
+    let clasifPositionChartInstance = null;
+    window.clasifRallyData = null;
+
+    window.openClasificacion = async function (rallyId) {
+      document.getElementById('modal-clasificacion').classList.add('active');
+      document.getElementById('clasif-content').style.display = 'none';
+      document.getElementById('clasif-ranking-container').innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
+      const selector = document.getElementById('clasif-pilot-selector');
+      selector.innerHTML = '<option value="">Cargando pilotos...</option>';
+      selector.disabled = true;
+      selector.value = '';
+      window.clasifRallyData = null;
+
+      const { data: etapa } = await supabase.schema('rally').from('etapas')
+        .select('id, nombre').eq('rally_id', rallyId).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
+
+      const { data: recorrido } = etapa ? await supabase.schema('rally').from('recorridos')
+        .select('id, nombre, distancia_km, numero_vueltas').eq('etapa_id', etapa.id).is('deleted_at', null).maybeSingle() : { data: null };
+
+      if (!etapa || !recorrido) {
+        document.getElementById('clasif-ranking-container').innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Este circuito todavía no tiene Clasificación configurada.</p>';
+        selector.innerHTML = '<option value="">Sin Clasificación configurada.</option>';
+        return;
+      }
+
+      document.getElementById('clasif-title').textContent = etapa.nombre || 'Clasificación';
+
+      const { data: inscritos, error } = await supabase.schema('rally').from('inscripciones')
+        .select('id, numero, piloto:pilotos(nombre, apellido, pais), navegante:navegantes(nombre, apellido, pais), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre)')
+        .eq('rally_id', rallyId).is('deleted_at', null).order('numero');
+
+      if (error || !inscritos || inscritos.length === 0) {
+        selector.innerHTML = '<option value="">No hay pilotos inscritos.</option>';
+        document.getElementById('clasif-ranking-container').innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">No hay pilotos inscritos en este rally.</p>';
+        return;
+      }
+
+      selector.innerHTML = '<option value="">Selecciona un Piloto...</option>';
+      inscritos.forEach(ins => {
+        const p = ins.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : 'Desc.';
+        selector.innerHTML += `<option value="${ins.id}" data-info='${JSON.stringify(ins)}'>#${ins.numero} - ${p}</option>`;
+      });
+
+      const { data: tiemposRaw } = await supabase.schema('rally').from('tiempos')
+        .select('vuelta, inscripcion_id, tiempo_bruto, tiempo_neto, velocidad_promedio_kmh, estado, inscripcion:inscripciones(numero, piloto:pilotos(nombre,apellido), categoria:categorias(nombre))')
+        .eq('recorrido_id', recorrido.id).is('deleted_at', null);
+
+      const tiemposValidos = (tiemposRaw || []).filter(t => !t.estado || t.estado === 'valido');
+      const tiemposClasif = tiemposValidos.map(t => ({ ...t, recorrido_id: 'vuelta_' + t.vuelta }));
+
+      const numVueltas = recorrido.numero_vueltas || 1;
+      const recorridoInfo = {};
+      const recorridoOrden = [];
+      for (let v = 1; v <= numVueltas; v++) {
+        const key = 'vuelta_' + v;
+        recorridoInfo[key] = { numero: v, nombre: `Vuelta ${v}`, distancia_km: recorrido.distancia_km };
+        recorridoOrden.push(key);
+      }
+
+      window.clasifRallyData = { recorridoInfo, recorridoOrden, tiemposRally: tiemposClasif };
+
+      // --- Ranking (suma de todas las vueltas), agrupado por categoría ---
+      if (tiemposClasif.length === 0) {
+        document.getElementById('clasif-ranking-container').innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Todavía no hay tiempos de Clasificación registrados.</p>';
+      } else {
+        const rankingGeneral = calcularRankingGeneralRally(tiemposClasif);
+        const entradasRanking = Object.entries(rankingGeneral).map(([insId, r]) => {
+          const row = tiemposClasif.find(t => t.inscripcion_id === insId);
+          return { inscripcion: row ? row.inscripcion : null, ms: r.ms };
+        }).filter(e => e.inscripcion);
+        const byCat = agruparPorCategoriaYClasificar(entradasRanking);
+        document.getElementById('clasif-ranking-container').innerHTML = renderCategoriasHtml(byCat);
+      }
+
+      selector.disabled = false;
+    };
+
+    document.getElementById('clasif-pilot-selector').addEventListener('change', async (e) => {
+      const insId = e.target.value;
+      const content = document.getElementById('clasif-content');
+
+      if (!insId || !window.clasifRallyData) {
+        content.style.display = 'none';
+        return;
+      }
+
+      const { recorridoInfo, recorridoOrden, tiemposRally } = window.clasifRallyData;
+      const rankingsPorVuelta = calcularRankingsPorRecorrido(tiemposRally);
+      const rankingGeneral = calcularRankingGeneralRally(tiemposRally);
+      const miGeneral = rankingGeneral[insId];
+
+      const filasPiloto = recorridoOrden
+        .map(recId => {
+          const info = rankingsPorVuelta[recId]?.[insId];
+          if (!info) return null;
+          return { recId, ...recorridoInfo[recId], ...info };
+        })
+        .filter(Boolean);
+
+      if (filasPiloto.length === 0) {
+        content.style.display = 'block';
+        document.getElementById('clasif-kpi-grid').innerHTML = '';
+        document.getElementById('clasif-table-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center; color: var(--text-muted); padding: 32px 0;">Sin vueltas registradas aún.</td></tr>';
+        if (clasifGapChartInstance) { clasifGapChartInstance.destroy(); clasifGapChartInstance = null; }
+        if (clasifSpeedChartInstance) { clasifSpeedChartInstance.destroy(); clasifSpeedChartInstance = null; }
+        if (clasifPositionChartInstance) { clasifPositionChartInstance.destroy(); clasifPositionChartInstance = null; }
+        return;
+      }
+
+      content.style.display = 'block';
+
+      const selectedOption = e.target.options[e.target.selectedIndex];
+      const pilotInfo = JSON.parse(selectedOption.getAttribute('data-info') || '{}');
+
+      document.getElementById('clasif-banner-number').textContent = `#${pilotInfo.numero || '-'}`;
+      document.getElementById('clasif-banner-name').textContent = pilotInfo.piloto ? `${pilotInfo.piloto.nombre} ${pilotInfo.piloto.apellido}` : 'Desconocido';
+      document.getElementById('clasif-banner-cat').textContent = pilotInfo.categoria ? pilotInfo.categoria.nombre : 'Sin Clase';
+      document.getElementById('clasif-banner-nav').textContent = pilotInfo.navegante ? `${pilotInfo.navegante.nombre} ${pilotInfo.navegante.apellido}` : 'Sin Navegante';
+      document.getElementById('clasif-banner-car').textContent = pilotInfo.vehiculo ? `${pilotInfo.vehiculo.marca} ${pilotInfo.vehiculo.modelo}` : 'Vehículo N/A';
+      document.getElementById('clasif-banner-team').textContent = pilotInfo.equipo ? pilotInfo.equipo.nombre : 'Independiente';
+
+      const categoriaPiloto = pilotInfo.categoria ? pilotInfo.categoria.nombre : 'Sin Categoría';
+      const promCatPorRec = promedioVelocidadCategoriaPorRecorrido(tiemposRally, categoriaPiloto);
+
+      let totalDistancia = 0;
+      let totalPenalidadesMs = 0;
+
+      const misVelocidades = filasPiloto.map(f => {
+        const row = tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === insId);
+        if (f.distancia_km) totalDistancia += parseFloat(f.distancia_km);
+        if (row) {
+          const msNeto = intervalToMsPublic(row.tiempo_neto);
+          const msBruto = intervalToMsPublic(row.tiempo_bruto);
+          if (msNeto > msBruto) totalPenalidadesMs += (msNeto - msBruto);
+        }
+        return row ? parseFloat(row.velocidad_promedio_kmh) || 0 : 0;
+      }).filter(v => v > 0);
+      const velPromedioGeneral = misVelocidades.length ? (misVelocidades.reduce((a, b) => a + b, 0) / misVelocidades.length) : 0;
+
+      const vueltasGanadas = filasPiloto.filter(f => f.difLiderCategoria <= 0).length;
+
+      let kpiHtml = '';
+      if (miGeneral) {
+        kpiHtml += kpiCard('Pos. Clase', `${miGeneral.posCategoria}°`, `de ${miGeneral.totalCategoria} vehículos`, 'positive');
+        kpiHtml += kpiCard('Pos. General', `${miGeneral.posGeneral}°`, `de ${miGeneral.totalGeneral}`);
+        kpiHtml += kpiCard('Tiempo Total', msToIntervalStrPublic(miGeneral.ms).split('.')[0], 'acumulado');
+        kpiHtml += kpiCard('Dif. Líder Clase', miGeneral.difLiderCategoria > 0 ? '+' + fmtInterval(msToIntervalStrPublic(miGeneral.difLiderCategoria)) : 'LÍDER', 'en la categoría', miGeneral.difLiderCategoria > 0 ? 'negative' : 'positive');
+      }
+      kpiHtml += kpiCard('Distancia', `${totalDistancia.toFixed(2)} km`, 'recorridas en Clasificación');
+      kpiHtml += kpiCard('Vel. Promedio', velPromedioGeneral.toFixed(1) + ' km/h', 'promedio en ruta');
+      kpiHtml += kpiCard('Penalizaciones', totalPenalidadesMs > 0 ? `+${(totalPenalidadesMs / 1000).toFixed(1)}s` : '0.0s', 'tiempo añadido', totalPenalidadesMs > 0 ? 'negative' : 'positive');
+      kpiHtml += kpiCard('Vueltas Ganadas', `${vueltasGanadas}`, `de ${filasPiloto.length} completadas`, vueltasGanadas > 0 ? 'positive' : '');
+
+      document.getElementById('clasif-kpi-grid').innerHTML = kpiHtml;
+
+      const catDrivers = new Set(tiemposRally.filter(t => t.inscripcion?.categoria?.nombre === categoriaPiloto).map(t => t.inscripcion_id));
+      const accumulatedTimesByCategoryDriver = {};
+      let acumuladoMs = 0;
+
+      document.getElementById('clasif-table-tbody').innerHTML = filasPiloto.map((f, i) => {
+        acumuladoMs += f.ms;
+        const rowSpeed = tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === insId);
+        const speed = rowSpeed && rowSpeed.velocidad_promedio_kmh ? parseFloat(rowSpeed.velocidad_promedio_kmh).toFixed(2) : '-';
+
+        catDrivers.forEach(dId => {
+          const tRow = tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === dId);
+          if (!accumulatedTimesByCategoryDriver[dId]) accumulatedTimesByCategoryDriver[dId] = 0;
+          if (tRow) {
+            const ms = sumarTiempoRecorridoInscripcion([tRow]);
+            if (ms) accumulatedTimesByCategoryDriver[dId] += ms;
+          }
+        });
+
+        let minAccumulatedMs = Infinity;
+        catDrivers.forEach(dId => {
+          if (accumulatedTimesByCategoryDriver[dId] > 0 && accumulatedTimesByCategoryDriver[dId] < minAccumulatedMs) {
+            minAccumulatedMs = accumulatedTimesByCategoryDriver[dId];
+          }
+        });
+
+        const gapAcumuladoMs = (minAccumulatedMs !== Infinity) ? (acumuladoMs - minAccumulatedMs) : 0;
+        const isLeader = f.difLiderCategoria <= 0;
+        const isAcumLeader = gapAcumuladoMs <= 0;
+
+        let trendHtml = '';
+        if (i > 0) {
+          const prevF = filasPiloto[i - 1];
+          if (f.posCategoria < prevF.posCategoria) trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
+          else if (f.posCategoria > prevF.posCategoria) trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E63946" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+          else trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+        }
+
+        let paceHtml = '-';
+        if (f.distancia_km && parseFloat(f.distancia_km) > 0) {
+          const gapSecs = f.difLiderCategoria / 1000;
+          const pace = gapSecs / parseFloat(f.distancia_km);
+          if (gapSecs > 0) paceHtml = `+${pace.toFixed(2)} <span style="font-size:10px; color:var(--text-dim);">s/km</span>`;
+          else if (gapSecs === 0) paceHtml = `<span style="color:var(--live-green); font-size:12px;">LÍDER</span>`;
+        }
+
+        return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+          <td style="font-weight:600; padding: 12px 16px;">${f.nombre}</td>
+          <td style="color: var(--text-muted); padding: 12px 16px;">${f.distancia_km ? parseFloat(f.distancia_km).toFixed(2) + ' km' : '-'}</td>
+          <td style="font-family: var(--font-mono); color: var(--accent-primary); font-weight: bold; padding: 12px 16px;">${fmtInterval(msToIntervalStrPublic(f.ms))}</td>
+          <td style="font-family: var(--font-mono); color: var(--text-muted); padding: 12px 16px;">${fmtInterval(msToIntervalStrPublic(acumuladoMs))}</td>
+          <td style="font-family: var(--font-mono); padding: 12px 16px; color: #FFD166;">${paceHtml}</td>
+          <td style="font-family: var(--font-mono); padding: 12px 16px;">${speed}</td>
+          <td style="padding: 12px 16px; color: var(--text-muted);">${f.posGeneral}° <span style="font-size:11px;">/ ${f.totalGeneral}</span></td>
+          <td style="padding: 12px 16px; font-weight: 600; color: var(--text-main);">${f.posCategoria}° ${trendHtml}</td>
+          <td style="font-family: var(--font-mono); padding: 12px 16px; color: ${isLeader ? 'var(--live-green)' : 'var(--text-muted)'}; font-weight: ${isLeader ? '700' : '400'};">
+            ${isLeader ? 'LÍDER' : '+' + fmtInterval(msToIntervalStrPublic(f.difLiderCategoria))}
+          </td>
+          <td style="font-family: var(--font-mono); padding: 12px 16px; color: ${isAcumLeader ? 'var(--live-green)' : 'var(--text-muted)'}; font-weight: ${isAcumLeader ? '700' : '400'};">
+             ${isAcumLeader ? 'LÍDER' : '+' + fmtInterval(msToIntervalStrPublic(gapAcumuladoMs))}
+          </td>
+        </tr>`;
+      }).join('');
+
+      const labels = filasPiloto.map(f => f.nombre);
+
+      // --- Gráfico: diferencia al líder de categoría (segundos) ---
+      const gapData = filasPiloto.map(f => Math.round(f.difLiderCategoria / 1000 * 10) / 10);
+      const ctxGap = document.getElementById('clasifGapChart').getContext('2d');
+      if (clasifGapChartInstance) clasifGapChartInstance.destroy();
+      clasifGapChartInstance = new Chart(ctxGap, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Segundos detrás del líder de tu categoría', data: gapData, backgroundColor: gapData.map(v => v <= 0 ? 'rgba(0,245,160,0.8)' : 'rgba(230,57,70,0.8)'), borderRadius: 6 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, suggestedMax: 10, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-mono)' } }, title: { display: false } },
+            x: { grid: { display: false }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-display)', weight: 'bold' } } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: 'rgba(10,10,10,0.9)', titleFont: { family: 'var(--font-display)' }, bodyFont: { family: 'var(--font-mono)' }, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 12 }
+          }
+        }
+      });
+
+      // --- Gráfico: velocidad promedio (piloto vs. promedio de su categoría) ---
+      const misVelSerie = filasPiloto.map(f => {
+        const row = tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === insId);
+        return row ? parseFloat(row.velocidad_promedio_kmh) || null : null;
+      });
+      const catVelSerie = filasPiloto.map(f => promCatPorRec[f.recId] ? Math.round(promCatPorRec[f.recId] * 10) / 10 : null);
+
+      const ctxSpeed = document.getElementById('clasifSpeedChart').getContext('2d');
+      if (clasifSpeedChartInstance) clasifSpeedChartInstance.destroy();
+
+      const gradientSpeed = ctxSpeed.createLinearGradient(0, 0, 0, 220);
+      gradientSpeed.addColorStop(0, 'rgba(230,57,70,0.3)');
+      gradientSpeed.addColorStop(1, 'rgba(230,57,70,0.0)');
+
+      clasifSpeedChartInstance = new Chart(ctxSpeed, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Tu velocidad', data: misVelSerie, borderColor: '#E63946', backgroundColor: gradientSpeed, borderWidth: 3, pointBackgroundColor: '#00F5A0', pointBorderColor: '#0A0A0A', pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 7, fill: true, tension: 0.4 },
+            { label: 'Promedio Categoría', data: catVelSerie, borderColor: 'rgba(142,155,174,0.5)', borderDash: [6, 4], borderWidth: 2, pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-mono)' } } },
+            x: { grid: { display: false }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-display)', weight: 'bold' } } }
+          },
+          plugins: {
+            legend: { position: 'top', align: 'end', labels: { color: '#F8F9FA', font: { family: 'var(--font-body)' }, boxWidth: 12, usePointStyle: true } },
+            tooltip: { backgroundColor: 'rgba(10,10,10,0.9)', titleFont: { family: 'var(--font-display)' }, bodyFont: { family: 'var(--font-mono)' }, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 12 }
+          }
+        }
+      });
+
+      // --- Gráfico: evolución de posición en categoría (eje invertido: 1° arriba) ---
+      const posSerie = filasPiloto.map(f => f.posCategoria);
+      const maxPos = Math.max(...posSerie, miGeneral?.totalCategoria || 1, 2);
+      const ctxPos = document.getElementById('clasifPositionChart').getContext('2d');
+      if (clasifPositionChartInstance) clasifPositionChartInstance.destroy();
+
+      const gradientPos = ctxPos.createLinearGradient(0, 0, 0, 220);
+      gradientPos.addColorStop(0, 'rgba(255,209,102,0.3)');
+      gradientPos.addColorStop(1, 'rgba(255,209,102,0.0)');
+
+      clasifPositionChartInstance = new Chart(ctxPos, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Posición en tu clase', data: posSerie, borderColor: '#FFD166', backgroundColor: gradientPos, borderWidth: 3, pointBackgroundColor: '#FFD166', pointBorderColor: '#0A0A0A', pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 7, fill: true, stepped: true, tension: 0 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { top: 10, bottom: 10 } },
+          scales: {
+            y: { reverse: true, min: 1, max: maxPos, ticks: { stepSize: 1, color: '#8E9BAE', font: { family: 'var(--font-mono)', weight: 'bold' } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { grid: { display: false }, ticks: { color: '#8E9BAE', font: { family: 'var(--font-display)', weight: 'bold' } } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: 'rgba(10,10,10,0.9)', titleFont: { family: 'var(--font-display)' }, bodyFont: { family: 'var(--font-mono)' }, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 12 }
+          }
+        }
+      });
+    });
+
+    // 5. Lógica del Acceso Secreto (Admin)
+    const adminTrigger = document.getElementById('admin-trigger');
+    adminTrigger.addEventListener('dblclick', () => {
+      window.location.href = 'admin_login.html';
+    });
+  </script>
+</body>
+
+</html>

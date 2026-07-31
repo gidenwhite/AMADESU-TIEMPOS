@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /index.html
+Allow: /$
+Disallow: /admin_login.html
+Disallow: /admin_dashboard.html
+Disallow: /operador_dashboard.html
+Disallow: /files/
+Disallow: /*.sql$
+Disallow: /*.js$
+
+Sitemap: https://[TU-DOMINIO]/sitemap.xml

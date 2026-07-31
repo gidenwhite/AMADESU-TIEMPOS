@@ -1,0 +1,2616 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AMADESU RALLYS — Panel de Operador</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23E63946'/%3E%3Cpath d='M6 16s1-1 3.5-1 4 1.5 6.5 1.5 3-1 3-1V6s-.8.8-3 .8-4-1.5-6.5-1.5-3.5 1-3.5 1z' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='6' y1='19' x2='6' y2='6' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js" defer></script>
+
+  <style>
+    /* ==========================================================
+       TOKENS & VARIABLES — AMADESU RALLYS
+       Sistema "Stage Broadcast" compartido con el resto del sitio.
+       ========================================================== */
+    :root {
+      --bg-void: #030303;
+      --bg-base: #0a0a0a;
+      --bg-surface: #131313;
+      --bg-surface-elevated: #1c1c1c;
+
+      --accent-primary: #E63946;
+      --accent-hover: #ff4d5a;
+      --accent-glow: rgba(230, 57, 70, 0.4);
+
+      --live-green: #00F5A0;
+      --pe-cyan: #00E5FF;
+      --podium-gold: #FFD166;
+      --danger: #ff4d5a;
+
+      --text-main: #F8F9FA;
+      --text-2: #C7CDD6;
+      --text-muted: #8E9BAE;
+      --text-dim: #546071;
+
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-strong: rgba(255, 255, 255, 0.15);
+
+      --font-body: 'Barlow', sans-serif;
+      --font-display: 'Barlow Condensed', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-void);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-surface-elevated); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+    /* ==========================================================
+       SIDEBAR NAV
+       ========================================================== */
+    .sidebar {
+      width: 280px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      padding: 32px 24px;
+      z-index: 10;
+      position: relative;
+    }
+
+    .sidebar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.15;
+      background-image:
+        linear-gradient(var(--border-strong) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-strong) 1px, transparent 1px);
+      background-size: 20px 20px;
+      pointer-events: none;
+      z-index: 0;
+      mask-image: linear-gradient(to bottom, black 0%, transparent 60%);
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 60%);
+    }
+
+    .brand {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 48px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent-primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    .brand-text {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
+
+    .brand-text span {
+      display: block;
+      color: var(--accent-primary);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      margin-top: 4px;
+      font-family: var(--font-body);
+    }
+
+    .nav-menu { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 6px; }
+
+    .nav-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin: 24px 0 8px 12px;
+      font-weight: 600;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item svg { width: 20px; height: 20px; stroke: currentColor; transition: stroke 0.2s ease; }
+
+    .nav-item:hover { background: rgba(255, 255, 255, 0.04); color: var(--text-main); }
+    .nav-item.active {
+      background: rgba(230, 57, 70, 0.1);
+      color: var(--accent-primary);
+      box-shadow: inset 2px 0 0 var(--accent-primary);
+    }
+
+    /* ==========================================================
+       MAIN CONTENT & TOPBAR
+       ========================================================== */
+    .main-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .topbar {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 40px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(6, 6, 6, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    .content-container {
+      padding: 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ==========================================================
+       RESPONSIVE — sidebar como cajón deslizable en pantallas
+       angostas (celular en pista/auto). Sin esto el sidebar fijo
+       de 280px empuja todo el contenido fuera de la pantalla.
+       ========================================================== */
+    .hamburger-btn {
+      display: none;
+      background: transparent;
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 999;
+    }
+
+    @media (max-width: 900px) {
+      .hamburger-btn { display: inline-flex; }
+
+      .topbar { padding: 0 16px; justify-content: space-between; }
+
+      .content-container { padding: 20px; }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        z-index: 1000;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .sidebar.mobile-open { transform: translateX(0); }
+
+      .sidebar-backdrop.visible { display: block; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar { transition: none; }
+    }
+
+    /* Formularios en grilla (registrar tiempo, horas, etc.) apilados en 1
+       columna en celulares angostos — de lo contrario los selects y los
+       campos de hora quedan ilegibles/cortados. */
+    @media (max-width: 640px) {
+      [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+      [style*="grid-column"] { grid-column: 1 !important; }
+      .form-grid { grid-template-columns: 1fr !important; }
+      .form-group.full-width { grid-column: 1 !important; }
+    }
+
+    .page-header { margin-bottom: 32px; }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 32px;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+    .page-subtitle { color: var(--text-muted); font-size: 15px; }
+
+    /* ==========================================================
+       SPA SECTIONS
+       ========================================================== */
+    .admin-section {
+      display: none;
+    }
+    .admin-section.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ==========================================================
+       FORMULARIOS Y PANELES GENÉRICOS
+       ========================================================== */
+    .card-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 16px;
+      justify-content: space-between; /* Para botones de acción en el título */
+    }
+
+    .panel-title-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group.full-width { grid-column: 1 / -1; }
+
+    /* TOM SELECT CUSTOM DARK THEME */
+    .ts-wrapper.form-control {
+      padding: 0; 
+      border: none;
+      background: none;
+    }
+    .ts-control {
+      background: rgba(0,0,0,0.2) !important;
+      border: 1px solid var(--border-strong) !important;
+      color: var(--text-main) !important;
+      border-radius: 8px !important;
+      padding: 12px 16px !important;
+      font-family: var(--font-body);
+      font-size: 14px;
+      min-height: 44px;
+      box-shadow: none !important;
+    }
+    .ts-control input {
+      color: var(--text-main) !important;
+    }
+    .ts-dropdown {
+      background: var(--bg-surface-elevated) !important;
+      border: 1px solid var(--border-strong) !important;
+      border-radius: 8px !important;
+      color: var(--text-main) !important;
+      font-family: var(--font-body);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+      margin-top: 4px;
+    }
+    .ts-dropdown .option {
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .ts-dropdown .option:hover, .ts-dropdown .active {
+      background: rgba(255,255,255,0.05) !important;
+      color: var(--text-main) !important;
+    }
+    .ts-control .item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .form-control {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    
+    select.form-control {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238E9BAE' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 40px;
+    }
+    select.form-control option { background: var(--bg-surface-elevated); }
+
+    .form-control:focus {
+      border-color: var(--accent-primary);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    textarea.form-control { resize: vertical; min-height: 100px; }
+
+    /* Botones Genéricos */
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 16px var(--accent-glow); }
+    
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--border-strong);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.05); }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 16px;
+      margin-top: 32px;
+    }
+
+    /* ==========================================================
+       COMPONENTES ESPECÍFICOS (Circuitos)
+       ========================================================== */
+    .categories-grid { display: flex; flex-wrap: wrap; gap: 20px; }
+    .category-toggle {
+      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      user-select: none; color: var(--text-muted); font-size: 15px;
+      font-weight: 700; font-family: var(--font-mono); transition: color 0.2s;
+    }
+    .category-toggle:hover { color: var(--text-main); }
+    .category-toggle input[type="checkbox"] {
+      width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;
+    }
+
+    .stage-item {
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+      margin-bottom: 20px;
+    }
+    .stage-number {
+      width: 60px;
+      font-family: var(--font-mono); font-size: 18px; font-weight: 800;
+      color: var(--accent-primary); text-align: center;
+      background: rgba(230,57,70,0.1); padding: 12px; border-radius: 8px;
+      margin-bottom: 2px;
+    }
+    .stage-item > .form-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    .btn-remove-stage, .btn-remove-recorrido {
+      background: transparent; border: none; color: #ff4d5a; cursor: pointer;
+      padding: 8px; border-radius: 4px; transition: background 0.2s;
+      flex-shrink: 0; margin-bottom: 2px;
+    }
+    .btn-remove-stage:hover, .btn-remove-recorrido:hover { background: rgba(255, 77, 90, 0.1); }
+    .btn-add-stage {
+      background: transparent; border: 1px dashed var(--border-strong);
+      color: var(--text-muted); width: 100%; padding: 16px; border-radius: 8px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;
+    }
+    .btn-add-stage:hover {
+      border-color: var(--live-green); color: var(--live-green); background: rgba(0, 245, 160, 0.05);
+    }
+    .recorridos-container {
+      width: 100%; margin-top: 8px; display: flex; flex-direction: column;
+      gap: 12px; padding-left: 20px; border-left: 2px solid var(--border-strong);
+    }
+    .recorrido-item {
+      background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-subtle);
+      border-radius: 8px; padding: 16px; 
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+    }
+    .recorrido-item > .form-group {
+      flex: 1; min-width: 140px;
+    }
+    .recorrido-number { 
+      width: 60px; font-family: var(--font-mono); font-size: 15px; font-weight: 700; 
+      color: var(--pe-cyan); text-align: center; padding-bottom: 8px;
+    }
+    .btn-add-recorrido {
+      background: transparent; border: 1px dashed var(--border-strong); color: var(--text-muted);
+      padding: 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; transition: all 0.2s;
+    }
+    .btn-add-recorrido:hover { border-color: var(--pe-cyan); color: var(--pe-cyan); background: rgba(0, 229, 255, 0.05); }
+
+    /* ==========================================================
+       COMPONENTES ESPECÍFICOS (Operadores)
+       ========================================================== */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    .data-table th, .data-table td {
+      padding: 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .data-table th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    
+    .role-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+    .role-admin2 { background: rgba(230, 57, 70, 0.15); color: #ff4d5a; border: 1px solid rgba(255, 77, 90, 0.3); }
+    .role-largada { background: rgba(0, 229, 255, 0.15); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.3); }
+    .role-llegada { background: rgba(0, 245, 160, 0.15); color: #00F5A0; border: 1px solid rgba(0, 245, 160, 0.3); }
+    
+    .table-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .action-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .action-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-main); border-color: var(--border-strong); }
+    .action-delete:hover { background: rgba(255, 77, 90, 0.1); color: #ff4d5a; border-color: rgba(255, 77, 90, 0.3); }
+
+    .rallies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .rally-card {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .rally-card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .rally-card-title { font-size: 18px; font-weight: 700; color: white; }
+    .rally-card-status { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--pe-cyan); font-weight: 700; }
+    
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+      z-index: 100; display: flex; align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 32px;
+      width: 500px;
+      max-width: 90vw;
+    }
+
+    /* Spinner de carga inline (reemplaza el reloj de arena emoji) */
+    .icon-spin {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: icon-spin-anim 0.7s linear infinite;
+    }
+
+    @keyframes icon-spin-anim {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .icon-spin { animation: none; }
+    }
+    
+    /* ==========================================================
+       ESTILOS PARA IMPRESIÓN (CRONOGRAMA)
+       ========================================================== */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #section-cronograma, #section-cronograma * {
+        visibility: visible;
+      }
+      #section-cronograma {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .sidebar, .page-header button, #section-cronograma .btn-primary, #section-cronograma .btn-secondary, #section-cronograma button {
+        display: none !important;
+      }
+      .card-panel {
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        color: black !important;
+      }
+      .data-table th, .data-table td {
+        color: black !important;
+        border: 1px solid #ccc !important;
+      }
+      .form-control {
+        border: none !important;
+        background: transparent !important;
+        color: black !important;
+        padding: 0 !important;
+      }
+    }
+    .time-display-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .time-display-container input {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--pe-cyan);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      width: 48px;
+      padding: 4px 0;
+      border-radius: 4px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .time-display-container input:focus {
+      background: rgba(0, 229, 255, 0.1);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+    }
+    .time-display-container input.readonly {
+      color: var(--text-muted);
+    }
+    .time-display-container .colon, .time-display-container .dot {
+      color: var(--text-muted);
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <aside class="sidebar" id="app-sidebar">
+  <div style="padding: 20px;">
+    <h2 style="color: var(--pe-cyan); font-family: var(--font-display);">Rally Control</h2>
+    <p style="color: var(--text-muted); font-size: 13px;">Panel de Operador</p>
+  </div>
+  <div class="nav-menu">
+    <a href="#" class="nav-item active" data-target="section-tiempos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Control de Tiempos</a>
+    <a href="#" id="btn-logout-op" class="nav-item" style="color: #ff4d5a; margin-top: auto; display:flex; align-items:center; gap:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Cerrar Sesión</a>
+  </div>
+</aside>
+
+  <!-- MAIN WRAPPER -->
+  <main class="main-wrapper">
+    
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <button type="button" class="hamburger-btn" id="btn-toggle-sidebar" aria-label="Abrir menú" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <div class="user-profile">
+        <span>Admin_Central</span>
+        <button id="btn-logout" class="btn-logout">Cerrar Sesión</button>
+      </div>
+    </header>
+
+    <div class="content-container">
+      
+      <!-- ==========================================
+           SECCIÓN: MIS CIRCUITOS
+           ========================================== -->
+      <section id="section-tiempos" class="admin-section active">
+        <!-- LOBBY DE SELECCIÓN DE RALLY -->
+        <div id="tiempos-lobby">
+          <h2 style="font-family: var(--font-display); font-size: 32px; color: var(--text-main); margin-bottom: 8px;">Selecciona una Carrera</h2>
+          <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 32px;">Para registrar tiempos, primero debes ingresar a un Rally específico.</p>
+          <div id="tiempos-lobby-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;">
+            <p>Cargando rallies...</p>
+          </div>
+        </div>
+
+        <!-- ESPACIO DE TRABAJO (TIEMPOS) -->
+        <div id="tiempos-workspace" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 12px; flex-wrap: wrap;">
+            <h2 id="tiempos-workspace-title" style="font-family: var(--font-display); font-size: 28px; color: var(--pe-cyan); display:flex; align-items:center; gap:10px;">Control de Tiempos</h2>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn-secondary" id="btn-shakedown" onclick="window.abrirShakedown()" style="display:inline-flex; align-items:center; gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> <span id="btn-shakedown-label">Shakedown</span></button>
+              <button class="btn-logout" onclick="window.salirRally()" style="color: #ff4d5a; border-color: rgba(255, 77, 90, 0.5); background: rgba(255, 77, 90, 0.1); display:inline-flex; align-items:center; gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Cambiar de Carrera</button>
+            </div>
+          </div>
+          <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 24px;">Registra horas de salida y llegada para este evento.</p>
+
+          <!-- Banner de Modo Shakedown -->
+          <div id="shakedown-banner" style="display: none; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: rgba(0,245,160,0.08); border: 1px solid rgba(0,245,160,0.35); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+            <span id="shakedown-banner-info" style="color: var(--live-green); font-weight: bold; font-size: 14px;"></span>
+            <button class="btn-secondary" onclick="window.salirDeShakedown()" style="padding: 6px 14px; font-size: 13px;">Volver a Etapas / PE</button>
+          </div>
+
+          <!-- Formulario de Registro -->
+          <div class="card-panel" style="margin-bottom: 24px;">
+            <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Registrar Tiempos</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: center;">
+              
+              <!-- El select original oculto para mantener compatibilidad con JS existente -->
+              
+  <div class="form-group" style="display: none;">
+    <label class="form-label">Circuito / Rally</label>
+    <select id="tiempo-rally-select" class="form-control">
+      <!-- To be filled via JS -->
+    </select>
+  </div>
+  <div class="form-group" style="grid-column: span 2;">
+    <h3 id="operador-rally-name" style="color: var(--accent-primary); margin-bottom: 0; padding-top: 14px;">Cargando Rally...</h3>
+  </div>
+
+
+              <div class="form-group">
+                <label class="form-label">Etapa</label>
+                <select id="tiempo-etapa-select" class="form-control" onchange="window.filtrarRecorridosPorEtapa()">
+                  <option value="">Selecciona Etapa...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Prueba Especial (PE)</label>
+                <select id="tiempo-recorrido-select" class="form-control" onchange="window.limpiarFormTiempos()">
+                  <option value="">Selecciona PE...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nº de Vehículo</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="number" id="tiempo-numero-input" class="form-control" placeholder="Ej. 50" onkeydown="window.buscarAutoPorNumero(event)" style="font-family: var(--font-mono); font-size: 18px; font-weight: bold; color: var(--live-green);">
+                  <button class="btn-secondary" onclick="window.buscarAutoPorNumero({key:'Enter'})" style="padding: 0 16px; display:inline-flex; align-items:center;" aria-label="Buscar vehículo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                </div>
+              </div>
+              <div class="form-group" id="tiempo-vuelta-group" style="display: none;">
+                <label class="form-label" id="tiempo-vuelta-label">Vuelta</label>
+                <input type="number" id="tiempo-vuelta-input" class="form-control" min="1" value="1" style="font-family: var(--font-mono); font-size: 18px; font-weight: bold;" onchange="window.onVueltaChange()">
+              </div>
+            </div>
+          <div id="tiempo-piloto-info" style="font-size: 14px; margin-top: 16px; font-weight: bold; color: var(--accent-primary); text-align: right;"></div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+            <div class="form-group">
+              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Hora Salida (HH:MM)</label>
+              <div class="time-display-container">
+                <input type="text" id="sal-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'sal-mm', 23); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, null)">
+                <span class="colon">:</span>
+                <input type="text" id="sal-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'lle-hh', 59); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
+                <span class="colon">:</span>
+                <input type="text" class="readonly" value="00" readonly tabindex="-1">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Hora Llegada (HH:MM:SS.cc)</label>
+              <div class="time-display-container" style="border-color: rgba(0, 245, 160, 0.3);">
+                <input type="text" id="lle-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'lle-mm', 23); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')" style="color: #00F5A0;">
+                <span class="colon">:</span>
+                <input type="text" id="lle-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'lle-ss', 59); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-hh')" style="color: #00F5A0;">
+                <span class="colon">:</span>
+                <input type="text" id="lle-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, 'lle-cc', 59); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-mm')" style="color: #00F5A0;">
+                <span class="dot">.</span>
+                <input type="text" id="lle-cc" maxlength="2" placeholder="cc" oninput="window.autoTabTime(this, null, 99); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'lle-ss')" style="color: #00F5A0;">
+              </div>
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <button type="button" id="btn-no-largo" class="btn-secondary" onclick="window.toggleEstadoEspecialLlegada('no_presentado')" style="flex:1; padding:6px; font-size:11px;">No Largó</button>
+                <button type="button" id="btn-abandono" class="btn-secondary" onclick="window.toggleEstadoEspecialLlegada('abandono')" style="flex:1; padding:6px; font-size:11px;">Abandono</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="tiempo-preview" style="margin-top: 16px; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 8px; font-family: var(--font-mono); font-size: 14px; text-align: center; color: var(--text-muted);">Ingresa salida y llegada para ver el cálculo.</div>
+
+          <button id="btn-guardar-tiempo" class="btn-primary" onclick="window.guardarTiempo()" style="width: 100%; margin-top: 16px; padding: 12px; font-size: 16px; display:inline-flex; align-items:center; justify-content:center; gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg><span id="btn-guardar-tiempo-label">Registrar Tiempo</span></button>
+        </div>
+
+        <!-- PENALIZACIONES -->
+        <div class="card-panel" style="margin-bottom: 24px; border: 1px solid rgba(255, 152, 0, 0.3);">
+          <h3 style="color: #ff9800; margin-bottom: 16px; display:flex; align-items:center; gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> Penalización</h3>
+          <p id="penal-piloto-info" style="color: var(--text-muted); font-size: 13px; margin-bottom: 4px;">Selecciona un vehículo arriba para aplicar penalización.</p>
+          <p id="penal-total-info" style="color: #ff9800; font-size: 13px; font-weight: bold; margin-bottom: 12px; min-height: 16px;"></p>
+
+
+          <div style="display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-top: 16px;">
+            <!-- Tiempo personalizado MM:SS -->
+            <div class="form-group">
+              <label class="form-label" style="font-size: 11px;">Personalizado (MM:SS)</label>
+              <div class="time-display-container" style="min-width: 90px;">
+                <input type="text" id="penal-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'penal-ss', 99)" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, null)" style="color:#ff9800;">
+                <span class="colon">:</span>
+                <input type="text" id="penal-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, null, 59)" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'penal-mm')" style="color:#ff9800;">
+              </div>
+            </div>
+
+            <!-- Motivo -->
+            <div class="form-group">
+              <label class="form-label" style="font-size: 11px;">Motivo</label>
+              <select id="penal-motivo" class="form-control" onchange="window.toggleMotivoLibre()">
+                <option value="Adelanto de largada">Adelanto de largada</option>
+                <option value="Pisada con otra categoría">Pisada con otra categoría</option>
+                <option value="Exceso de velocidad en enlace">Exceso de velocidad en enlace</option>
+                <option value="Incumplimiento de normas">Incumplimiento de normas</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+
+            <!-- Motivo libre (solo si Motivo = Otro) -->
+            <div class="form-group" id="penal-motivo-otro-group" style="display:none;">
+              <label class="form-label" style="font-size: 11px;">Especifica el motivo</label>
+              <input type="text" id="penal-motivo-otro" class="form-control" placeholder="Escribe el motivo..." maxlength="200" style="min-width: 220px;">
+            </div>
+
+            <!-- Botón Aplicar -->
+            <div class="form-group">
+              <label class="form-label" style="font-size: 11px;">&nbsp;</label>
+              <button id="btn-penal-aplicar" class="btn-primary" disabled title="Busca un vehículo y selecciona una PE primero." onclick="window.aplicarPenalizacionCustom()" style="padding: 10px 16px; font-size: 14px; background: #ff9800; border-color: #ff9800; white-space: nowrap; display:inline-flex; align-items:center; gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg> Aplicar</button>
+            </div>
+          </div>
+
+          <!-- Tabla de penalizaciones existentes -->
+          <div id="penal-lista-container" style="margin-top: 16px; display: none;">
+            <h4 style="color: var(--text-muted); font-size: 13px; margin-bottom: 8px;">Penalizaciones aplicadas a este vehículo en esta PE:</h4>
+            <table class="data-table" style="font-size: 13px;">
+              <thead>
+                <tr>
+                  <th>Tiempo</th>
+                  <th>Motivo</th>
+                  <th>Fecha</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="penal-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PUNTOS DE CONTROL (solo circuitos con puntos definidos) -->
+        <div class="card-panel" id="pasos-control-panel" style="margin-bottom: 24px; border: 1px solid rgba(0,245,160,0.3); display: none;">
+          <h3 style="color: var(--live-green); margin-bottom: 16px; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+            Puntos de Control
+          </h3>
+          <p id="pasos-control-info" style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Selecciona un vehículo arriba para registrar su paso por un punto de control (solo verificación, no afecta el tiempo).</p>
+
+          <div style="display: flex; gap: 12px; align-items: end; flex-wrap: wrap;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 11px;">Punto de Control</label>
+              <select id="pasos-control-select" class="form-control"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 11px;">&nbsp;</label>
+              <button id="btn-registrar-paso" class="btn-primary" disabled title="Busca un vehículo primero." onclick="window.registrarPasoControl()" style="padding: 10px 16px; font-size: 14px; background: var(--live-green); color:black; font-weight:bold; white-space: nowrap;">Registrar Paso (ahora)</button>
+            </div>
+          </div>
+
+          <div id="pasos-control-lista-container" style="margin-top: 16px; display: none;">
+            <h4 style="color: var(--text-muted); font-size: 13px; margin-bottom: 8px;">Pasos registrados en esta vuelta:</h4>
+            <table class="data-table" style="font-size: 13px;">
+              <thead><tr><th>Punto de Control</th><th>Hora de Paso</th></tr></thead>
+              <tbody id="pasos-control-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Clasificación -->
+        <div class="card-panel">
+          <h3 style="color: #ff9800; margin-bottom: 16px;">Clasificación en Vivo de la Etapa</h3>
+          <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+            <div class="form-group" style="flex: 1;">
+              <select id="clasificacion-categoria-select" class="form-control" onchange="window.filtrarClasificacion()">
+                <option value="ALL">Todas las Clases</option>
+              </select>
+            </div>
+            <button class="btn-secondary" onclick="window.cargarClasificacion()" style="padding: 0 16px; display:inline-flex; align-items:center; gap:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Pos.</th>
+                  <th>#</th>
+                  <th>Piloto</th>
+                  <th>Clase</th>
+                  <th>Salida</th>
+                  <th>Llegada</th>
+                  <th>T. Bruto</th>
+                  <th>Penal.</th>
+                  <th>T. Neto</th>
+                  <th>Dif.</th>
+                  <th>Vel. Prom.</th>
+                </tr>
+              </thead>
+              <tbody id="clasificacion-tbody">
+                <tr><td colspan="11" style="text-align: center; color: var(--text-muted);">Selecciona un Recorrido para ver la clasificación.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          </div>
+        </div>
+        <!-- END OF TIEMPOS WORKSPACE -->
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module">
+    import { supabase } from './supabase_config.js';
+
+    // 1. Verificación de Autenticación Real
+
+    // Selector de rally para operadores sin restricción (rally_id = null = "Todos los Rallies").
+    // Es el mismo patrón que usa admin_dashboard.html para "Selecciona una Carrera".
+    window.mostrarLobbyOperador = async function() {
+      document.getElementById('tiempos-lobby').style.display = 'block';
+      document.getElementById('tiempos-workspace').style.display = 'none';
+
+      const grid = document.getElementById('tiempos-lobby-grid');
+      grid.innerHTML = '<p>Cargando rallies...</p>';
+
+      const { data, error } = await supabase.schema('rally').from('rallies')
+        .select('id, nombre, created_at, tipo_evento')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        grid.innerHTML = `<p style="color:#ff4d5a;">Error al cargar rallies: ${escapeHtml(error.message)}</p>`;
+        return;
+      }
+      if (!data || data.length === 0) {
+        grid.innerHTML = '<p style="color: var(--text-muted);">No hay rallies creados todavía.</p>';
+        return;
+      }
+
+      grid.innerHTML = data.map(r => {
+        const fecha = new Date(r.created_at).toLocaleDateString('es-ES');
+        return `
+          <div class="card-panel" style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <h3 style="color: var(--pe-cyan); margin-bottom: 4px; font-family: var(--font-display); font-size: 22px;">${escapeHtml(r.nombre)}</h3>
+              <span style="color: var(--text-muted); font-size: 12px;">Creado: ${fecha}</span>
+            </div>
+            <button class="btn-primary" onclick="window.entrarRally('${r.id}', '${r.nombre.replace(/'/g, "\\'")}', '${r.tipo_evento || 'rally'}')" style="margin-top: auto;">Entrar a esta Carrera</button>
+          </div>
+        `;
+      }).join('');
+    };
+
+    // Se usa cuando un operador sin restricción hace clic en "Cambiar de Carrera"
+    window.initTiemposSection = async function() {
+      await window.mostrarLobbyOperador();
+    };
+
+    async function checkAuth() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = 'admin_login.html';
+          return;
+        }
+
+        // rally_id null = operador sin restricción (acceso a todos los rallies):
+        // se le muestra el selector, igual que en modo admin.
+        const opRallyId = localStorage.getItem('operator_rally_id');
+        if (!opRallyId) {
+          await window.mostrarLobbyOperador();
+          return;
+        }
+
+        // rally_id definido = operador fijo a esa carrera: entra directo, sin selector.
+        const { data: rData, error } = await supabase.schema('rally').from('rallies').select('nombre, tipo_evento').eq('id', opRallyId).maybeSingle();
+
+        if (error) {
+          window.toast('Error de base de datos al buscar tu rally: ' + error.message, 'error');
+          return;
+        }
+
+        if (rData) {
+          window.entrarRally(opRallyId, rData.nombre, rData.tipo_evento);
+
+          // Ocultar botón de "Cambiar de Carrera" (el operador está fijo a su rally)
+          const btnSalir = document.querySelector('button[onclick="window.salirRally()"]');
+          if (btnSalir) btnSalir.style.display = 'none';
+        } else {
+          window.toast('El rally asignado ya no existe o no tienes permiso.', 'error', { duracion: 6000 });
+          await supabase.auth.signOut();
+          setTimeout(() => { window.location.href = 'admin_login.html'; }, 1500);
+        }
+      } catch (e) {
+        window.toast('Error inesperado: ' + e.message, 'error');
+      }
+    }
+    checkAuth();
+
+    document.getElementById('btn-logout-op').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = 'index.html';
+    });
+
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = 'index.html';
+    });
+
+    // Cajón de sidebar en móvil (pantallas angostas, uso trackside en el auto)
+    const appSidebar = document.getElementById('app-sidebar');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+
+    function closeSidebar() {
+      appSidebar.classList.remove('mobile-open');
+      sidebarBackdrop.classList.remove('visible');
+      btnToggleSidebar.setAttribute('aria-expanded', 'false');
+    }
+    function openSidebar() {
+      appSidebar.classList.add('mobile-open');
+      sidebarBackdrop.classList.add('visible');
+      btnToggleSidebar.setAttribute('aria-expanded', 'true');
+    }
+    btnToggleSidebar.addEventListener('click', () => {
+      appSidebar.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
+    });
+    sidebarBackdrop.addEventListener('click', closeSidebar);
+    appSidebar.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', closeSidebar));
+
+    // ==========================================
+    // SECCIÓN: CONTROL DE TIEMPOS
+    // ==========================================
+    let tiemposRecorridosCache = [];
+    let tiempoCurrentInscripcion = null;
+    let tiemposCurrentClasificacion = [];
+
+    // Etiqueta dinámica del tramo de práctica no oficial: en circuitos se llama
+    // "Clasificación" (una o más vueltas para definir el orden de salida, no
+    // afecta el tiempo oficial); en rallies clásicos sigue siendo "Shakedown".
+    window.actualizarLabelShakedown = function() {
+      const esCircuito = window.adminCurrentTipoEvento === 'circuito';
+      const label = esCircuito ? 'Clasificación' : 'Shakedown';
+      const labelEl = document.getElementById('btn-shakedown-label');
+      if (labelEl) labelEl.textContent = label;
+    };
+
+    window.entrarRally = function(id, nombre, tipoEvento) {
+      window.adminCurrentRallyId = id;
+      window.adminCurrentTipoEvento = tipoEvento || 'rally';
+      window.actualizarLabelShakedown();
+      document.getElementById('tiempos-lobby').style.display = 'none';
+      document.getElementById('tiempos-workspace').style.display = 'block';
+      document.getElementById('tiempos-workspace-title').innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg> Trabajando en: ' + escapeHtml(nombre);
+
+      const rallyNameEl = document.getElementById('operador-rally-name');
+      if (rallyNameEl) rallyNameEl.textContent = nombre;
+
+      // Simular selección en el dropdown oculto para mantener compatibilidad con JS existente
+      const select = document.getElementById('tiempo-rally-select');
+      select.innerHTML = `<option value="${id}">${nombre}</option>`;
+      select.value = id;
+
+      window.cargarConfigTiempos();
+    };
+
+    window.salirRally = function() {
+      window.adminCurrentRallyId = null;
+      window.adminCurrentTipoEvento = null;
+      document.getElementById('tiempos-workspace').style.display = 'none';
+      document.getElementById('tiempo-rally-select').innerHTML = '<option value="">Selecciona un Circuito...</option>';
+      document.getElementById('tiempo-recorrido-select').innerHTML = '<option value="">Selecciona PE...</option>';
+      document.getElementById('shakedown-banner').style.display = 'none';
+      document.getElementById('tiempo-etapa-select').closest('.form-group').style.display = '';
+      document.getElementById('tiempo-recorrido-select').closest('.form-group').style.display = '';
+      window.shakedownEtapaId = null;
+      window.shakedownRecorridoData = null;
+      window.limpiarFormTiempos();
+      window.initTiemposSection();
+    };
+
+    window.cargarConfigTiempos = async function() {
+      const rallyId = document.getElementById('tiempo-rally-select').value;
+      const etapaSelect = document.getElementById('tiempo-etapa-select');
+      const recSelect = document.getElementById('tiempo-recorrido-select');
+
+      etapaSelect.innerHTML = '<option value="">Selecciona Etapa...</option>';
+      recSelect.innerHTML = '<option value="">Selecciona PE...</option>';
+      tiemposRecorridosCache = [];
+      window.tiemposTodosRecorridosCache = [];
+
+      if(!rallyId) return;
+
+      etapaSelect.innerHTML = '<option value="">Cargando Etapas...</option>';
+
+      // El Shakedown se maneja aparte (botón dedicado), nunca se mezcla con las Etapas oficiales.
+      await window.cargarShakedownInfo(rallyId);
+
+      const { data: etapas } = await supabase.schema('rally').from('etapas').select('id, nombre').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero');
+      if(!etapas || etapas.length === 0) {
+        etapaSelect.innerHTML = '<option value="">No hay Cronograma generado</option>';
+        return;
+      }
+
+      etapaSelect.innerHTML = '<option value="">Selecciona Etapa...</option>';
+      for(let etapa of etapas) {
+        etapaSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
+        
+        const { data: recorridos, error } = await supabase.schema('rally').from('recorridos').select('id, nombre, distancia_km, etapa_id, numero_vueltas').eq('etapa_id', etapa.id).is('deleted_at', null).order('numero');
+        if(recorridos) {
+          recorridos.forEach(r => {
+            r.etapa_nombre = etapa.nombre;
+            r.distancia = r.distancia_km; // Map for later use
+            window.tiemposTodosRecorridosCache.push(r);
+          });
+        }
+      }
+
+      // Cargar inscritos y cronograma para auto-rellenar
+      window.tiemposInscritosCache = [];
+      window.tiemposCronogramaCache = null;
+
+      const { data: inscritos } = await supabase.schema('rally').from('inscripciones').select(`
+        id, numero, categoria_id, manga_id,
+        piloto:pilotos(nombre, apellido),
+        categoria:categorias(nombre, codigo),
+        manga:mangas(nombre)
+      `).eq('rally_id', rallyId).is('deleted_at', null).order('numero');
+      
+      const { data: rallyData } = await supabase.schema('rally').from('rallies').select('cronograma_filas').eq('id', rallyId).maybeSingle();
+      if(rallyData) window.tiemposCronogramaCache = rallyData.cronograma_filas;
+
+      if (inscritos) {
+        window.tiemposInscritosCache = inscritos;
+        console.log('Inscritos cargados:', inscritos.length, inscritos.map(i => '#' + i.numero));
+      }
+    };
+
+    // ==========================================
+    // SHAKEDOWN (tramo de pruebas, no oficial)
+    // ==========================================
+    // El operador solo puede USAR el Shakedown (registrar tiempos), no crearlo:
+    // la creación de etapas/recorridos está reservada a admin/super_admin por RLS.
+    window.shakedownEtapaId = null;
+    window.shakedownRecorridoData = null;
+
+    window.cargarShakedownInfo = async function(rallyId) {
+      window.shakedownEtapaId = null;
+      window.shakedownRecorridoData = null;
+      if (!rallyId) return;
+
+      const { data: etapa } = await supabase.schema('rally').from('etapas')
+        .select('id').eq('rally_id', rallyId).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
+      if (!etapa) return;
+
+      window.shakedownEtapaId = etapa.id;
+      const { data: recorrido } = await supabase.schema('rally').from('recorridos')
+        .select('*').eq('etapa_id', etapa.id).is('deleted_at', null).maybeSingle();
+      if (recorrido) window.shakedownRecorridoData = recorrido;
+    };
+
+    window.abrirShakedown = function() {
+      const rallyId = document.getElementById('tiempo-rally-select').value;
+      if (!rallyId) return window.toast('Selecciona un Rally primero.', 'warn');
+
+      const label = window.adminCurrentTipoEvento === 'circuito' ? 'Clasificación' : 'Shakedown';
+
+      if (!window.shakedownRecorridoData) {
+        return window.toast(`El administrador aún no configuró la ${label} para este rally.`, 'warn');
+      }
+
+      window.entrarModoShakedown();
+    };
+
+    window.entrarModoShakedown = function() {
+      const rec = window.shakedownRecorridoData;
+      if (!rec) return;
+
+      const esCircuito = window.adminCurrentTipoEvento === 'circuito';
+      const label = esCircuito ? 'Clasificación' : 'Shakedown';
+      const unidad = esCircuito ? 'vueltas' : 'intentos';
+
+      rec.distancia = rec.distancia_km;
+      rec.es_shakedown = true;
+      const existingIdx = tiemposRecorridosCache.findIndex(r => r.id === rec.id);
+      if (existingIdx === -1) tiemposRecorridosCache.push(rec);
+      else tiemposRecorridosCache[existingIdx] = rec;
+
+      document.getElementById('tiempo-etapa-select').closest('.form-group').style.display = 'none';
+      document.getElementById('tiempo-recorrido-select').closest('.form-group').style.display = 'none';
+
+      const recSelect = document.getElementById('tiempo-recorrido-select');
+      recSelect.innerHTML = `<option value="${rec.id}">${label}</option>`;
+      recSelect.value = rec.id;
+
+      document.getElementById('shakedown-banner').style.display = 'flex';
+      document.getElementById('shakedown-banner-info').textContent =
+        `Modo ${label} — ${rec.lugar_inicio} — ${rec.numero_vueltas || 1} ${unidad} por vehículo (no oficial)`;
+
+      window.limpiarFormTiempos();
+    };
+
+    window.salirDeShakedown = function() {
+      document.getElementById('shakedown-banner').style.display = 'none';
+      document.getElementById('tiempo-etapa-select').closest('.form-group').style.display = '';
+      document.getElementById('tiempo-recorrido-select').closest('.form-group').style.display = '';
+      document.getElementById('tiempo-recorrido-select').innerHTML = '<option value="">Selecciona PE...</option>';
+      window.limpiarFormTiempos();
+    };
+
+    window.filtrarRecorridosPorEtapa = function() {
+      const etapaId = document.getElementById('tiempo-etapa-select').value;
+      const recSelect = document.getElementById('tiempo-recorrido-select');
+      
+      recSelect.innerHTML = '<option value="">Selecciona PE...</option>';
+      window.limpiarFormTiempos(); // Clear form since PE changed
+      tiemposRecorridosCache = []; // Clear the active cache
+      
+      if (!etapaId) return;
+      
+      const recorridosEtapa = (window.tiemposTodosRecorridosCache || []).filter(r => r.etapa_id === etapaId);
+      
+      recorridosEtapa.forEach(r => {
+        tiemposRecorridosCache.push(r);
+        recSelect.innerHTML += `<option value="${r.id}">${r.nombre} (${r.distancia_km} km)</option>`;
+      });
+      
+      if(tiemposRecorridosCache.length === 0) {
+        recSelect.innerHTML = '<option value="">No hay tramos en esta Etapa</option>';
+      }
+    };
+
+    window.filtrarPilotosPorCategoria = function() {
+      // Obsoleto: ahora buscamos directamente por número
+      window.limpiarFormTiempos();
+    };
+
+    window.buscarAutoPorNumero = function(event) {
+      if (event.key !== 'Enter' && event.type !== 'click') return;
+      if (event.preventDefault) event.preventDefault();
+      
+      const numInput = document.getElementById('tiempo-numero-input').value.trim();
+      if(!numInput) return;
+      
+      const rallyId = document.getElementById('tiempo-rally-select').value;
+      if (!rallyId) {
+        document.getElementById('tiempo-piloto-info').innerText = 'Selecciona un Rally primero.';
+        document.getElementById('tiempo-piloto-info').style.color = 'var(--pe-yellow)';
+        return;
+      }
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+      if (!recId) {
+        document.getElementById('tiempo-piloto-info').innerText = 'Selecciona una Prueba Especial (PE) primero.';
+        document.getElementById('tiempo-piloto-info').style.color = 'var(--pe-yellow)';
+        return;
+      }
+
+      const numVal = parseInt(numInput, 10);
+      const coincidencias = (window.tiemposInscritosCache || []).filter(i => parseInt(i.numero, 10) === numVal);
+
+      if (coincidencias.length > 1) {
+        // El mismo Nº compite en varias clases (circuito multi-clase): que elijan cuál.
+        window.mostrarSelectorClasePorNumero(coincidencias);
+      } else if (coincidencias.length === 1) {
+        window.seleccionarInscrito(coincidencias[0].id);
+        document.getElementById('sal-hh').focus();
+      } else {
+        document.getElementById('tiempo-piloto-info').innerText = 'Vehículo #' + numInput + ' no encontrado en este Rally.';
+        document.getElementById('tiempo-piloto-info').style.color = '#ff4d5a';
+        window.limpiarFormTiemposParcial();
+      }
+    };
+
+    // Un mismo Nº de coche puede tener varias inscripciones (una por clase) en
+    // circuitos multi-clase. En vez de adivinar cuál, se muestra un selector.
+    window.mostrarSelectorClasePorNumero = function(coincidencias) {
+      window.limpiarFormTiemposParcial();
+      const opciones = coincidencias.map(i => {
+        const cat = i.categoria ? (i.categoria.codigo || i.categoria.nombre) : '?';
+        const p = i.piloto ? `${i.piloto.nombre} ${i.piloto.apellido}` : 'Desconocido';
+        return `<option value="${i.id}">${escapeHtml(cat)} — ${escapeHtml(p)}</option>`;
+      }).join('');
+      const info = document.getElementById('tiempo-piloto-info');
+      info.innerHTML = `Este número compite en varias clases. Elige cuál:
+        <select id="tiempo-clase-selector" class="form-control" style="display:inline-block; width:auto; margin-left:8px;" onchange="window.seleccionarInscrito(this.value); document.getElementById('sal-hh').focus();">
+          <option value="">Selecciona...</option>${opciones}
+        </select>`;
+      info.style.color = 'var(--pe-yellow, #ffb020)';
+    };
+
+    // Estado especial de la llegada: null (normal) | 'no_presentado' (No Largó) | 'abandono'.
+    // Mientras esté activo, los 4 campos de Hora Llegada se deshabilitan y no se
+    // guarda tiempo_bruto/tiempo_neto -- el piloto queda marcado sin tiempo.
+    window.tiempoEstadoEspecial = null;
+
+    window.toggleEstadoEspecialLlegada = function(estado) {
+      window.tiempoEstadoEspecial = (window.tiempoEstadoEspecial === estado) ? null : estado;
+      window.actualizarBotonesEstadoEspecial();
+      window.actualizarPreviewTiempo();
+    };
+
+    window.actualizarBotonesEstadoEspecial = function() {
+      const activo = !!window.tiempoEstadoEspecial;
+      ['lle-hh', 'lle-mm', 'lle-ss', 'lle-cc'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = activo;
+        if (activo) el.value = '';
+      });
+      const btnNL = document.getElementById('btn-no-largo');
+      const btnAB = document.getElementById('btn-abandono');
+      if (btnNL) {
+        btnNL.style.background = window.tiempoEstadoEspecial === 'no_presentado' ? '#ff9800' : '';
+        btnNL.style.color = window.tiempoEstadoEspecial === 'no_presentado' ? '#000' : '';
+      }
+      if (btnAB) {
+        btnAB.style.background = window.tiempoEstadoEspecial === 'abandono' ? '#ff4d5a' : '';
+        btnAB.style.color = window.tiempoEstadoEspecial === 'abandono' ? '#fff' : '';
+      }
+    };
+
+    window.limpiarFormTiemposParcial = function() {
+      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc'].forEach(id => document.getElementById(id).value = '');
+      tiempoCurrentInscripcion = null;
+      window.tiempoCurrentTiempoId = null;
+      window.tiempoEstadoEspecial = null;
+      window.actualizarBotonesEstadoEspecial();
+      window.actualizarPreviewTiempo();
+      if (window.actualizarEstadoPenalizacion) window.actualizarEstadoPenalizacion();
+      if (window.actualizarEstadoPasoControl) window.actualizarEstadoPasoControl();
+    };
+
+    window.limpiarFormTiempos = function() {
+      const inputNum = document.getElementById('tiempo-numero-input');
+      if(inputNum) inputNum.value = '';
+      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('tiempo-piloto-info').innerText = '';
+      tiempoCurrentInscripcion = null;
+      window.tiempoCurrentTiempoId = null;
+      window.tiempoEstadoEspecial = null;
+      window.actualizarBotonesEstadoEspecial();
+      window.actualizarPreviewTiempo();
+      if (window.actualizarEstadoPenalizacion) window.actualizarEstadoPenalizacion();
+      if (window.actualizarEstadoPasoControl) window.actualizarEstadoPasoControl();
+
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+
+      // Mostrar el selector de Vuelta solo si el recorrido seleccionado es de un circuito
+      const recData = (tiemposRecorridosCache || []).find(r => r.id === recId);
+      const vueltaGroup = document.getElementById('tiempo-vuelta-group');
+      const vueltaInput = document.getElementById('tiempo-vuelta-input');
+      if (recData && recData.numero_vueltas) {
+        vueltaGroup.style.display = '';
+        vueltaInput.max = recData.numero_vueltas;
+        vueltaInput.value = 1;
+        const unidadEtiqueta = (recData.es_shakedown && recData.nombre !== 'Clasificación') ? 'Intento' : 'Vuelta';
+        document.getElementById('tiempo-vuelta-label').textContent = `${unidadEtiqueta} (de ${recData.numero_vueltas})`;
+      } else {
+        vueltaGroup.style.display = 'none';
+        vueltaInput.value = 1;
+      }
+
+      window.cargarPuntosControl(recId);
+
+      if (recId) {
+        window.cargarClasificacion();
+      } else {
+        document.getElementById('clasificacion-tbody').innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted);">Selecciona un Recorrido para ver la clasificación.</td></tr>';
+      }
+    };
+
+    // Al cambiar de vuelta con un vehículo ya seleccionado, recarga los tiempos de esa vuelta.
+    window.onVueltaChange = function() {
+      const vueltaInput = document.getElementById('tiempo-vuelta-input');
+      let v = parseInt(vueltaInput.value, 10) || 1;
+      const max = parseInt(vueltaInput.max, 10);
+      if (v < 1) v = 1;
+      if (max && v > max) v = max;
+      vueltaInput.value = v;
+      if (tiempoCurrentInscripcion) {
+        window.seleccionarInscrito(tiempoCurrentInscripcion.id);
+      }
+    };
+
+    window.autoTabTime = function(input, nextId, max) {
+      let val = input.value.replace(/\D/g, ''); // Solo números
+      
+      if (val.length === 2 && max !== undefined) {
+        let num = parseInt(val, 10);
+        if (num > max) {
+          val = max.toString().padStart(2, '0');
+        }
+      }
+      
+      input.value = val;
+      
+      if (input.value.length === 2 && nextId) {
+        document.getElementById(nextId).focus();
+      }
+    };
+
+    window.validateTimeBlur = function(input, max) {
+       let val = input.value.replace(/\D/g, '');
+       if(val.length === 1) {
+          input.value = val.padStart(2, '0');
+       } else if(val.length === 2) {
+          let num = parseInt(val, 10);
+          if (num > max) {
+             input.value = max.toString().padStart(2, '0');
+          }
+       }
+    };
+
+    window.handleTimeBackspace = function(event, input, prevId) {
+      if (event.key === 'Backspace' && input.value.length === 0 && prevId) {
+        document.getElementById(prevId).focus();
+        event.preventDefault(); // Prevenir que borre en el anterior inmediatamente
+      }
+    };
+
+    window.seleccionarInscrito = function(insId) {
+      document.getElementById('tiempo-piloto-info').innerText = '';
+      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc'].forEach(id => document.getElementById(id).value = '');
+      tiempoCurrentInscripcion = null;
+      window.tiempoEstadoEspecial = null;
+      window.actualizarBotonesEstadoEspecial();
+
+      if(!insId) return;
+
+      const ins = (window.tiemposInscritosCache || []).find(i => i.id === insId);
+      if(!ins) return;
+
+      tiempoCurrentInscripcion = ins;
+      const p = ins.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : 'Desconocido';
+      const c = ins.categoria ? ins.categoria.codigo || ins.categoria.nombre : '';
+      const mangaTxt = ins.manga ? ` | Manga: ${ins.manga.nombre}` : '';
+      document.getElementById('tiempo-piloto-info').innerText = `Vehículo #${ins.numero} | Piloto: ${p} | Cat: ${c}${mangaTxt}`;
+      document.getElementById('tiempo-piloto-info').style.color = 'var(--live-green)';
+
+      // Cargar tiempos existentes si ya están guardados en la BD
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+      const vueltaActual = parseInt(document.getElementById('tiempo-vuelta-input').value, 10) || 1;
+      let loadedFromDB = false;
+      window.tiempoCurrentTiempoId = null;
+
+      if (recId && window.tiemposCurrentVueltaRaw) {
+        const existingTime = window.tiemposCurrentVueltaRaw.find(t => t.inscripcion_id === insId && t.vuelta === vueltaActual);
+        if (existingTime) {
+          window.tiempoCurrentTiempoId = existingTime.id;
+          if (existingTime.hora_salida) {
+            loadedFromDB = true;
+            const timePart = existingTime.hora_salida.split('T')[1].replace('Z',''); // "10:00:00"
+            const parts = timePart.split(':');
+            document.getElementById('sal-hh').value = parts[0] || '';
+            document.getElementById('sal-mm').value = parts[1] || '';
+          }
+          if (existingTime.hora_llegada) {
+            loadedFromDB = true;
+            const timePart = existingTime.hora_llegada.split('T')[1].replace('Z',''); // "10:05:30.99"
+            const parts = timePart.split(':');
+            document.getElementById('lle-hh').value = parts[0] || '';
+            document.getElementById('lle-mm').value = parts[1] || '';
+            if (parts[2]) {
+              const secParts = parts[2].split('.');
+              document.getElementById('lle-ss').value = secParts[0] || '';
+              if (secParts[1]) {
+                document.getElementById('lle-cc').value = secParts[1].substring(0, 2).padEnd(2, '0');
+              } else {
+                document.getElementById('lle-cc').value = '00';
+              }
+            }
+          }
+          if (existingTime.estado === 'no_presentado' || existingTime.estado === 'abandono') {
+            loadedFromDB = true;
+            window.tiempoEstadoEspecial = existingTime.estado;
+            window.actualizarBotonesEstadoEspecial();
+          }
+        }
+      }
+
+      // Auto fill hora salida if exists in cronograma (y si no se cargó de la BD)
+      if (!loadedFromDB && recId && window.tiemposCronogramaCache) {
+        const cronoRow = window.tiemposCronogramaCache.find(r => r.id === insId);
+        if (cronoRow && cronoRow.tiempos && cronoRow.tiempos[recId]) {
+          const parts = cronoRow.tiempos[recId].split(':');
+          if (parts.length >= 2) {
+             document.getElementById('sal-hh').value = parts[0];
+             document.getElementById('sal-mm').value = parts[1];
+          }
+        }
+      }
+
+      // Actualizar panel de penalización
+      document.getElementById('penal-piloto-info').innerText = `Penalización para Vehículo #${ins.numero} — ${p}`;
+      document.getElementById('penal-piloto-info').style.color = 'var(--pe-cyan)';
+      if (recId) {
+        window.cargarPenalizaciones(ins.id, recId);
+        window.cargarPasosControl(ins.id, recId, vueltaActual);
+      }
+      window.actualizarPreviewTiempo();
+      window.actualizarEstadoPenalizacion();
+      window.actualizarEstadoPasoControl();
+    };
+
+    function parseTimeStr(str) {
+      if(!str) return null;
+      const parts = str.split(':');
+      if(parts.length < 3) return null;
+      const secParts = parts[2].split('.');
+      const h = parseInt(parts[0]) || 0;
+      const m = parseInt(parts[1]) || 0;
+      const s = parseInt(secParts[0]) || 0;
+      const msStr = secParts[1] || '0';
+      let ms = parseInt(msStr);
+      if(msStr.length === 1) ms *= 100;
+      else if(msStr.length === 2) ms *= 10;
+      
+      return (h * 3600000) + (m * 60000) + (s * 1000) + ms;
+    }
+
+    function formatTimeMs(totalMs) {
+      if(totalMs === null || isNaN(totalMs)) return '--:--:--.--';
+      let ms = totalMs % 1000;
+      let s = Math.floor(totalMs / 1000) % 60;
+      let m = Math.floor(totalMs / 60000) % 60;
+      let h = Math.floor(totalMs / 3600000);
+
+      const pad = (n) => n.toString().padStart(2, '0');
+      const padMs = (n) => Math.floor(n/10).toString().padStart(2, '0');
+      return `${pad(h)}:${pad(m)}:${pad(s)}.${padMs(ms)}`;
+    }
+
+    // Convierte un interval de Postgres (ej. "00:10:00", "10:00", "00:00:30.5",
+    // "1 day 02:00:00") a milisegundos. Tolerante a null/undefined/formatos raros.
+    function intervalToMs(iv) {
+      if (iv === null || iv === undefined || iv === '') return 0;
+      if (typeof iv === 'number') return iv * 1000; // interval numérico (segundos)
+
+      let str = String(iv).trim();
+      let dayMs = 0;
+
+      const dayMatch = str.match(/(-?\d+)\s+days?/i);
+      if (dayMatch) {
+        dayMs = parseInt(dayMatch[1], 10) * 86400000;
+        str = str.replace(/(-?\d+)\s+days?/i, '').trim();
+      }
+
+      if (!str) return dayMs;
+
+      const isNeg = str.startsWith('-');
+      if (isNeg) str = str.slice(1);
+
+      const parts = str.split(':');
+      let h = 0, m = 0, s = 0, ms = 0;
+
+      if (parts.length >= 3) {
+        h = parseInt(parts[0], 10) || 0;
+        m = parseInt(parts[1], 10) || 0;
+        const secParts = parts[2].split('.');
+        s = parseInt(secParts[0], 10) || 0;
+        if (secParts[1]) {
+          const msStr = secParts[1].padEnd(3, '0').slice(0, 3);
+          ms = parseInt(msStr, 10) || 0;
+        }
+      } else if (parts.length === 2) {
+        m = parseInt(parts[0], 10) || 0;
+        const secParts = parts[1].split('.');
+        s = parseInt(secParts[0], 10) || 0;
+        if (secParts[1]) {
+          const msStr = secParts[1].padEnd(3, '0').slice(0, 3);
+          ms = parseInt(msStr, 10) || 0;
+        }
+      } else if (parts.length === 1 && parts[0]) {
+        s = parseInt(parts[0], 10) || 0;
+      }
+
+      const total = (h * 3600000) + (m * 60000) + (s * 1000) + ms;
+      return dayMs + (isNeg ? -total : total);
+    }
+
+    // ms -> "MM:SS" o "H:MM:SS" según magnitud, sin signo. Para listas de penalización.
+    function formatPenalMs(ms) {
+      if (!ms || ms <= 0) return '0:00';
+      const totalSec = Math.round(ms / 1000);
+      const s = totalSec % 60;
+      const m = Math.floor(totalSec / 60) % 60;
+      const h = Math.floor(totalSec / 3600);
+      const pad = (n) => n.toString().padStart(2, '0');
+      return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+    }
+
+    // ms -> "+2:30" con signo explícito. Para la columna "Penal." de la clasificación.
+    function formatPenalSigned(ms) {
+      if (!ms || ms <= 0) return '–';
+      return `+${formatPenalMs(ms)}`;
+    }
+
+    // Diferencia contra el líder para la columna "Dif.". ms ya viene como (tiempo - líder).
+    function formatDiffMs(ms) {
+      if (ms === null || ms === undefined || isNaN(ms)) return '-';
+      if (ms <= 0) return 'LÍDER';
+      if (ms < 60000) return `+${(ms / 1000).toFixed(2)}s`;
+      const totalSec = ms / 1000;
+      const m = Math.floor(totalSec / 60);
+      const s = (totalSec % 60).toFixed(2).padStart(5, '0');
+      return `+${m}:${s}`;
+    }
+
+    // Escapa texto libre (motivos, nombres) antes de inyectarlo por innerHTML.
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ==========================================
+    // SISTEMA DE NOTIFICACIONES (toasts, no bloqueante)
+    // ==========================================
+    (function() {
+      let container = null;
+      function ensureContainer() {
+        if (container && document.body.contains(container)) return container;
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = 'position:fixed; bottom:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; align-items:flex-end; pointer-events:none;';
+        document.body.appendChild(container);
+        return container;
+      }
+
+      const SVG_OK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+      const SVG_WARN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+      const SVG_ERROR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+      const SVG_INFO = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+
+      const ESTILOS = {
+        ok:    { border: '#00F5A0', icon: SVG_OK },
+        warn:  { border: '#ff9800', icon: SVG_WARN },
+        error: { border: '#ff4d5a', icon: SVG_ERROR },
+        info:  { border: '#4dd8ff', icon: SVG_INFO }
+      };
+
+      // window.toast(mensaje, tipo, opts) — tipo: 'ok' | 'warn' | 'error' | 'info'
+      // opts.accion = { texto, onClick } agrega un botón (p.ej. "Deshacer").
+      // opts.duracion en ms (default 3000).
+      window.toast = function(msg, tipo, opts) {
+        tipo = tipo || 'info';
+        opts = opts || {};
+        const cont = ensureContainer();
+        const style = ESTILOS[tipo] || ESTILOS.info;
+        const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const el = document.createElement('div');
+        el.setAttribute('role', 'status');
+        el.style.cssText = `
+          background:#14141a; border-left:3px solid ${style.border}; color:#fff;
+          padding:10px 14px; border-radius:8px; font-size:13px; max-width:340px;
+          box-shadow:0 4px 16px rgba(0,0,0,0.4); display:flex; align-items:center; gap:10px;
+          pointer-events:auto; opacity:${reducedMotion ? 1 : 0}; transform:translateY(${reducedMotion ? 0 : 8}px);
+          transition:${reducedMotion ? 'none' : 'opacity 0.2s ease-out, transform 0.2s ease-out'};
+        `;
+
+        const iconEl = document.createElement('span');
+        iconEl.style.cssText = `display:flex; flex-shrink:0; width:16px; height:16px; color:${style.border};`;
+        iconEl.innerHTML = style.icon;
+        el.appendChild(iconEl);
+
+        const span = document.createElement('span');
+        span.style.flex = '1';
+        span.textContent = msg;
+        el.appendChild(span);
+
+        let dismissed = false;
+        const dismiss = () => {
+          if (dismissed) return;
+          dismissed = true;
+          el.style.opacity = '0';
+          el.style.transform = `translateY(8px)`;
+          setTimeout(() => el.remove(), reducedMotion ? 0 : 200);
+        };
+
+        if (opts.accion) {
+          const btn = document.createElement('button');
+          btn.textContent = opts.accion.texto || 'Deshacer';
+          btn.style.cssText = 'background:none; border:1px solid rgba(255,255,255,0.35); color:#fff; border-radius:6px; padding:4px 8px; font-size:12px; cursor:pointer; white-space:nowrap;';
+          btn.onclick = () => { opts.accion.onClick(); dismiss(); };
+          el.appendChild(btn);
+        }
+
+        cont.appendChild(el);
+        requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+
+        setTimeout(dismiss, opts.duracion || 3000);
+        return dismiss;
+      };
+    })();
+
+    // ==========================================
+    // MODAL DE CONFIRMACIÓN (reemplaza confirm() nativo)
+    // ==========================================
+    (function() {
+      let overlay = null;
+
+      function build() {
+        overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.style.cssText = 'z-index:5000; display:none;';
+        overlay.innerHTML = `
+          <div class="modal-content" style="width:440px; text-align:left;">
+            <h3 id="confirm-dialog-title" style="margin:0 0 12px; font-size:19px; color:var(--text-main);"></h3>
+            <p id="confirm-dialog-message" style="color:var(--text-muted); font-size:14px; line-height:1.5; margin-bottom:28px;"></p>
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
+              <button type="button" class="btn-secondary" id="confirm-dialog-cancel"></button>
+              <button type="button" class="btn-primary" id="confirm-dialog-confirm"></button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('mousedown', (e) => {
+          if (e.target === overlay) overlay.dispatchEvent(new CustomEvent('_backdrop'));
+        });
+      }
+
+      // window.confirmDialog(mensaje, { title, confirmText, cancelText, danger }) -> Promise<boolean>
+      window.confirmDialog = function(message, opts) {
+        opts = opts || {};
+        if (!overlay) build();
+
+        const titleEl = overlay.querySelector('#confirm-dialog-title');
+        const msgEl = overlay.querySelector('#confirm-dialog-message');
+        const cancelBtn = overlay.querySelector('#confirm-dialog-cancel');
+        const confirmBtn = overlay.querySelector('#confirm-dialog-confirm');
+
+        titleEl.textContent = opts.title || '¿Confirmar acción?';
+        msgEl.textContent = message;
+        cancelBtn.textContent = opts.cancelText || 'Cancelar';
+        confirmBtn.textContent = opts.confirmText || 'Confirmar';
+        confirmBtn.style.background = opts.danger ? '#ff4d5a' : '';
+        confirmBtn.style.borderColor = opts.danger ? '#ff4d5a' : '';
+
+        overlay.style.display = 'flex';
+
+        return new Promise((resolve) => {
+          function cleanup(result) {
+            overlay.style.display = 'none';
+            cancelBtn.removeEventListener('click', onCancel);
+            confirmBtn.removeEventListener('click', onConfirm);
+            overlay.removeEventListener('_backdrop', onCancel);
+            document.removeEventListener('keydown', onKey);
+            resolve(result);
+          }
+          function onCancel() { cleanup(false); }
+          function onConfirm() { cleanup(true); }
+          function onKey(e) { if (e.key === 'Escape') cleanup(false); }
+
+          cancelBtn.addEventListener('click', onCancel);
+          confirmBtn.addEventListener('click', onConfirm);
+          overlay.addEventListener('_backdrop', onCancel);
+          document.addEventListener('keydown', onKey);
+          confirmBtn.focus();
+        });
+      };
+    })();
+
+    // Penalización acumulada (ms) de una inscripción, según lo cargado por cargarClasificacion().
+    function penalActualMs(inscripcionId) {
+      const entry = (window.penalPorInscripcion || {})[inscripcionId];
+      return entry ? entry.ms : 0;
+    }
+
+    // Recalcula y muestra el preview "Bruto + Penal = Neto" bajo el formulario de tiempos.
+    window.actualizarPreviewTiempo = function() {
+      const el = document.getElementById('tiempo-preview');
+      if (!el) return;
+
+      if (window.tiempoEstadoEspecial) {
+        const texto = window.tiempoEstadoEspecial === 'no_presentado' ? 'No Largó' : 'Abandono';
+        const color = window.tiempoEstadoEspecial === 'no_presentado' ? '#ff9800' : '#ff4d5a';
+        el.innerHTML = `<span style="color:${color}; font-weight:bold;">${texto}</span> — sin tiempo neto.`;
+        return;
+      }
+
+      const sH = document.getElementById('sal-hh').value;
+      const sM = document.getElementById('sal-mm').value;
+      const lH = document.getElementById('lle-hh').value;
+      const lM = document.getElementById('lle-mm').value;
+      const lS = document.getElementById('lle-ss').value;
+      const lC = document.getElementById('lle-cc').value;
+
+      const isSalEmpty = !sH && !sM;
+      const isLleEmpty = !lH && !lM && !lS && !lC;
+
+      if (isSalEmpty || isLleEmpty) {
+        el.innerHTML = '<span style="color: var(--text-muted);">Ingresa salida y llegada para ver el cálculo.</span>';
+        return;
+      }
+
+      const salMs = parseTimeStr(`${sH.padStart(2,'0')}:${sM.padStart(2,'0')}:00.00`);
+      const lleMs = parseTimeStr(`${lH.padStart(2,'0')}:${lM.padStart(2,'0')}:${(lS || '0').padStart(2,'0')}.${(lC || '0').padStart(2,'0')}`);
+
+      if (lleMs < salMs) {
+        el.innerHTML = '<span style="color:#ff4d5a;">Llegada menor a salida.</span>';
+        return;
+      }
+
+      const brutoMs = lleMs - salMs;
+      const penalMs = tiempoCurrentInscripcion ? penalActualMs(tiempoCurrentInscripcion.id) : 0;
+      const netoMs = brutoMs + penalMs;
+      const netoColor = penalMs > 0 ? '#ff9800' : 'var(--pe-cyan)';
+
+      el.innerHTML = `Bruto <b>${formatTimeMs(brutoMs)}</b>` +
+        (penalMs > 0 ? ` &nbsp;+&nbsp; Penal <b style="color:#ff9800;">${formatPenalMs(penalMs)}</b>` : '') +
+        ` &nbsp;=&nbsp; Neto <b style="color:${netoColor};">${formatTimeMs(netoMs)}</b>`;
+    };
+
+    window.guardarTiempo = async function() {
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+      if(!recId) return window.toast('Selecciona el Recorrido (PE).', 'warn');
+      if(!tiempoCurrentInscripcion) return window.toast('Busca e identifica un Auto válido primero.', 'warn');
+
+      const sH = document.getElementById('sal-hh').value;
+      const sM = document.getElementById('sal-mm').value;
+      const isSalEmpty = !sH && !sM;
+      const salStr = isSalEmpty ? null : `${sH.padStart(2,'0')}:${sM.padStart(2,'0')}:00.00`;
+
+      const lH = document.getElementById('lle-hh').value;
+      const lM = document.getElementById('lle-mm').value;
+      const lS = document.getElementById('lle-ss').value;
+      const lC = document.getElementById('lle-cc').value;
+      const isLleEmpty = !lH && !lM && !lS && !lC;
+      const lleStr = (isLleEmpty || window.tiempoEstadoEspecial) ? null : `${lH.padStart(2,'0')}:${lM.padStart(2,'0')}:${lS.padStart(2,'0')}.${lC.padStart(2,'0')}`;
+
+      if(isSalEmpty && isLleEmpty && !window.tiempoEstadoEspecial) {
+        return window.toast('Ingresa al menos el tiempo de salida o de llegada.', 'warn');
+      }
+
+      const salMs = salStr ? parseTimeStr(salStr) : null;
+      const lleMs = lleStr ? parseTimeStr(lleStr) : null;
+
+      if(salMs !== null && lleMs !== null && lleMs < salMs) {
+        return window.toast('La hora de llegada no puede ser menor a la de salida.', 'warn');
+      }
+
+      let brutoMs = null;
+      if (salMs !== null && lleMs !== null) {
+        brutoMs = lleMs - salMs;
+      }
+
+      const penalMs = penalActualMs(tiempoCurrentInscripcion.id);
+      const netoMs = brutoMs !== null ? brutoMs + penalMs : null;
+
+      const recData = tiemposRecorridosCache.find(r => r.id === recId);
+      let velPromedio = 0;
+      if(recData && recData.distancia && netoMs !== null && netoMs > 0) {
+        const horas = netoMs / 3600000;
+        velPromedio = (recData.distancia / horas).toFixed(2);
+      }
+
+      const brutoInterval = (brutoMs !== null) ? formatTimeMs(brutoMs) : null;
+      const netoInterval  = (netoMs !== null) ? formatTimeMs(netoMs) : null;
+      const penalInterval = formatTimeMs(penalMs);
+      const hoy = new Date().toISOString().split('T')[0];
+      const horaSalidaISO = salStr ? `${hoy}T${salStr}Z` : null;
+      const horaLlegadaISO = lleStr ? `${hoy}T${lleStr}Z` : null;
+
+      const btnGuardar = document.getElementById('btn-guardar-tiempo');
+      const btnGuardarLabel = document.getElementById('btn-guardar-tiempo-label');
+      if (btnGuardar) { btnGuardar.disabled = true; if (btnGuardarLabel) btnGuardarLabel.textContent = 'Guardando...'; }
+
+      try {
+        document.getElementById('clasificacion-tbody').innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--pe-cyan);">Guardando...</td></tr>';
+
+        const vueltaGroupVisible = document.getElementById('tiempo-vuelta-group').style.display !== 'none';
+        const vueltaActual = vueltaGroupVisible
+          ? (parseInt(document.getElementById('tiempo-vuelta-input').value, 10) || 1)
+          : 1;
+
+        const timeData = {
+          inscripcion_id: tiempoCurrentInscripcion.id,
+          recorrido_id: recId,
+          vuelta: vueltaActual,
+          hora_salida: horaSalidaISO,
+          hora_llegada: horaLlegadaISO,
+          tiempo_bruto: brutoInterval,
+          tiempo_penalizacion: penalInterval,
+          tiempo_neto: netoInterval,
+          velocidad_promedio_kmh: velPromedio,
+          estado: window.tiempoEstadoEspecial || 'valido'
+        };
+
+        let insErr;
+        if (window.tiempoCurrentTiempoId) {
+          const { error } = await supabase.schema('rally').from('tiempos').update(timeData).eq('id', window.tiempoCurrentTiempoId);
+          insErr = error;
+        } else {
+          const { error } = await supabase.schema('rally').from('tiempos').insert(timeData);
+          insErr = error;
+        }
+
+        if(insErr) throw insErr;
+
+        const inputNum = document.getElementById('tiempo-numero-input');
+        if(inputNum) {
+          inputNum.value = '';
+          inputNum.focus();
+        }
+        ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc'].forEach(id => document.getElementById(id).value = '');
+        window.tiempoEstadoEspecial = null;
+        window.actualizarBotonesEstadoEspecial();
+        window.actualizarPreviewTiempo();
+        document.getElementById('tiempo-piloto-info').innerText = 'Guardado. Ingresa el siguiente N° de vehículo.';
+        document.getElementById('tiempo-piloto-info').style.color = 'var(--live-green)';
+        window.toast('Tiempo guardado.', 'ok');
+
+        await window.cargarClasificacion();
+
+      } catch(e) {
+        window.toast('Error al guardar tiempo: ' + e.message, 'error');
+        window.cargarClasificacion();
+      } finally {
+        if (btnGuardar) { btnGuardar.disabled = false; if (btnGuardarLabel) btnGuardarLabel.textContent = 'Registrar Tiempo'; }
+      }
+    };
+
+    // ==========================================
+    // PENALIZACIONES
+    // ==========================================
+
+    // Habilita/deshabilita los controles de penalización según haya vehículo + PE seleccionados.
+    window.actualizarEstadoPenalizacion = function() {
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+      const habilitado = !!(tiempoCurrentInscripcion && recId);
+      const motivoDeshabilitado = !recId ? 'Selecciona la Prueba Especial (PE) primero.' : 'Busca un vehículo primero.';
+
+      const btnAplicar = document.getElementById('btn-penal-aplicar');
+      if (btnAplicar) {
+        btnAplicar.disabled = !habilitado;
+        btnAplicar.title = habilitado ? '' : motivoDeshabilitado;
+      }
+    };
+
+    window.toggleMotivoLibre = function() {
+      const sel = document.getElementById('penal-motivo');
+      const group = document.getElementById('penal-motivo-otro-group');
+      group.style.display = (sel.value === 'Otro') ? 'flex' : 'none';
+    };
+
+    // Devuelve el motivo a guardar, o null si falta escribir el motivo libre.
+    function motivoPenalizacionValido() {
+      const sel = document.getElementById('penal-motivo');
+      if (sel.value === 'Otro') {
+        const libre = document.getElementById('penal-motivo-otro').value.trim();
+        return libre || null;
+      }
+      return sel.value;
+    }
+
+    window.aplicarPenalizacionCustom = async function() {
+      const btnEl = document.getElementById('btn-penal-aplicar');
+      const mm = parseInt(document.getElementById('penal-mm').value, 10) || 0;
+      const ss = parseInt(document.getElementById('penal-ss').value, 10) || 0;
+      const segundos = mm * 60 + ss;
+
+      if (segundos <= 0) {
+        window.toast('Ingresa minutos y/o segundos de penalización.', 'warn');
+        document.getElementById('penal-mm').focus();
+        return;
+      }
+
+      const motivo = motivoPenalizacionValido();
+      if (motivo === null) {
+        window.toast('Escribe el motivo antes de aplicar.', 'warn');
+        document.getElementById('penal-motivo-otro').focus();
+        return;
+      }
+
+      await window._insertarPenalizacion(segundos, motivo, btnEl);
+    };
+
+    window._insertarPenalizacion = async function(segundos, motivo, btnEl) {
+      if (!tiempoCurrentInscripcion) { window.toast('Primero busca un vehículo.', 'warn'); return; }
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+      if (!recId) { window.toast('Selecciona una Prueba Especial (PE).', 'warn'); return; }
+
+      const original = btnEl ? btnEl.innerHTML : null;
+      if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<span class="icon-spin"></span>'; }
+
+      try {
+        const { error } = await supabase.schema('rally').from('penalizaciones').insert({
+          inscripcion_id: tiempoCurrentInscripcion.id,
+          recorrido_id: recId,
+          tipo: 'tiempo',
+          tiempo_penalizacion: `${segundos} seconds`,
+          motivo: motivo
+        });
+
+        if (error) throw error;
+
+        window.toast(`Penalización de +${formatPenalMs(segundos * 1000)} aplicada a Vehículo #${tiempoCurrentInscripcion.numero}.`, 'ok');
+        document.getElementById('penal-mm').value = '';
+        document.getElementById('penal-ss').value = '';
+
+        await window.cargarPenalizaciones(tiempoCurrentInscripcion.id, recId);
+        await window.recalcularNetoDeInscripcion(tiempoCurrentInscripcion.id, recId);
+        await window.cargarClasificacion();
+      } catch(e) {
+        window.toast('Error al aplicar penalización: ' + e.message, 'error');
+      } finally {
+        if (btnEl) { btnEl.disabled = !tiempoCurrentInscripcion; btnEl.innerHTML = original; }
+        window.actualizarEstadoPenalizacion();
+      }
+    };
+
+    window.cargarPenalizaciones = async function(inscripcionId, recorridoId) {
+      const container = document.getElementById('penal-lista-container');
+      const tbody = document.getElementById('penal-tbody');
+      const totalInfo = document.getElementById('penal-total-info');
+
+      if (!inscripcionId || !recorridoId) {
+        container.style.display = 'none';
+        if (totalInfo) totalInfo.innerText = '';
+        return;
+      }
+
+      container.style.display = 'block';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">Cargando...</td></tr>';
+
+      const { data, error } = await supabase.schema('rally').from('penalizaciones')
+        .select('id, tiempo_penalizacion, motivo, created_at')
+        .eq('inscripcion_id', inscripcionId)
+        .eq('recorrido_id', recorridoId)
+        .eq('tipo', 'tiempo')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#ff4d5a;">Error: ${escapeHtml(error.message)}</td></tr>`;
+        return;
+      }
+
+      const lista = data || [];
+      let totalMs = 0;
+
+      if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">Sin penalizaciones registradas.</td></tr>';
+      } else {
+        const rows = lista.map(p => {
+          const ms = intervalToMs(p.tiempo_penalizacion);
+          totalMs += ms;
+          const fecha = new Date(p.created_at).toLocaleString('es-BO', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+          return `<tr>
+            <td style="color: #ff9800; font-weight: bold;">+${formatPenalMs(ms)}</td>
+            <td>${escapeHtml(p.motivo)}</td>
+            <td style="font-size: 11px; color: var(--text-muted);">${fecha}</td>
+            <td><button class="btn-secondary" onclick="window.eliminarPenalizacion('${p.id}')" style="padding: 4px 10px; font-size: 11px; color: #ff4d5a; border-color: rgba(255,77,90,0.4); display:inline-flex; align-items:center; gap:5px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Quitar</button></td>
+          </tr>`;
+        });
+        tbody.innerHTML = rows.join('');
+      }
+
+      totalInfo.innerText = lista.length
+        ? `Penalización total: +${formatPenalMs(totalMs)} (${lista.length} aplicada${lista.length === 1 ? '' : 's'})`
+        : '';
+    };
+
+    window.eliminarPenalizacion = async function(penalId) {
+      const insId = tiempoCurrentInscripcion ? tiempoCurrentInscripcion.id : null;
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+
+      try {
+        const { error } = await supabase.schema('rally').from('penalizaciones')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', penalId);
+
+        if (error) throw error;
+
+        if (insId && recId) {
+          await window.cargarPenalizaciones(insId, recId);
+          await window.recalcularNetoDeInscripcion(insId, recId);
+        }
+        await window.cargarClasificacion();
+
+        window.toast('Penalización eliminada.', 'ok', {
+          duracion: 5000,
+          accion: {
+            texto: 'Deshacer',
+            onClick: async () => {
+              try {
+                const { error: undoErr } = await supabase.schema('rally').from('penalizaciones')
+                  .update({ deleted_at: null })
+                  .eq('id', penalId);
+                if (undoErr) throw undoErr;
+
+                if (insId && recId) {
+                  await window.cargarPenalizaciones(insId, recId);
+                  await window.recalcularNetoDeInscripcion(insId, recId);
+                }
+                await window.cargarClasificacion();
+                window.toast('Penalización restaurada.', 'ok');
+              } catch(undoCatch) {
+                window.toast('Error al deshacer: ' + undoCatch.message, 'error');
+              }
+            }
+          }
+        });
+      } catch(e) {
+        window.toast('Error al eliminar penalización: ' + e.message, 'error');
+      }
+    };
+
+    // ==========================================
+    // PUNTOS DE CONTROL (solo circuitos)
+    // ==========================================
+    window.puntosControlCache = [];
+
+    // Se llama al cambiar de Recorrido: muestra el panel solo si el recorrido tiene
+    // puntos de control definidos (circuitos), y carga el select de puntos.
+    window.cargarPuntosControl = async function(recorridoId) {
+      const panel = document.getElementById('pasos-control-panel');
+      const select = document.getElementById('pasos-control-select');
+      window.puntosControlCache = [];
+
+      if (!recorridoId) { panel.style.display = 'none'; return; }
+
+      const { data, error } = await supabase.schema('rally').from('puntos_control')
+        .select('id, numero, nombre').eq('recorrido_id', recorridoId).is('deleted_at', null).order('numero');
+
+      if (error || !data || data.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      window.puntosControlCache = data;
+      select.innerHTML = data.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('');
+      panel.style.display = '';
+      window.actualizarEstadoPasoControl();
+    };
+
+    window.actualizarEstadoPasoControl = function() {
+      const btn = document.getElementById('btn-registrar-paso');
+      if (!btn) return;
+      const habilitado = !!tiempoCurrentInscripcion && window.puntosControlCache.length > 0;
+      btn.disabled = !habilitado;
+      btn.title = habilitado ? '' : 'Busca un vehículo primero.';
+    };
+
+    window.registrarPasoControl = async function() {
+      if (!tiempoCurrentInscripcion) return window.toast('Busca un vehículo primero.', 'warn');
+      const puntoId = document.getElementById('pasos-control-select').value;
+      if (!puntoId) return window.toast('Selecciona un punto de control.', 'warn');
+
+      const vueltaGroupVisible = document.getElementById('tiempo-vuelta-group').style.display !== 'none';
+      const vuelta = vueltaGroupVisible ? (parseInt(document.getElementById('tiempo-vuelta-input').value, 10) || 1) : 1;
+
+      const btn = document.getElementById('btn-registrar-paso');
+      const original = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = '<span class="icon-spin"></span>';
+
+      try {
+        const { error } = await supabase.schema('rally').from('pasos_control').upsert({
+          inscripcion_id: tiempoCurrentInscripcion.id,
+          punto_control_id: puntoId,
+          vuelta: vuelta,
+          hora_paso: new Date().toISOString()
+        }, { onConflict: 'inscripcion_id,punto_control_id,vuelta' });
+
+        if (error) throw error;
+
+        window.toast('Paso registrado.', 'ok');
+        await window.cargarPasosControl(tiempoCurrentInscripcion.id, document.getElementById('tiempo-recorrido-select').value, vuelta);
+      } catch(e) {
+        window.toast('Error al registrar paso: ' + e.message, 'error');
+      } finally {
+        btn.disabled = !tiempoCurrentInscripcion;
+        btn.innerHTML = original;
+      }
+    };
+
+    window.cargarPasosControl = async function(inscripcionId, recorridoId, vuelta) {
+      const container = document.getElementById('pasos-control-lista-container');
+      const tbody = document.getElementById('pasos-control-tbody');
+      if (!inscripcionId || window.puntosControlCache.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      const { data, error } = await supabase.schema('rally').from('pasos_control')
+        .select('punto_control_id, hora_paso')
+        .eq('inscripcion_id', inscripcionId)
+        .eq('vuelta', vuelta)
+        .is('deleted_at', null);
+
+      if (error) { container.style.display = 'none'; return; }
+
+      container.style.display = 'block';
+      const nombrePorPunto = {};
+      window.puntosControlCache.forEach(p => nombrePorPunto[p.id] = p.nombre);
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color: var(--text-muted);">Sin pasos registrados en esta vuelta.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(p => {
+        const hora = p.hora_paso ? new Date(p.hora_paso).toLocaleTimeString('es-BO') : '-';
+        return `<tr><td>${escapeHtml(nombrePorPunto[p.punto_control_id] || '?')}</td><td style="font-family: var(--font-mono);">${hora}</td></tr>`;
+      }).join('');
+    };
+
+    // Recalcula tiempo_penalizacion/tiempo_neto/velocidad de la fila `tiempos` de una inscripción
+    // sumando sus penalizaciones vigentes sobre el bruto. Neutraliza cualquier trigger de BD que
+    // reste en vez de sumar, porque el frontend sobreescribe el neto justo después.
+    window.recalcularNetoDeInscripcion = async function(inscripcionId, recorridoId) {
+      const { data: penales, error: penalErr } = await supabase.schema('rally').from('penalizaciones')
+        .select('tiempo_penalizacion')
+        .eq('inscripcion_id', inscripcionId)
+        .eq('recorrido_id', recorridoId)
+        .eq('tipo', 'tiempo')
+        .is('deleted_at', null);
+      if (penalErr) throw penalErr;
+
+      const penalMs = (penales || []).reduce((sum, p) => sum + intervalToMs(p.tiempo_penalizacion), 0);
+
+      // Un circuito tiene una fila de 'tiempos' por vuelta para esta misma inscripción+recorrido;
+      // la penalización se aplica al total (no a una vuelta en particular), así que se refleja
+      // en cada fila individualmente (campo informativo, la clasificación suma tiempo_bruto aparte).
+      const { data: tiempoRows, error: tiempoErr } = await supabase.schema('rally').from('tiempos')
+        .select('id, tiempo_bruto')
+        .eq('inscripcion_id', inscripcionId)
+        .eq('recorrido_id', recorridoId)
+        .is('deleted_at', null);
+      if (tiempoErr) throw tiempoErr;
+      if (!tiempoRows || tiempoRows.length === 0) return;
+
+      const recData = (tiemposRecorridosCache || []).find(r => r.id === recorridoId);
+
+      for (const tiempoRow of tiempoRows) {
+        const brutoMs = intervalToMs(tiempoRow.tiempo_bruto);
+        if (!brutoMs) continue;
+
+        const netoMs = brutoMs + penalMs;
+        let velPromedio = 0;
+        if (recData && recData.distancia && netoMs > 0) {
+          velPromedio = (recData.distancia / (netoMs / 3600000)).toFixed(2);
+        }
+
+        const { error: updErr } = await supabase.schema('rally').from('tiempos').update({
+          tiempo_penalizacion: formatTimeMs(penalMs),
+          tiempo_neto: formatTimeMs(netoMs),
+          velocidad_promedio_kmh: velPromedio
+        }).eq('id', tiempoRow.id);
+        if (updErr) throw updErr;
+      }
+    };
+
+    // Atajos de teclado dentro de la sección de Tiempos: Ctrl+S guarda, Ctrl+P enfoca la
+    // penalización, Esc limpia el formulario. No dispara si el foco está en un select/textarea.
+    document.addEventListener('keydown', function(e) {
+      const seccion = document.getElementById('section-tiempos');
+      if (!seccion || !seccion.classList.contains('active')) return;
+
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'select' || tag === 'textarea') return;
+
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        window.guardarTiempo();
+      } else if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        const el = document.getElementById('penal-mm');
+        if (el) el.focus();
+      } else if (e.key === 'Escape') {
+        window.limpiarFormTiempos();
+      }
+    });
+
+    window.cargarClasificacion = async function() {
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+      const tbody = document.getElementById('clasificacion-tbody');
+      if(!recId) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted);">Selecciona un Recorrido para ver la clasificación.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--pe-cyan);">Cargando clasificación...</td></tr>';
+
+      const [tiemposRes, penalRes] = await Promise.all([
+        supabase.schema('rally').from('tiempos').select(`
+          *,
+          inscripcion:inscripciones (
+            numero,
+            piloto:pilotos(nombre, apellido),
+            categoria:categorias(nombre, codigo)
+          )
+        `).eq('recorrido_id', recId).is('deleted_at', null),
+        supabase.schema('rally').from('penalizaciones')
+          .select('id, inscripcion_id, tiempo_penalizacion, motivo, tipo')
+          .eq('recorrido_id', recId).eq('tipo', 'tiempo').is('deleted_at', null)
+      ]);
+
+      const { data, error } = tiemposRes;
+      if(error) {
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #ff5555;">Error: ${error.message}</td></tr>`;
+        return;
+      }
+
+      const penalPorInscripcion = {};
+      (penalRes.data || []).forEach(p => {
+        const entry = penalPorInscripcion[p.inscripcion_id] || { ms: 0, count: 0, motivos: [] };
+        entry.ms += intervalToMs(p.tiempo_penalizacion);
+        entry.count += 1;
+        if (p.motivo) entry.motivos.push(p.motivo);
+        penalPorInscripcion[p.inscripcion_id] = entry;
+      });
+      window.penalPorInscripcion = penalPorInscripcion;
+
+      // Guarda las filas crudas (una por vuelta) para poder buscar el tiempo exacto
+      // de la vuelta seleccionada al elegir un vehículo (ver window.seleccionarInscrito).
+      window.tiemposCurrentVueltaRaw = data || [];
+
+      const recData = (tiemposRecorridosCache || []).find(r => r.id === recId);
+      const esCircuito = !!(recData && recData.numero_vueltas);
+
+      let rows = data || [];
+
+      if (esCircuito) {
+        // Un circuito tiene varias filas de 'tiempos' por inscripción (una por vuelta).
+        // La clasificación agrupa por vehículo: tiempo total = suma de los tiempo_bruto
+        // de todas las vueltas registradas.
+        const porInscripcion = {};
+        rows.forEach(t => {
+          const entry = porInscripcion[t.inscripcion_id] || {
+            inscripcion_id: t.inscripcion_id, inscripcion: t.inscripcion,
+            vueltas: [], sumBrutoMs: 0, tieneBruto: false, primeraVuelta: null, ultimaVuelta: null
+          };
+          entry.vueltas.push(t);
+          const brutoMs = intervalToMs(t.tiempo_bruto);
+          if (brutoMs) { entry.sumBrutoMs += brutoMs; entry.tieneBruto = true; }
+          if (!entry.primeraVuelta || t.vuelta < entry.primeraVuelta.vuelta) entry.primeraVuelta = t;
+          if (!entry.ultimaVuelta || t.vuelta > entry.ultimaVuelta.vuelta) entry.ultimaVuelta = t;
+          porInscripcion[t.inscripcion_id] = entry;
+        });
+
+        rows = Object.values(porInscripcion).map(entry => {
+          entry.vueltas.sort((a, b) => a.vuelta - b.vuelta);
+          return {
+            id: entry.ultimaVuelta.id,
+            inscripcion_id: entry.inscripcion_id,
+            inscripcion: entry.inscripcion,
+            hora_salida: entry.primeraVuelta.hora_salida,
+            hora_llegada: entry.ultimaVuelta.hora_llegada,
+            _sumBrutoMs: entry.tieneBruto ? entry.sumBrutoMs : null,
+            _vueltasCompletas: entry.vueltas.filter(v => intervalToMs(v.tiempo_bruto)).length,
+            _vueltasTotal: recData.numero_vueltas,
+            _vueltasUnidad: (recData.es_shakedown && recData.nombre !== 'Clasificación') ? 'intentos' : 'vueltas'
+          };
+        });
+      }
+
+      tiemposCurrentClasificacion = rows;
+
+      tiemposCurrentClasificacion.forEach(t => {
+        const penal = penalPorInscripcion[t.inscripcion_id];
+        t._brutoMs = (t._sumBrutoMs !== undefined) ? t._sumBrutoMs : intervalToMs(t.tiempo_bruto);
+        t._penalMs = penal ? penal.ms : 0;
+        t._penalN  = penal ? penal.count : 0;
+        t._motivos = penal ? penal.motivos : [];
+        t._netoMs  = t._brutoMs ? t._brutoMs + t._penalMs : null;
+        t._ms      = t._netoMs ?? 999999999;
+      });
+
+      const catSelect = document.getElementById('clasificacion-categoria-select');
+      const currentCat = catSelect.value;
+
+      const uniqueCats = [...new Set(tiemposCurrentClasificacion.map(t => {
+        return t.inscripcion?.categoria?.nombre || 'Sin Categoría';
+      }))].sort();
+
+      let catHtml = '<option value="ALL">Todas las Categorías</option>';
+      uniqueCats.forEach(c => {
+        catHtml += `<option value="${c}">${c}</option>`;
+      });
+      catSelect.innerHTML = catHtml;
+      if(uniqueCats.includes(currentCat)) catSelect.value = currentCat;
+
+      window.filtrarClasificacion();
+      window.actualizarPreviewTiempo();
+    };
+
+    window.filtrarClasificacion = function() {
+      const catFilter = document.getElementById('clasificacion-categoria-select').value;
+      const tbody = document.getElementById('clasificacion-tbody');
+
+      if(tiemposCurrentClasificacion.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted);">No hay tiempos registrados aún en esta prueba.</td></tr>';
+        return;
+      }
+
+      let filtered = tiemposCurrentClasificacion;
+      if(catFilter !== 'ALL') {
+        filtered = filtered.filter(t => (t.inscripcion?.categoria?.nombre || 'Sin Categoría') === catFilter);
+      }
+
+      filtered.sort((a, b) => a._ms - b._ms);
+
+      const liderMs = (filtered.length && filtered[0]._netoMs !== null) ? filtered[0]._netoMs : null;
+
+      const rows = filtered.map((t, i) => {
+        const ins = t.inscripcion;
+        const p = ins?.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : 'Desc.';
+        const c = ins?.categoria ? ins.categoria.nombre : '';
+
+        let hl = t.hora_llegada ? t.hora_llegada.split('T')[1].replace('Z','') : '--:--';
+        let hs = t.hora_salida ? t.hora_salida.split('T')[1].replace('Z','') : '--:--';
+
+        if(hl.includes('+')) hl = hl.split('+')[0];
+        if(hs.includes('+')) hs = hs.split('+')[0];
+
+        if(hl.length > 11) hl = hl.substring(0,11);
+        if(hs.length > 11) hs = hs.substring(0,11);
+
+        const brutoDisplay = t._brutoMs ? formatTimeMs(t._brutoMs) : '--:--:--.--';
+        const netoDisplay  = t._netoMs !== null ? formatTimeMs(t._netoMs) : '--:--:--.--';
+        const penalDisplay = formatPenalSigned(t._penalMs);
+        const difDisplay = (t._netoMs !== null && liderMs !== null) ? formatDiffMs(t._netoMs - liderMs) : '-';
+
+        const penalizada = t._penalN > 0;
+        const rowStyle = penalizada ? 'border-left: 3px solid #ff9800; background: rgba(255,152,0,0.04);' : '';
+        const badge = penalizada
+          ? ` <span title="${escapeHtml(t._motivos.join(' · '))}" style="color:#ff9800; font-size:11px; cursor: help; display:inline-flex; align-items:center; gap:3px; vertical-align:middle;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> ${t._penalN}</span>`
+          : '';
+        const vueltasInfo = t._vueltasTotal
+          ? `<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${t._vueltasCompletas}/${t._vueltasTotal} ${t._vueltasUnidad || 'vueltas'}</div>`
+          : '';
+
+        return `
+          <tr style="${rowStyle}">
+            <td style="font-weight:bold; color:var(--accent-primary);">${i + 1}</td>
+            <td style="font-family: var(--font-mono); font-weight:bold;">${ins?.numero || '-'}${badge}</td>
+            <td>${escapeHtml(p)}${vueltasInfo}</td>
+            <td><span class="badge" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">${escapeHtml(c)}</span></td>
+            <td>${hs}</td>
+            <td>${hl}</td>
+            <td style="font-family: var(--font-mono); color: var(--text-muted);">${brutoDisplay}</td>
+            <td style="font-family: var(--font-mono); color: #ff9800; font-weight:bold;">${penalDisplay}</td>
+            <td style="font-family: var(--font-mono); color: var(--pe-cyan); font-weight:bold; font-size: 15px;">${netoDisplay}</td>
+            <td style="font-family: var(--font-mono); color: ${difDisplay === 'LÍDER' ? 'var(--live-green)' : 'var(--text-muted)'};">${difDisplay}</td>
+            <td>${t.velocidad_promedio_kmh || '-'} km/h</td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = rows.join('');
+    };
+    // --- LÓGICA DE BANDERAS PARA PILOTOS/NAVEGANTES ---
+    window.populateCountryDropdown = async function(selectId, flagImgId) {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      if (select.tomselect) return; // Evitar reinicializar
+      
+      try {
+        const countries = [{"code":"ar","name":"Argentina"},{"code":"bo","name":"Bolivia"},{"code":"br","name":"Brasil"},{"code":"ca","name":"Canadá"},{"code":"cl","name":"Chile"},{"code":"cn","name":"China"},{"code":"co","name":"Colombia"},{"code":"cr","name":"Costa Rica"},{"code":"cu","name":"Cuba"},{"code":"ec","name":"Ecuador"},{"code":"sv","name":"El Salvador"},{"code":"es","name":"España"},{"code":"us","name":"Estados Unidos"},{"code":"fr","name":"Francia"},{"code":"gt","name":"Guatemala"},{"code":"hn","name":"Honduras"},{"code":"it","name":"Italia"},{"code":"jp","name":"Japón"},{"code":"mx","name":"México"},{"code":"ni","name":"Nicaragua"},{"code":"pa","name":"Panamá"},{"code":"py","name":"Paraguay"},{"code":"pe","name":"Perú"},{"code":"pr","name":"Puerto Rico"},{"code":"gb","name":"Reino Unido"},{"code":"do","name":"República Dominicana"},{"code":"uy","name":"Uruguay"},{"code":"ve","name":"Venezuela"}];
+        
+        const optionsData = countries.map(c => ({
+          value: c.name.toUpperCase(),
+          text: c.name,
+          code: c.code
+        }));
+
+        select.innerHTML = '<option value="">Seleccione un país...</option>';
+
+        new TomSelect(select, {
+          valueField: 'value',
+          labelField: 'text',
+          searchField: 'text',
+          options: optionsData,
+          placeholder: 'Seleccione un país...',
+          render: {
+            option: function(data, escape) {
+              return `<div>
+                        <img src="https://flagcdn.com/${escape(data.code)}.svg" style="width: 20px; border-radius: 2px;">
+                        <span>${escape(data.text)}</span>
+                      </div>`;
+            },
+            item: function(data, escape) {
+              return `<div>
+                        <img src="https://flagcdn.com/${escape(data.code)}.svg" style="width: 20px; border-radius: 2px;">
+                        <span>${escape(data.text)}</span>
+                      </div>`;
+            }
+          }
+        });
+
+        // Ocultar la imagen estática antigua porque TomSelect ya la incluye
+        const flagImg = document.getElementById(flagImgId);
+        if (flagImg) {
+          flagImg.style.display = 'none';
+          flagImg.style.width = '0';
+          flagImg.style.margin = '0';
+        }
+
+      } catch (err) {
+        console.error("Error cargando países:", err);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      populateCountryDropdown('ins-p-pais', 'ins-p-pais-flag');
+      populateCountryDropdown('ins-n-pais', 'ins-n-pais-flag');
+    });
+  </script>
+</body>
+</html>
