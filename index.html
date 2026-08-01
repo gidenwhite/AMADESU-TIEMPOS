@@ -1392,21 +1392,38 @@
     .print-doc table { break-inside: auto; }
     .print-doc tr { break-inside: avoid; }
     .print-doc div[style*="overflow-x"] { overflow: visible !important; }
-    .print-doc div[style="margin-bottom: 16px;"] { margin-bottom: 32px !important; }
     .print-doc .data-table { width: 100%; border-collapse: collapse; }
     .print-doc .data-table th {
       background: #eee !important; color: #111 !important; border: 1px solid #bbb !important;
       font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
     }
     .print-doc .data-table td { color: #111 !important; border: 1px solid #ccc !important; font-size: 12px; }
+    /* Franja cebra + podio (oro/plata/bronce) para que la lista se lea de
+       un vistazo -- el orden ya viene ordenado por puesto desde el cálculo
+       de clasificación, así que la fila N de cada tabla es el puesto N. */
+    .print-doc .data-table tbody tr:nth-child(even) td { background: #f7f7f7; }
+    .print-doc .data-table tbody tr:nth-child(1) td { background: #fff3c4 !important; font-weight: 800; }
+    .print-doc .data-table tbody tr:nth-child(2) td { background: #e9e9e9 !important; font-weight: 700; }
+    .print-doc .data-table tbody tr:nth-child(3) td { background: #f3ddc9 !important; font-weight: 700; }
+
+    /* Footer de marca (GIDEN TECHNOLOGY) fijo en TODAS las hojas: en modo
+       impresión, un elemento position:fixed se repite en cada página del
+       navegador (a diferencia de position:absolute, que solo aparece en la
+       primera) -- por eso se usa acá y se reserva espacio para él en el
+       margen inferior del @page. */
     .print-doc-footer {
-      margin-top: 34px; padding-top: 14px; border-top: 1px solid #ddd;
-      text-align: center; font-size: 10px; color: #888; letter-spacing: 0.02em;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      flex-wrap: wrap; padding: 7px 18px; border-radius: 7px;
+      background: linear-gradient(90deg, #0a0a0a 0%, #1c1c1c 100%);
+      font-size: 9px; letter-spacing: 0.02em;
     }
-    .print-doc-footer b { color: #555; }
+    .print-doc-footer .pf-brand { color: #E63946; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; font-size: 10px; }
+    .print-doc-footer .pf-sep { color: #555; }
+    .print-doc-footer .pf-tag { color: #ccc; }
+    .print-doc-footer .pf-contact { color: #00F5A0; font-weight: 700; }
 
     @media print {
-      @page { size: landscape; }
+      @page { size: landscape; margin: 12mm 12mm 26mm 12mm; }
       body * { visibility: hidden; }
 
       /* PDF de Tiempos: documento armado aparte, ver window.printTiempos().
@@ -1420,6 +1437,12 @@
       #print-tiempos-root:not(:empty) {
         display: block !important;
         background: #fff; color: #111;
+      }
+
+      .print-doc-footer {
+        position: fixed;
+        left: 6mm; right: 6mm; bottom: 4mm;
+        margin: 0;
       }
 
       #modal-stats.active, #modal-stats.active * { visibility: visible; }
@@ -1474,6 +1497,20 @@
     .acc-etapa-children { padding: 0 0 4px; }
     .acc-etapa-summary { padding: 0 18px 12px; }
     .acc-empty { color: var(--text-muted); text-align: center; padding: 20px; font-size: 13px; }
+
+    /* Pestañas "General"/"Manga X" dentro de cada vuelta de circuito. Van
+       dentro de .acc-body, que ya trae padding horizontal propio. */
+    .manga-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 14px;
+    }
+    .manga-tab {
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle);
+      color: var(--text-muted); padding: 7px 16px; border-radius: 20px;
+      font-family: var(--font-body); font-size: 12px; font-weight: 700; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.2s;
+    }
+    .manga-tab:hover { border-color: var(--border-strong); color: var(--text-main); }
+    .manga-tab.active { background: var(--accent-primary); border-color: var(--accent-primary); color: white; }
 
     .t-tab:hover {
       color: var(--text-main);
@@ -2443,6 +2480,22 @@
       </div>`;
     }
 
+    // Igual que renderCategoriasHtml (misma tabla vía buildResultTable), pero
+    // cada categoría lleva su propio color -- el mismo hash de categoriaColorFor
+    // que ya se usa en las tarjetas de Pilotos -- para que la lista sea fácil
+    // de distinguir de un vistazo en el PDF en vez de un gris/negro plano.
+    function printCategoriasHtml(byCat) {
+      const cats = Object.keys(byCat);
+      if (cats.length === 0) return '<p style="color:#666;">Sin tiempos registrados aún.</p>';
+      return cats.sort().map(cat => {
+        const color = categoriaColorFor(cat);
+        return `<div style="margin-bottom: 32px;">
+          <h4 style="margin-bottom:10px; padding:7px 14px; border-radius:4px; background:${color}18; border-left:5px solid ${color}; color:${color}; font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:0.03em;">${escPrintText(cat)}</h4>
+          ${buildResultTable(byCat[cat])}
+        </div>`;
+      }).join('');
+    }
+
     // Arma un documento aparte (no una foto del modal) con TODAS las
     // categorías siempre expandidas -- Shakedown/Clasificación, General y
     // cada Etapa > PE -- con el logo del sitio y el nombre del rally arriba,
@@ -2476,13 +2529,13 @@
       if (shakeFilas && shakeFilas.length > 0) {
         const shakeLabel = esCircuito ? 'Clasificación' : 'Shakedown';
         const shakeByCat = agruparPorCategoriaYClasificar(shakeFilas.map(f => ({ inscripcion: f.inscripcion, ms: f.ms, estado: f.estado })));
-        seccionesHtml += printSeccion(shakeLabel, renderCategoriasHtml(shakeByCat));
+        seccionesHtml += printSeccion(shakeLabel, printCategoriasHtml(shakeByCat));
       }
 
       const generalFilas = acumularEntradas(entradas);
       if (generalFilas.length > 0) {
         const generalLabel = esCircuito ? 'Tiempo General Circuito' : 'General';
-        seccionesHtml += printSeccion(generalLabel, renderCategoriasHtml(agruparPorCategoriaYClasificar(generalFilas)));
+        seccionesHtml += printSeccion(generalLabel, printCategoriasHtml(agruparPorCategoriaYClasificar(generalFilas)));
       }
 
       etapas.forEach(etapa => {
@@ -2492,12 +2545,12 @@
 
         let etapaBody = '';
         if (acumFilas.length > 0) {
-          etapaBody += `<div style="margin-bottom:16px;"><div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#666; font-weight:700; margin-bottom:6px;">Acumulado de la Etapa</div>${renderCategoriasHtml(agruparPorCategoriaYClasificar(acumFilas))}</div>`;
+          etapaBody += `<div style="margin-bottom:16px;"><div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#666; font-weight:700; margin-bottom:6px;">Acumulado de la Etapa</div>${printCategoriasHtml(agruparPorCategoriaYClasificar(acumFilas))}</div>`;
         }
         etapa.recorridos.forEach(rec => {
           const entradasPE = entradas.filter(e => e.recorrido_id === rec.id);
           if (entradasPE.length === 0) return;
-          etapaBody += `<div style="margin-bottom:16px;"><div style="font-size:13px; font-weight:800; color:#111; margin-bottom:8px;">PE${rec.numero}: ${escPrintText(rec.nombre)}</div>${renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasPE))}</div>`;
+          etapaBody += `<div style="margin-bottom:16px;"><div style="font-size:13px; font-weight:800; color:#111; margin-bottom:8px;">PE${rec.numero}: ${escPrintText(rec.nombre)}</div>${printCategoriasHtml(agruparPorCategoriaYClasificar(entradasPE))}</div>`;
         });
 
         if (etapaBody) seccionesHtml += printSeccion('ETAPA: ' + etapa.nombre, etapaBody);
@@ -2525,9 +2578,13 @@
             </div>
           </div>
           ${seccionesHtml}
-          <div class="print-doc-footer">
-            <b>GIDEN TECHNOLOGY</b> — Página web · Diseños 3D · Industria · Tecnología · Ingeniería · Sistemas y más &nbsp;·&nbsp; 📞 62402261
-          </div>
+        </div>
+        <div class="print-doc-footer">
+          <span class="pf-brand">⚙️ Giden Technology</span>
+          <span class="pf-sep">|</span>
+          <span class="pf-tag">Ingeniería Mecatrónica · Tecnología &amp; Industria</span>
+          <span class="pf-sep">|</span>
+          <span class="pf-contact">📱 62402261</span>
         </div>
       `;
 
@@ -2625,7 +2682,7 @@
         : { inscripcion: g.inscripcion, ms: null, estado: g.ultimoEstado });
     }
 
-    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito) {
+    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas) {
       const pasaFiltro = (ins) => !catFilter || catFilter === 'ALL' || (ins?.categoria?.nombre || 'Sin Categoría') === catFilter;
 
       const porRecorridoInscripcion = {};
@@ -2658,10 +2715,43 @@
         : '<p class="acc-empty">Sin tiempos registrados aún.</p>';
       html += accordionItem('general', generalLabel, 'acc-header-general', generalHtml);
 
-      // --- ETAPAS > PEs ---
-      if (etapas.length === 0) {
+      if (esCircuito) {
+        // --- CIRCUITO: sin envoltorio de "Etapa" (solo hay una) -- se listan
+        // directamente las vueltas del único PE, y dentro de cada vuelta se
+        // puede ver "General" (todos juntos) o filtrar por manga (grupo de salida). ---
+        const porRecorridoVueltaInscripcion = {};
+        tiemposRally.forEach(t => {
+          if (!pasaFiltro(t.inscripcion)) return;
+          const key = t.recorrido_id + '||' + t.vuelta + '||' + t.inscripcion_id;
+          if (!porRecorridoVueltaInscripcion[key]) {
+            porRecorridoVueltaInscripcion[key] = { inscripcion: t.inscripcion, recorrido_id: t.recorrido_id, vuelta: t.vuelta, inscripcion_id: t.inscripcion_id, rows: [] };
+          }
+          porRecorridoVueltaInscripcion[key].rows.push(t);
+        });
+        const entradasPorVuelta = Object.values(porRecorridoVueltaInscripcion)
+          .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, vuelta: e.vuelta, ...resolverEntradaTiempo(e.rows) }));
+
+        let vueltasHtml = '';
+        etapas.forEach(etapa => {
+          etapa.recorridos.forEach(rec => {
+            const numVueltas = rec.numero_vueltas || 1;
+            for (let v = 1; v <= numVueltas; v++) {
+              const entradasVuelta = entradasPorVuelta.filter(e => e.recorrido_id === rec.id && e.vuelta === v);
+              if (entradasVuelta.length === 0) continue;
+              const vueltaId = 'vuelta-' + rec.id + '-' + v;
+              vueltasHtml += accordionItem(vueltaId, `Vuelta ${v}`, 'acc-header-pe', buildVueltaConMangas(entradasVuelta, mangas, vueltaId));
+            }
+          });
+        });
+
+        if (!vueltasHtml) {
+          vueltasHtml = accordionItem('sin-vueltas', 'Vueltas', 'acc-header-pe', '<p class="acc-empty">Sin tiempos registrados aún.</p>');
+        }
+        html += vueltasHtml;
+      } else if (etapas.length === 0) {
         html += accordionItem('sin-etapas', 'Etapas', 'acc-header-etapa', '<p class="acc-empty">No hay etapas ni pruebas especiales registradas aún.</p>');
       } else {
+        // --- RALLY CLÁSICO: Etapas > PEs (sin cambios) ---
         etapas.forEach(etapa => {
           const recorridoIdsEtapa = etapa.recorridos.map(r => r.id);
           const entradasEtapa = entradas.filter(e => recorridoIdsEtapa.includes(e.recorrido_id));
@@ -2705,13 +2795,43 @@
       return html;
     }
 
+    // Dentro de una vuelta de circuito: pestaña "General" (todos los pilotos
+    // juntos) + una pestaña por cada manga que realmente tenga pilotos en esa
+    // vuelta -- si nadie tiene manga asignada, se omite el selector y se
+    // muestra directo el general (no tiene sentido mostrar pestañas vacías).
+    function buildVueltaConMangas(entradasVuelta, mangas, vueltaId) {
+      const mangasPresentes = (mangas || []).filter(m => entradasVuelta.some(e => e.inscripcion?.manga_id === m.id));
+      if (mangasPresentes.length === 0) {
+        return renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasVuelta));
+      }
+
+      let tabsHtml = `<button type="button" class="manga-tab active" data-manga="ALL" onclick="window.filtrarPorManga('${vueltaId}', 'ALL', this)">General</button>`;
+      let panelsHtml = `<div class="manga-panel" data-manga="ALL">${renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasVuelta))}</div>`;
+
+      mangasPresentes.forEach(m => {
+        tabsHtml += `<button type="button" class="manga-tab" data-manga="${m.id}" onclick="window.filtrarPorManga('${vueltaId}', '${m.id}', this)">${escPrintText(m.nombre)}</button>`;
+        const entradasManga = entradasVuelta.filter(e => e.inscripcion?.manga_id === m.id);
+        panelsHtml += `<div class="manga-panel" data-manga="${m.id}" style="display:none;">${renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasManga))}</div>`;
+      });
+
+      return `<div class="manga-tabs" id="manga-tabs-${vueltaId}">${tabsHtml}</div><div id="manga-panels-${vueltaId}">${panelsHtml}</div>`;
+    }
+
+    window.filtrarPorManga = function (vueltaId, mangaId, btnEl) {
+      document.querySelectorAll(`#manga-tabs-${CSS.escape(vueltaId)} .manga-tab`).forEach(b => b.classList.remove('active'));
+      btnEl.classList.add('active');
+      document.querySelectorAll(`#manga-panels-${CSS.escape(vueltaId)} .manga-panel`).forEach(p => {
+        p.style.display = p.dataset.manga === mangaId ? '' : 'none';
+      });
+    };
+
     window.tiemposAccordionData = null;
 
     window.filtrarAccordionTiempos = function () {
       if (!window.tiemposAccordionData) return;
-      const { etapas, tiemposRally, shakeFilas, esCircuito } = window.tiemposAccordionData;
+      const { etapas, tiemposRally, shakeFilas, esCircuito, mangas } = window.tiemposAccordionData;
       const catFilter = document.getElementById('tiempos-cat-filter').value;
-      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito);
+      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas);
     };
 
     // Busca un Nº de coche entre todos los tiempos cargados (sin importar la clase actual
@@ -2762,11 +2882,20 @@
       document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Categorías</option>';
       document.getElementById('btn-tiempos-pdf').style.display = 'none';
 
-      const { data: etapasDb } = await supabase.schema('rally').from('etapas')
-        .select('id, numero, nombre, recorridos(id, numero, nombre, distancia_km, deleted_at)')
-        .eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero');
+      const rallyInfo = allRallies.find(r => r.id === rallyId);
+      const esCircuito = rallyInfo?.tipo_evento === 'circuito';
 
-      const etapas = (etapasDb || [])
+      const [etapasRes, shakeFilas, mangasRes] = await Promise.all([
+        supabase.schema('rally').from('etapas')
+          .select('id, numero, nombre, recorridos(id, numero, nombre, distancia_km, numero_vueltas, deleted_at)')
+          .eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero'),
+        obtenerShakedownFilas(rallyId),
+        esCircuito
+          ? supabase.schema('rally').from('mangas').select('id, numero, nombre').eq('rally_id', rallyId).is('deleted_at', null).order('numero')
+          : Promise.resolve({ data: [] })
+      ]);
+
+      const etapas = (etapasRes.data || [])
         .map(e => ({ ...e, recorridos: (e.recorridos || []).filter(r => !r.deleted_at).sort((a, b) => a.numero - b.numero) }))
         .sort((a, b) => a.numero - b.numero);
 
@@ -2775,16 +2904,14 @@
       let tiemposRally = [];
       if (recorridoIds.length > 0) {
         const { data } = await supabase.schema('rally').from('tiempos')
-          .select('recorrido_id, inscripcion_id, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre))')
+          .select('recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
           .in('recorrido_id', recorridoIds).is('deleted_at', null);
         tiemposRally = data || [];
       }
 
-      const shakeFilas = await obtenerShakedownFilas(rallyId);
-      const rallyInfo = allRallies.find(r => r.id === rallyId);
-      const esCircuito = rallyInfo?.tipo_evento === 'circuito';
+      const mangas = mangasRes.data || [];
 
-      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito, rallyNombre: rallyInfo?.nombre || '' };
+      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito, mangas, rallyNombre: rallyInfo?.nombre || '' };
 
       const hayDatos = tiemposRally.length > 0 || (shakeFilas && shakeFilas.length > 0);
       if (hayDatos) {

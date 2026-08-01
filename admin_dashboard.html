@@ -1032,28 +1032,39 @@
             </div>
           </div>
 
-          <!-- TAB: ASIGNAR MANGAS (solo circuito) — primero eliges la manga,
-               luego buscas pilotos por número y los vas añadiendo a esa manga. -->
+          <!-- TAB: ASIGNAR MANGAS (solo circuito) — arriba un resumen de todas
+               las mangas (y cuántos pilotos tiene cada una); abajo, eliges una
+               manga y marcás con checkbox a todos los pilotos que quieras
+               sumar de una sola vez ("seleccionar todos" incluido). -->
           <div id="ins-tab-mangas" style="display: none;">
+            <div id="mangas-overview-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:12px; margin-bottom:24px;"></div>
+
             <div class="form-group" style="max-width: 320px; margin-bottom: 20px;">
-              <label class="form-label">Manga</label>
+              <label class="form-label">Manga activa</label>
               <select id="manga-activa-select" class="form-control" onchange="window.mangaSeleccionarActiva()">
                 <option value="">Selecciona una manga...</option>
               </select>
             </div>
 
-            <p id="manga-sin-seleccion" style="color: var(--text-muted); font-size: 13px;">Elige una manga arriba para empezar a añadir pilotos.</p>
+            <p id="manga-sin-seleccion" style="color: var(--text-muted); font-size: 13px;">Elige una manga arriba (o una de las tarjetas) para empezar a añadir pilotos.</p>
 
             <div id="manga-activa-wrap" style="display:none;">
-              <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Escribe el número del coche y añádelo a la manga elegida. Si el número corre en varias clases, aparecerán todas por separado.</p>
-              <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <input type="text" inputmode="numeric" id="manga-buscar-numero" class="form-control" style="max-width: 220px;" placeholder="Nº de coche a añadir..." onkeydown="if(event.key==='Enter'){event.preventDefault(); window.mangaBuscarPorNumero();}">
-                <button type="button" class="btn-secondary" onclick="window.mangaBuscarPorNumero()">Buscar</button>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div>
+                  <h3 style="color: var(--pe-cyan); margin-bottom: 12px;">Disponibles</h3>
+                  <input type="text" id="manga-disp-buscar" class="form-control" style="margin-bottom: 10px;" placeholder="Buscar por Nº, piloto o clase..." oninput="window.mangaRenderDisponibles()">
+                  <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; color:var(--text-muted); cursor:pointer;">
+                    <input type="checkbox" id="manga-seleccionar-todos" onchange="window.mangaToggleSeleccionarTodos()">
+                    Seleccionar todos los visibles
+                  </label>
+                  <div id="manga-disponibles-lista" style="max-height:420px; overflow-y:auto; border:1px solid var(--border-subtle); border-radius:8px; padding:8px;"></div>
+                  <button type="button" class="btn-primary" style="margin-top:12px; width:100%;" onclick="window.mangaAnadirSeleccionados()">+ Añadir seleccionados a esta manga</button>
+                </div>
+                <div>
+                  <h3 style="color: var(--pe-cyan); margin-bottom: 12px;">Pilotos en esta manga (<span id="manga-activa-count">0</span>)</h3>
+                  <div id="manga-activa-lista" style="max-height:480px; overflow-y:auto;"></div>
+                </div>
               </div>
-              <div id="manga-buscar-resultado"></div>
-
-              <h3 style="color: var(--pe-cyan); margin: 28px 0 12px;">Pilotos en esta manga (<span id="manga-activa-count">0</span>)</h3>
-              <div id="manga-activa-lista"></div>
             </div>
           </div>
 
@@ -3976,8 +3987,8 @@
         sel.value = '';
         document.getElementById('manga-activa-wrap').style.display = 'none';
         document.getElementById('manga-sin-seleccion').style.display = '';
-        document.getElementById('manga-buscar-numero').value = '';
-        document.getElementById('manga-buscar-resultado').innerHTML = '';
+        document.getElementById('manga-disp-buscar').value = '';
+        window.mangaRenderOverview();
       }
     };
 
@@ -4140,15 +4151,46 @@
       });
     };
 
-    // Asignación de mangas (solo circuito): primero se elige la manga activa
-    // (manga-activa-select), y desde ahí se buscan pilotos por número y se
-    // van añadiendo uno por uno a esa manga -- se ve en todo momento la
-    // lista de quiénes ya están dentro. Todo opera sobre los inscritos ya
-    // cargados en memoria (window.currentPilotosInscritos).
+    // Asignación de mangas (solo circuito). Todo opera sobre los inscritos ya
+    // cargados en memoria (window.currentPilotosInscritos):
+    //   1) Resumen arriba: una tarjeta por manga con cuántos pilotos tiene
+    //      (clic en la tarjeta la selecciona abajo).
+    //   2) Se elige la manga activa, y se marca con checkbox a todos los
+    //      pilotos "Disponibles" (los que no están ya en esa manga) que se
+    //      quieran sumar, con buscador y "seleccionar todos los visibles".
+    //   3) "Añadir seleccionados" hace UN solo UPDATE en lote (in(...)) en
+    //      vez de una consulta por piloto.
+    window.mangaRenderOverview = function() {
+      const grid = document.getElementById('mangas-overview-grid');
+      const mangas = window.currentCircuitoMangas || [];
+      const inscritos = window.currentPilotosInscritos || [];
+
+      if (mangas.length === 0) {
+        grid.innerHTML = `<p style="color: var(--text-muted); font-size:13px; grid-column: 1 / -1;">Este circuito todavía no tiene mangas configuradas (se agregan desde "Editar Circuito").</p>`;
+        return;
+      }
+
+      const sinAsignar = inscritos.filter(i => !i.manga_id).length;
+
+      grid.innerHTML = mangas.map(m => {
+        const count = inscritos.filter(i => i.manga_id === m.id).length;
+        return `
+        <div onclick="document.getElementById('manga-activa-select').value='${m.id}'; window.mangaSeleccionarActiva();" style="cursor:pointer; background: var(--bg-base); border:1px solid var(--border-subtle); border-radius:10px; padding:14px; text-align:center; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-subtle)'">
+          <div style="font-family: var(--font-display); font-size:26px; color: var(--accent-primary); font-weight:800;">${count}</div>
+          <div style="font-size:12px; color: var(--text-muted); font-weight:600; margin-top:2px;">${escapeHtml(m.nombre)}</div>
+        </div>`;
+      }).join('') + `
+        <div style="background: var(--bg-base); border:1px dashed var(--border-strong); border-radius:10px; padding:14px; text-align:center;">
+          <div style="font-family: var(--font-display); font-size:26px; color: var(--text-muted); font-weight:800;">${sinAsignar}</div>
+          <div style="font-size:12px; color: var(--text-muted); font-weight:600; margin-top:2px;">Sin asignar</div>
+        </div>`;
+    };
+
     window.mangaSeleccionarActiva = function() {
       const mangaId = document.getElementById('manga-activa-select').value;
-      document.getElementById('manga-buscar-resultado').innerHTML = '';
-      document.getElementById('manga-buscar-numero').value = '';
+      document.getElementById('manga-disp-buscar').value = '';
+      const selTodos = document.getElementById('manga-seleccionar-todos');
+      if (selTodos) selTodos.checked = false;
       if (!mangaId) {
         document.getElementById('manga-activa-wrap').style.display = 'none';
         document.getElementById('manga-sin-seleccion').style.display = '';
@@ -4157,6 +4199,7 @@
       document.getElementById('manga-activa-wrap').style.display = '';
       document.getElementById('manga-sin-seleccion').style.display = 'none';
       window.mangaRenderMiembros();
+      window.mangaRenderDisponibles();
     };
 
     window.mangaRenderMiembros = function() {
@@ -4184,52 +4227,66 @@
       }).join('');
     };
 
-    window.mangaBuscarPorNumero = function() {
-      const val = document.getElementById('manga-buscar-numero').value.trim();
-      const resultado = document.getElementById('manga-buscar-resultado');
+    // Lista con checkbox de todos los inscritos que NO están en la manga
+    // activa, filtrable por número/piloto/clase -- para marcar varios de una
+    // y sumarlos todos juntos con "Añadir seleccionados".
+    window.mangaRenderDisponibles = function() {
       const mangaId = document.getElementById('manga-activa-select').value;
-      if (!val) { resultado.innerHTML = ''; return; }
-      if (!mangaId) { resultado.innerHTML = `<p style="color: var(--text-muted);">Elige primero una manga.</p>`; return; }
+      const buscar = (document.getElementById('manga-disp-buscar').value || '').trim().toLowerCase();
+      const lista = document.getElementById('manga-disponibles-lista');
 
-      const matches = (window.currentPilotosInscritos || []).filter(i => String(i.numero) === val);
-      if (matches.length === 0) {
-        resultado.innerHTML = `<p style="color: var(--text-muted);">No se encontró ningún piloto con el número ${escapeHtml(val)}.</p>`;
+      const disponibles = (window.currentPilotosInscritos || [])
+        .filter(i => i.manga_id !== mangaId)
+        .filter(i => {
+          if (!buscar) return true;
+          const p = i.piloto ? `${i.piloto.nombre} ${i.piloto.apellido}` : '';
+          const c = i.categoria ? `${i.categoria.codigo} ${i.categoria.nombre}` : '';
+          return String(i.numero).toLowerCase().includes(buscar) || p.toLowerCase().includes(buscar) || c.toLowerCase().includes(buscar);
+        })
+        .sort((a, b) => a.numero - b.numero);
+
+      if (disponibles.length === 0) {
+        lista.innerHTML = `<p style="color: var(--text-muted); font-size:13px; padding:8px;">Sin resultados.</p>`;
         return;
       }
 
-      resultado.innerHTML = matches.map(ins => {
-        const p = ins.piloto, n = ins.navegante, c = ins.categoria;
-        const yaEnEstaManga = ins.manga_id === mangaId;
-        const otraManga = ins.manga && ins.manga_id !== mangaId ? ins.manga.nombre : null;
-
+      lista.innerHTML = disponibles.map(ins => {
+        const p = ins.piloto, c = ins.categoria;
+        const otraManga = ins.manga ? ins.manga.nombre : null;
         return `
-        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:16px; border:1px solid var(--border-strong); border-radius:10px; margin-bottom:12px; background: var(--bg-base);">
-          <div style="font-family: var(--font-display); font-size:30px; color: var(--accent-primary); min-width:70px; line-height:1;">#${ins.numero}</div>
-          <div style="flex:1; min-width:220px;">
-            <div style="font-size:11px; color:#8E24AA; font-weight:bold; text-transform:uppercase;">${c ? escapeHtml(c.codigo) + ' - ' + escapeHtml(c.nombre) : 'Sin clase'}</div>
-            <div style="font-weight:600; font-family: var(--font-display); font-size:16px;">${p ? escapeHtml(p.nombre + ' ' + p.apellido) : 'Desconocido'}</div>
-            <div style="font-size:13px; color: var(--text-muted);">${n ? 'Navegante: ' + escapeHtml(n.nombre + ' ' + n.apellido) : 'Sin navegante'}</div>
-            ${otraManga ? `<div style="margin-top:6px; font-size:12px; color:#ff9800;">Actualmente en: ${escapeHtml(otraManga)}</div>` : ''}
-          </div>
-          ${yaEnEstaManga
-            ? `<span style="color: var(--live-green); font-weight:bold; font-size:13px;">✓ Ya está en esta manga</span>`
-            : `<button type="button" class="btn-primary" onclick="window.mangaAnadirRapido('${ins.id}')">+ Añadir a esta manga</button>`
-          }
-        </div>`;
+        <label style="display:flex; align-items:center; gap:10px; padding:8px 6px; border-bottom:1px solid var(--border-subtle); cursor:pointer;">
+          <input type="checkbox" class="manga-disp-check" value="${ins.id}">
+          <span style="font-family: var(--font-display); font-size:16px; color: var(--accent-primary); min-width:44px;">#${ins.numero}</span>
+          <span style="flex:1; font-size:13px;">
+            ${p ? escapeHtml(p.nombre + ' ' + p.apellido) : 'Desconocido'}
+            <span style="color:var(--text-muted);">— ${c ? escapeHtml(c.codigo) : 'Sin clase'}</span>
+            ${otraManga ? `<span style="color:#ff9800;"> · en ${escapeHtml(otraManga)}</span>` : ''}
+          </span>
+        </label>`;
       }).join('');
     };
 
-    window.mangaAnadirRapido = async function(inscripcionId) {
+    window.mangaToggleSeleccionarTodos = function() {
+      const marcar = document.getElementById('manga-seleccionar-todos').checked;
+      document.querySelectorAll('.manga-disp-check').forEach(cb => { cb.checked = marcar; });
+    };
+
+    window.mangaAnadirSeleccionados = async function() {
       const mangaId = document.getElementById('manga-activa-select').value;
       if (!mangaId) return;
-      const { error } = await supabase.schema('rally').from('inscripciones').update({ manga_id: mangaId }).eq('id', inscripcionId);
+      const ids = Array.from(document.querySelectorAll('.manga-disp-check:checked')).map(cb => cb.value);
+      if (ids.length === 0) { window.toast('Marca al menos un piloto de la lista.', 'warn'); return; }
+
+      const { error } = await supabase.schema('rally').from('inscripciones').update({ manga_id: mangaId }).in('id', ids);
       if (error) { window.toast('Error al añadir: ' + error.message, 'error'); return; }
-      window.toast('Piloto añadido a la manga.', 'ok');
+      window.toast(`${ids.length} piloto(s) añadidos a la manga.`, 'ok');
 
       const rallyId = document.getElementById('ins-rally-id').value;
       await window.cargarPilotosInscritos(rallyId);
-      window.mangaBuscarPorNumero();
+      document.getElementById('manga-seleccionar-todos').checked = false;
+      window.mangaRenderOverview();
       window.mangaRenderMiembros();
+      window.mangaRenderDisponibles();
     };
 
     window.mangaQuitar = async function(inscripcionId) {
@@ -4239,8 +4296,9 @@
 
       const rallyId = document.getElementById('ins-rally-id').value;
       await window.cargarPilotosInscritos(rallyId);
+      window.mangaRenderOverview();
       window.mangaRenderMiembros();
-      window.mangaBuscarPorNumero();
+      window.mangaRenderDisponibles();
     };
 
     // Reparte a todos los inscritos activos del circuito en grupos de salida
