@@ -1540,9 +1540,39 @@
       const max = parseInt(vueltaInput.max, 10);
       if (v < 1) v = 1;
       if (max && v > max) v = max;
+
+      // Si se avanza a la vuelta siguiente con el mismo vehículo ya cargado,
+      // y esa vuelta anterior ya tiene una Llegada en pantalla (guardada o
+      // no todavía), esa es la Entrada real de la vuelta que sigue -- el
+      // auto no para en meta. Se toma tal cual está en el formulario AHORA,
+      // antes de que seleccionarInscrito() borre los campos: no depende de
+      // que ya haya quedado guardada en la base.
+      const vueltaAnterior = parseInt(vueltaInput.dataset.vueltaActual || '1', 10);
+      let carryLlegada = null;
+      if (tiempoCurrentInscripcion && v > vueltaAnterior) {
+        const lH = document.getElementById('lle-hh').value;
+        const lM = document.getElementById('lle-mm').value;
+        if (lH && lM) {
+          carryLlegada = {
+            hh: lH, mm: lM,
+            ss: document.getElementById('lle-ss').value || '00',
+            cc: document.getElementById('lle-cc').value || '00'
+          };
+        }
+      }
+
       vueltaInput.value = v;
+      vueltaInput.dataset.vueltaActual = v;
+
       if (tiempoCurrentInscripcion) {
         window.seleccionarInscrito(tiempoCurrentInscripcion.id);
+        if (carryLlegada) {
+          document.getElementById('sal-hh').value = carryLlegada.hh;
+          document.getElementById('sal-mm').value = carryLlegada.mm;
+          document.getElementById('sal-ss').value = carryLlegada.ss;
+          document.getElementById('sal-cc').value = carryLlegada.cc;
+          window.onEntradaChange();
+        }
       }
     };
 
@@ -1702,7 +1732,9 @@
 
       // Cargar tiempos existentes si ya están guardados en la BD
       const recId = document.getElementById('tiempo-recorrido-select').value;
-      const vueltaActual = parseInt(document.getElementById('tiempo-vuelta-input').value, 10) || 1;
+      const vueltaInputEl = document.getElementById('tiempo-vuelta-input');
+      const vueltaActual = parseInt(vueltaInputEl.value, 10) || 1;
+      vueltaInputEl.dataset.vueltaActual = vueltaActual; // referencia para el "auto no para" de onVueltaChange
       let loadedFromDB = false;
       window.tiempoCurrentTiempoId = null;
 
