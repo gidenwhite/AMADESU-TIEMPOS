@@ -39,6 +39,11 @@
     href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
     rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <!-- Generador de PDF real para "Descargar PDF" en Tiempos: arma el documento
+       con texto/tablas vectoriales (no una foto de la pantalla) y lo descarga
+       directo, sin pasar por el diálogo de impresión del navegador. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 
   <style>
     /* ==========================================================
@@ -973,6 +978,17 @@
       }
     }
 
+    /* Botones para alternar entre la vista General y la de Clasificación/Shakedown en Stats */
+    .stats-view-tab {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle);
+      color: var(--text-muted); padding: 10px 18px; border-radius: 8px;
+      font-family: var(--font-body); font-size: 13px; font-weight: 700; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.2s;
+    }
+    .stats-view-tab:hover { border-color: var(--border-strong); color: var(--text-main); }
+    .stats-view-tab.active { background: var(--accent-primary); border-color: var(--accent-primary); color: white; }
+
     .modal-overlay.active .modal-content {
       transform: translateY(0);
     }
@@ -1070,7 +1086,7 @@
     .stat-kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
     @media (max-width: 768px) {
-      #stats-content > div[style*="grid-template-columns: 1fr 1fr"] {
+      #stats-content div[style*="grid-template-columns: 1fr 1fr"] {
         grid-template-columns: 1fr !important;
       }
     }
@@ -1358,92 +1374,13 @@
     .rank-badge.bronze { background: rgba(205, 127, 50, 0.15); color: #CD7F32; border: 1px solid rgba(205, 127, 50, 0.4); }
 
     /* ==========================================================
-       PDF DE TIEMPOS: documento armado aparte (no el modal en vivo), ver
-       window.printTiempos(). Oculto en pantalla, solo se ve al imprimir.
+       PDF DE STATS: sigue usando window.print() sobre el modal en vivo.
+       (El PDF de Tiempos ahora se genera aparte con jsPDF -- ver
+       window.printTiempos -- y se descarga directo, sin pasar por acá.)
        ========================================================== */
-    #print-tiempos-root { display: none; }
-
-    .print-doc { font-family: var(--font-body); color: #111; padding: 16px 4px; }
-    .print-doc-header {
-      display: flex; align-items: center; gap: 18px; margin-bottom: 26px;
-      padding-bottom: 16px; border-bottom: 3px solid #E63946;
-    }
-    .print-doc-brand {
-      font-family: var(--font-display); font-size: 26px; font-weight: 900;
-      text-transform: uppercase; letter-spacing: 0.04em; color: #111; line-height: 1.1;
-    }
-    .print-doc-tagline {
-      font-size: 11px; color: #E63946; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.12em; margin-top: 2px;
-    }
-    .print-doc-rally {
-      flex: 1; text-align: center; font-family: var(--font-display); font-size: 22px;
-      font-weight: 800; color: #111; text-transform: uppercase; letter-spacing: 0.02em;
-    }
-    .print-doc-rally-sub { font-size: 11px; color: #666; font-weight: 600; margin-top: 3px; text-transform: none; letter-spacing: 0; }
-    .print-doc-meta { text-align: right; font-size: 11px; color: #666; line-height: 1.7; flex-shrink: 0; }
-    .print-seccion { margin-bottom: 30px; }
-    .print-seccion-title {
-      font-family: var(--font-display); font-size: 15px; font-weight: 800; text-transform: uppercase;
-      letter-spacing: 0.04em; color: #fff; background: #111; padding: 7px 14px; border-radius: 4px;
-      margin-bottom: 14px;
-    }
-    .print-doc h4 { break-inside: avoid; }
-    .print-doc table { break-inside: auto; }
-    .print-doc tr { break-inside: avoid; }
-    .print-doc div[style*="overflow-x"] { overflow: visible !important; }
-    .print-doc .data-table { width: 100%; border-collapse: collapse; }
-    .print-doc .data-table th {
-      background: #eee !important; color: #111 !important; border: 1px solid #bbb !important;
-      font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
-    }
-    .print-doc .data-table td { color: #111 !important; border: 1px solid #ccc !important; font-size: 12px; }
-    /* Franja cebra + podio (oro/plata/bronce) para que la lista se lea de
-       un vistazo -- el orden ya viene ordenado por puesto desde el cálculo
-       de clasificación, así que la fila N de cada tabla es el puesto N. */
-    .print-doc .data-table tbody tr:nth-child(even) td { background: #f7f7f7; }
-    .print-doc .data-table tbody tr:nth-child(1) td { background: #fff3c4 !important; font-weight: 800; }
-    .print-doc .data-table tbody tr:nth-child(2) td { background: #e9e9e9 !important; font-weight: 700; }
-    .print-doc .data-table tbody tr:nth-child(3) td { background: #f3ddc9 !important; font-weight: 700; }
-
-    /* Footer de marca (GIDEN TECHNOLOGY) fijo en TODAS las hojas: en modo
-       impresión, un elemento position:fixed se repite en cada página del
-       navegador (a diferencia de position:absolute, que solo aparece en la
-       primera) -- por eso se usa acá y se reserva espacio para él en el
-       margen inferior del @page. */
-    .print-doc-footer {
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      flex-wrap: wrap; padding: 7px 18px; border-radius: 7px;
-      background: linear-gradient(90deg, #0a0a0a 0%, #1c1c1c 100%);
-      font-size: 9px; letter-spacing: 0.02em;
-    }
-    .print-doc-footer .pf-brand { color: #E63946; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; font-size: 10px; }
-    .print-doc-footer .pf-sep { color: #555; }
-    .print-doc-footer .pf-tag { color: #ccc; }
-    .print-doc-footer .pf-contact { color: #00F5A0; font-weight: 700; }
-
     @media print {
-      @page { size: landscape; margin: 12mm 12mm 26mm 12mm; }
+      @page { size: landscape; }
       body * { visibility: hidden; }
-
-      /* PDF de Tiempos: documento armado aparte, ver window.printTiempos().
-         Se saca a los hermanos del flujo con display:none (no solo
-         visibility:hidden) y el root queda en flujo normal (sin
-         position:absolute) para que el navegador pueda paginarlo en varias
-         hojas -- position:absolute cortaba el contenido a una sola página. */
-      body.printing-tiempos > *:not(#print-tiempos-root) { display: none !important; }
-      #print-tiempos-root:not(:empty),
-      #print-tiempos-root:not(:empty) * { visibility: visible; }
-      #print-tiempos-root:not(:empty) {
-        display: block !important;
-        background: #fff; color: #111;
-      }
-
-      .print-doc-footer {
-        position: fixed;
-        left: 6mm; right: 6mm; bottom: 4mm;
-        margin: 0;
-      }
 
       #modal-stats.active, #modal-stats.active * { visibility: visible; }
       #modal-stats.active {
@@ -1750,12 +1687,28 @@
           </div>
         </div>
 
+        <!-- ALTERNAR VISTA: General (Circuito/Rally) vs Clasificación/Shakedown --
+             el botón de Clasificación solo se muestra si ese piloto tiene datos ahí. -->
+        <div id="stats-view-toggle" style="display:none; gap:8px; margin-bottom: 28px;">
+          <button type="button" class="stats-view-tab active" id="stats-view-btn-general" onclick="window.statsSwitchView('general')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+            <span id="stats-view-btn-general-label">Circuito General</span>
+          </button>
+          <button type="button" class="stats-view-tab" id="stats-view-btn-clasif" onclick="window.statsSwitchView('clasif')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span id="stats-view-btn-clasif-label">Clasificación</span>
+          </button>
+        </div>
+
+        <!-- VISTA: GENERAL (Circuito/Rally) -->
+        <div id="stats-general-section">
+
         <!-- KPIs GRID -->
         <div id="stats-kpi-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:32px;"></div>
 
         <!-- CHARTS Y TABLA -->
         <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
-          
+
           <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
               <h3 style="font-size: 16px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
@@ -1778,7 +1731,7 @@
                 <canvas id="speedChart"></canvas>
               </div>
             </div>
-            
+
             <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
               <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD166" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
@@ -1814,15 +1767,15 @@
             </table>
           </div>
 
-          <!-- CLASIFICACIÓN (circuitos): mismo piloto seleccionado arriba, sus estadísticas
-               de la sesión de Clasificación (no oficial), con el mismo formato que arriba. -->
-          <div id="stats-clasif-section" style="display: none; margin-top: 8px;">
-            <div style="display:flex; align-items:center; gap:12px; margin: 8px 0 24px;">
-              <div style="flex:1; height:1px; background: var(--border-subtle);"></div>
-              <h3 id="clasif-title" style="margin:0; font-size: 18px; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-primary); white-space: nowrap;">Clasificación</h3>
-              <div style="flex:1; height:1px; background: var(--border-subtle);"></div>
-            </div>
-            <p style="color:var(--text-muted); font-size:12px; margin: -12px 0 20px; text-align:center;">Sesión de práctica no oficial (no afecta el tiempo oficial de la carrera).</p>
+        </div>
+        </div>
+        <!-- FIN VISTA GENERAL -->
+
+        <!-- VISTA: CLASIFICACIÓN / SHAKEDOWN (circuitos y rallies con shakedown
+             configurado): mismo piloto seleccionado arriba, sus estadísticas de
+             esa sesión de práctica (no oficial), con el mismo formato que arriba. -->
+        <div id="stats-clasif-section" style="display: none;">
+            <p style="color:var(--text-muted); font-size:12px; margin: 0 0 20px; text-align:center;">Sesión de práctica no oficial (no afecta el tiempo oficial de la carrera).</p>
 
             <div id="clasif-kpi-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:32px;"></div>
 
@@ -1890,13 +1843,6 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Documento armado especialmente para el PDF de Tiempos (window.printTiempos)
-       -- no es una copia del modal, se construye aparte para que salga completo,
-       prolijo y con el logo, sin depender del acordeón colapsado ni del scroll
-       horizontal de las tablas. Oculto en pantalla, solo visible al imprimir. -->
-  <div id="print-tiempos-root"></div>
 
   <script type="module">
     import { supabase } from './supabase_config.js';
@@ -2467,136 +2413,337 @@
       return filas.length > 0 ? filas : null;
     }
 
-    function escPrintText(str) {
-      const d = document.createElement('div');
-      d.textContent = str || '';
-      return d.innerHTML;
+    // -----------------------------------------------------------------
+    // PDF de Tiempos: se genera con jsPDF + autoTable (texto y tablas
+    // vectoriales de verdad, no una foto de la pantalla) y se DESCARGA
+    // directo -- sin pasar por el diálogo de imprimir del navegador. Al
+    // ser una tabla real paginada por la librería, nunca se corta
+    // contenido a mitad de hoja, y el pie de página con la publicidad se
+    // dibuja igual en TODAS las hojas al final, ya con el total de páginas.
+    // -----------------------------------------------------------------
+    function hexToRgbPdf(hex) {
+      const n = parseInt(String(hex).replace('#', ''), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
     }
 
-    function printSeccion(titulo, bodyHtml) {
-      return `<div class="print-seccion">
-        <div class="print-seccion-title">${escPrintText(titulo)}</div>
-        ${bodyHtml}
-      </div>`;
-    }
-
-    // Igual que renderCategoriasHtml (misma tabla vía buildResultTable), pero
-    // cada categoría lleva su propio color -- el mismo hash de categoriaColorFor
-    // que ya se usa en las tarjetas de Pilotos -- para que la lista sea fácil
-    // de distinguir de un vistazo en el PDF en vez de un gris/negro plano.
-    function printCategoriasHtml(byCat) {
-      const cats = Object.keys(byCat);
-      if (cats.length === 0) return '<p style="color:#666;">Sin tiempos registrados aún.</p>';
-      return cats.sort().map(cat => {
-        const color = categoriaColorFor(cat);
-        return `<div style="margin-bottom: 32px;">
-          <h4 style="margin-bottom:10px; padding:7px 14px; border-radius:4px; background:${color}18; border-left:5px solid ${color}; color:${color}; font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:0.03em;">${escPrintText(cat)}</h4>
-          ${buildResultTable(byCat[cat])}
-        </div>`;
-      }).join('');
-    }
-
-    // Arma un documento aparte (no una foto del modal) con TODAS las
-    // categorías siempre expandidas -- Shakedown/Clasificación, General y
-    // cada Etapa > PE -- con el logo del sitio y el nombre del rally arriba,
-    // y lo manda a imprimir/guardar como PDF. Ignora el filtro de categoría
-    // que esté puesto en pantalla: el PDF siempre sale completo.
-    window.printTiempos = function () {
-      if (!window.tiemposAccordionData) return;
-      const { etapas, tiemposRally, shakeFilas, esCircuito, rallyNombre } = window.tiemposAccordionData;
-
-      const logoUrl = window.sitioConfigCache && window.sitioConfigCache.logo_url;
-      const logoHtml = logoUrl
-        ? `<img src="${siteDriveImageUrl(logoUrl)}" onerror="this.onerror=null; this.src='${siteDriveImageUrlFallback(logoUrl)}';" alt="Logo" style="height:56px; width:56px; object-fit:contain; border-radius:10px; flex-shrink:0;">`
-        : `<div style="height:56px; width:56px; border-radius:10px; background:#E63946; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
-           </div>`;
-
-      const fecha = new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-      // Recalcula todo sin el filtro de categoría de pantalla (el PDF es siempre completo).
-      const porRecorridoInscripcion = {};
-      tiemposRally.forEach(t => {
-        const key = t.recorrido_id + '||' + t.inscripcion_id;
-        if (!porRecorridoInscripcion[key]) porRecorridoInscripcion[key] = { inscripcion: t.inscripcion, inscripcion_id: t.inscripcion_id, recorrido_id: t.recorrido_id, rows: [] };
-        porRecorridoInscripcion[key].rows.push(t);
+    // Intenta traer una imagen (logo) como dataURL para poder insertarla en
+    // el PDF. Si falla por CORS, red, o lo que sea, resuelve null en vez de
+    // tirar error -- el PDF sigue armándose igual, con el logo por defecto.
+    function cargarImagenComoDataUrl(url, timeoutMs) {
+      return new Promise((resolve) => {
+        if (!url) { resolve(null); return; }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        let listo = false;
+        const terminar = (res) => { if (!listo) { listo = true; resolve(res); } };
+        const timer = setTimeout(() => terminar(null), timeoutMs || 4000);
+        img.onload = () => {
+          clearTimeout(timer);
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || 100;
+            canvas.height = img.naturalHeight || 100;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            terminar(canvas.toDataURL('image/png'));
+          } catch (e) { terminar(null); }
+        };
+        img.onerror = () => { clearTimeout(timer); terminar(null); };
+        img.src = url;
       });
-      const entradas = Object.values(porRecorridoInscripcion)
-        .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resolverEntradaTiempo(e.rows) }));
+    }
 
-      let seccionesHtml = '';
-
-      if (shakeFilas && shakeFilas.length > 0) {
-        const shakeLabel = esCircuito ? 'Clasificación' : 'Shakedown';
-        const shakeByCat = agruparPorCategoriaYClasificar(shakeFilas.map(f => ({ inscripcion: f.inscripcion, ms: f.ms, estado: f.estado })));
-        seccionesHtml += printSeccion(shakeLabel, printCategoriasHtml(shakeByCat));
-      }
-
-      const generalFilas = acumularEntradas(entradas);
-      if (generalFilas.length > 0) {
-        const generalLabel = esCircuito ? 'Tiempo General Circuito' : 'General';
-        seccionesHtml += printSeccion(generalLabel, printCategoriasHtml(agruparPorCategoriaYClasificar(generalFilas)));
-      }
-
-      etapas.forEach(etapa => {
-        const recorridoIdsEtapa = etapa.recorridos.map(r => r.id);
-        const entradasEtapa = entradas.filter(e => recorridoIdsEtapa.includes(e.recorrido_id));
-        const acumFilas = acumularEntradas(entradasEtapa);
-
-        let etapaBody = '';
-        if (acumFilas.length > 0) {
-          etapaBody += `<div style="margin-bottom:16px;"><div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#666; font-weight:700; margin-bottom:6px;">Acumulado de la Etapa</div>${printCategoriasHtml(agruparPorCategoriaYClasificar(acumFilas))}</div>`;
+    // Convierte las filas de agruparPorCategoriaYClasificar al formato que
+    // espera autoTable, marcando los estados especiales (No Largó/Abandono/
+    // Sin Tiempo) para pintarlos distinto en vez de mostrarles un puesto.
+    function filasParaPdf(rows) {
+      return rows.map(r => {
+        if (r.estadoEspecial) {
+          const label = r.estadoEspecial === 'no_presentado' ? 'NO LARGÓ' : r.estadoEspecial === 'abandono' ? 'ABANDONO' : 'SIN TIEMPO';
+          return { pos: '-', num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: label, dif: '', _especial: true };
         }
-        etapa.recorridos.forEach(rec => {
-          const entradasPE = entradas.filter(e => e.recorrido_id === rec.id);
-          if (entradasPE.length === 0) return;
-          etapaBody += `<div style="margin-bottom:16px;"><div style="font-size:13px; font-weight:800; color:#111; margin-bottom:8px;">PE${rec.numero}: ${escPrintText(rec.nombre)}</div>${printCategoriasHtml(agruparPorCategoriaYClasificar(entradasPE))}</div>`;
-        });
-
-        if (etapaBody) seccionesHtml += printSeccion('ETAPA: ' + etapa.nombre, etapaBody);
+        return { pos: String(r.pos), num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: r.tiempo, dif: r.dif == null ? 'LÍDER' : '+' + r.dif, _especial: false };
       });
+    }
 
-      if (!seccionesHtml) {
-        seccionesHtml = '<p style="color:#666;">Sin tiempos registrados aún.</p>';
+    window.printTiempos = async function () {
+      if (!window.tiemposAccordionData) return;
+      if (!window.jspdf) {
+        window.toast ? window.toast('No se pudo cargar el generador de PDF. Revisa tu conexión y volvé a intentar.', 'error') : alert('No se pudo cargar el generador de PDF.');
+        return;
       }
 
-      document.getElementById('print-tiempos-root').innerHTML = `
-        <div class="print-doc">
-          <div class="print-doc-header">
-            ${logoHtml}
-            <div>
-              <div class="print-doc-brand">AMADESU RALLYS</div>
-              <div class="print-doc-tagline">Cronometraje Oficial en Vivo</div>
-            </div>
-            <div class="print-doc-rally">
-              ${escPrintText(rallyNombre)}
-              <div class="print-doc-rally-sub">Resultados Oficiales</div>
-            </div>
-            <div class="print-doc-meta">
-              <div>Generado</div>
-              <div>${fecha}</div>
-            </div>
-          </div>
-          ${seccionesHtml}
-        </div>
-        <div class="print-doc-footer">
-          <span class="pf-brand">⚙️ Giden Technology</span>
-          <span class="pf-sep">|</span>
-          <span class="pf-tag">Ingeniería Mecatrónica · Tecnología &amp; Industria</span>
-          <span class="pf-sep">|</span>
-          <span class="pf-contact">📱 62402261</span>
-        </div>
-      `;
+      const btn = document.getElementById('btn-tiempos-pdf');
+      const btnHtmlOriginal = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Generando PDF...'; }
 
-      // Saca del flujo a todo lo demás (display:none, no solo visibility)
-      // para que el documento pueda paginar en varias hojas sin cortarse.
-      document.body.classList.add('printing-tiempos');
-      window.print();
+      try {
+        const { etapas, tiemposRally, shakeFilas, esCircuito, mangas, rallyNombre } = window.tiemposAccordionData;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const marginX = 12;
+        const footerH = 15;
+        let y = 14;
+
+        // --- Encabezado (marca + nombre del rally + fecha) ---
+        const logoUrl = window.sitioConfigCache && window.sitioConfigCache.logo_url;
+        const logoData = logoUrl ? await cargarImagenComoDataUrl(siteDriveImageUrl(logoUrl)) : null;
+
+        if (logoData) {
+          try { doc.addImage(logoData, 'PNG', marginX, y - 3, 17, 17, undefined, 'FAST'); } catch (e) { /* sigue sin logo */ }
+        } else {
+          doc.setFillColor(230, 57, 70);
+          doc.roundedRect(marginX, y - 3, 17, 17, 3, 3, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(255, 255, 255);
+          doc.text('AR', marginX + 8.5, y + 7, { align: 'center' });
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(17, 17, 17);
+        doc.text('AMADESU RALLYS', marginX + 21, y + 2);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(230, 57, 70);
+        doc.text('CRONOMETRAJE OFICIAL EN VIVO', marginX + 21, y + 7.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(17, 17, 17);
+        doc.text((rallyNombre || 'RESULTADOS').toUpperCase(), pageW / 2, y + 3, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Resultados Oficiales', pageW / 2, y + 9.5, { align: 'center' });
+
+        const fecha = new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Generado', pageW - marginX, y, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(60, 60, 60);
+        doc.text(fecha, pageW - marginX, y + 5, { align: 'right' });
+
+        y += 21;
+        doc.setDrawColor(230, 57, 70);
+        doc.setLineWidth(0.8);
+        doc.line(marginX, y, pageW - marginX, y);
+        y += 9;
+
+        // --- Helpers para dibujar secciones y tablas de categoría ---
+        const columns = [
+          { header: 'Pos', dataKey: 'pos' },
+          { header: '#', dataKey: 'num' },
+          { header: 'Piloto', dataKey: 'name' },
+          { header: 'Navegante', dataKey: 'navName' },
+          { header: 'Tiempo', dataKey: 'tiempo' },
+          { header: '+ Diferencia', dataKey: 'dif' },
+        ];
+
+        function asegurarEspacio(minimo) {
+          if (y > pageH - footerH - minimo) { doc.addPage(); y = 14; }
+        }
+
+        function dibujarSeccionTitulo(titulo) {
+          asegurarEspacio(16);
+          doc.setFillColor(17, 17, 17);
+          doc.roundedRect(marginX, y, pageW - marginX * 2, 8, 1.5, 1.5, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.setTextColor(255, 255, 255);
+          doc.text(titulo.toUpperCase(), marginX + 4, y + 5.6);
+          y += 12;
+        }
+
+        function dibujarCategoria(nombreCat, filas) {
+          asegurarEspacio(20);
+          const [r, g, b] = hexToRgbPdf(categoriaColorFor(nombreCat));
+          doc.setFillColor(r, g, b);
+          doc.rect(marginX, y, 2.2, 6, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(r, g, b);
+          doc.text(nombreCat.toUpperCase(), marginX + 5.5, y + 4.6);
+          y += 8;
+
+          doc.autoTable({
+            startY: y,
+            margin: { left: marginX, right: marginX, bottom: footerH },
+            columns,
+            body: filasParaPdf(filas),
+            theme: 'grid',
+            styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.3, lineColor: [210, 210, 210], lineWidth: 0.15, textColor: [20, 20, 20] },
+            headStyles: { fillColor: [232, 232, 232], textColor: [30, 30, 30], fontStyle: 'bold', fontSize: 8 },
+            columnStyles: {
+              pos: { cellWidth: 16, halign: 'center' },
+              num: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+              tiempo: { cellWidth: 34, halign: 'right', font: 'courier' },
+              dif: { cellWidth: 34, halign: 'right', font: 'courier' },
+            },
+            didParseCell: (data) => {
+              if (data.section !== 'body') return;
+              const raw = data.row.raw;
+              if (raw._especial) {
+                data.cell.styles.textColor = [150, 70, 20];
+                data.cell.styles.fontStyle = 'italic';
+                return;
+              }
+              const idx = data.row.index;
+              if (idx === 0) { data.cell.styles.fillColor = [255, 244, 199]; data.cell.styles.fontStyle = 'bold'; }
+              else if (idx === 1) { data.cell.styles.fillColor = [233, 233, 233]; data.cell.styles.fontStyle = 'bold'; }
+              else if (idx === 2) { data.cell.styles.fillColor = [244, 222, 202]; data.cell.styles.fontStyle = 'bold'; }
+              else if (idx % 2 === 0) { data.cell.styles.fillColor = [248, 248, 248]; }
+            },
+          });
+          y = doc.lastAutoTable.finalY + 10;
+        }
+
+        function dibujarByCat(byCat) {
+          Object.keys(byCat).sort().forEach(cat => dibujarCategoria(cat, byCat[cat]));
+        }
+
+        // --- Recalcula todo sin el filtro de categoría de pantalla (el PDF es siempre completo) ---
+        const porRecorridoInscripcion = {};
+        tiemposRally.forEach(t => {
+          const key = t.recorrido_id + '||' + t.inscripcion_id;
+          if (!porRecorridoInscripcion[key]) porRecorridoInscripcion[key] = { inscripcion: t.inscripcion, inscripcion_id: t.inscripcion_id, recorrido_id: t.recorrido_id, rows: [] };
+          porRecorridoInscripcion[key].rows.push(t);
+        });
+        const entradas = Object.values(porRecorridoInscripcion)
+          .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resolverEntradaTiempo(e.rows) }));
+
+        let huboContenido = false;
+
+        if (shakeFilas && shakeFilas.length > 0) {
+          huboContenido = true;
+          dibujarSeccionTitulo(esCircuito ? 'Clasificación' : 'Shakedown');
+          dibujarByCat(agruparPorCategoriaYClasificar(shakeFilas.map(f => ({ inscripcion: f.inscripcion, ms: f.ms, estado: f.estado }))));
+        }
+
+        const generalFilas = acumularEntradas(entradas);
+        if (generalFilas.length > 0) {
+          huboContenido = true;
+          dibujarSeccionTitulo(esCircuito ? 'Tiempo General Circuito' : 'General');
+          dibujarByCat(agruparPorCategoriaYClasificar(generalFilas));
+        }
+
+        if (esCircuito) {
+          // Sin envoltorio de "Etapa" (solo hay una): se listan las vueltas
+          // del único PE, y si hay mangas con pilotos en esa vuelta, se
+          // agrega además una tabla aparte por cada manga.
+          const porRecorridoVueltaInscripcion = {};
+          tiemposRally.forEach(t => {
+            const key = t.recorrido_id + '||' + t.vuelta + '||' + t.inscripcion_id;
+            if (!porRecorridoVueltaInscripcion[key]) porRecorridoVueltaInscripcion[key] = { inscripcion: t.inscripcion, recorrido_id: t.recorrido_id, vuelta: t.vuelta, inscripcion_id: t.inscripcion_id, rows: [] };
+            porRecorridoVueltaInscripcion[key].rows.push(t);
+          });
+          const entradasPorVuelta = Object.values(porRecorridoVueltaInscripcion)
+            .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, vuelta: e.vuelta, ...resolverEntradaTiempo(e.rows) }));
+
+          etapas.forEach(etapa => {
+            etapa.recorridos.forEach(rec => {
+              const numVueltas = rec.numero_vueltas || 1;
+              for (let v = 1; v <= numVueltas; v++) {
+                const entradasVuelta = entradasPorVuelta.filter(e => e.recorrido_id === rec.id && e.vuelta === v);
+                if (entradasVuelta.length === 0) continue;
+                huboContenido = true;
+
+                const mangasPresentes = (mangas || []).filter(m => entradasVuelta.some(e => e.inscripcion?.manga_id === m.id));
+                if (mangasPresentes.length === 0) {
+                  dibujarSeccionTitulo(`Vuelta ${v}`);
+                  dibujarByCat(agruparPorCategoriaYClasificar(entradasVuelta));
+                } else {
+                  dibujarSeccionTitulo(`Vuelta ${v} — General`);
+                  dibujarByCat(agruparPorCategoriaYClasificar(entradasVuelta));
+                  mangasPresentes.forEach(m => {
+                    const entradasManga = entradasVuelta.filter(e => e.inscripcion?.manga_id === m.id);
+                    dibujarSeccionTitulo(`Vuelta ${v} — ${m.nombre}`);
+                    dibujarByCat(agruparPorCategoriaYClasificar(entradasManga));
+                  });
+                }
+              }
+            });
+          });
+        } else {
+          etapas.forEach(etapa => {
+            const recorridoIdsEtapa = etapa.recorridos.map(r => r.id);
+            const entradasEtapa = entradas.filter(e => recorridoIdsEtapa.includes(e.recorrido_id));
+            const acumFilas = acumularEntradas(entradasEtapa);
+            if (acumFilas.length > 0) {
+              huboContenido = true;
+              dibujarSeccionTitulo(`Etapa ${etapa.nombre} — Acumulado`);
+              dibujarByCat(agruparPorCategoriaYClasificar(acumFilas));
+            }
+            etapa.recorridos.forEach(rec => {
+              const entradasPE = entradas.filter(e => e.recorrido_id === rec.id);
+              if (entradasPE.length === 0) return;
+              huboContenido = true;
+              dibujarSeccionTitulo(`PE${rec.numero}: ${rec.nombre}`);
+              dibujarByCat(agruparPorCategoriaYClasificar(entradasPE));
+            });
+          });
+        }
+
+        if (!huboContenido) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(11);
+          doc.setTextColor(120, 120, 120);
+          doc.text('Sin tiempos registrados aún.', marginX, y + 6);
+        }
+
+        // --- Pie de página con la publicidad: igual en TODAS las hojas ---
+        const totalPaginas = doc.internal.getNumberOfPages();
+        for (let p = 1; p <= totalPaginas; p++) {
+          doc.setPage(p);
+          const fy = pageH - 9;
+          doc.setFillColor(10, 10, 10);
+          doc.roundedRect(marginX, fy - 5.5, pageW - marginX * 2, 10, 2, 2, 'F');
+
+          let fx = marginX + 5;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(230, 57, 70);
+          doc.text('GIDEN TECHNOLOGY', fx, fy);
+          fx += doc.getTextWidth('GIDEN TECHNOLOGY') + 4;
+
+          doc.setTextColor(90, 90, 90);
+          doc.setFont('helvetica', 'normal');
+          doc.text('|', fx, fy);
+          fx += 4;
+
+          doc.setTextColor(205, 205, 205);
+          doc.setFontSize(8);
+          const tag = 'Ingeniería Mecatrónica  ·  Tecnología & Industria';
+          doc.text(tag, fx, fy);
+          fx += doc.getTextWidth(tag) + 4;
+
+          doc.setTextColor(90, 90, 90);
+          doc.text('|', fx, fy);
+          fx += 4;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 245, 160);
+          doc.text('Tel. 62402261', fx, fy);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7.5);
+          doc.setTextColor(150, 150, 150);
+          doc.text(`Página ${p} de ${totalPaginas}`, pageW - marginX - 5, fy, { align: 'right' });
+        }
+
+        const nombreArchivo = 'Resultados_' + (rallyNombre || 'Rally').replace(/[^a-zA-Z0-9]+/g, '_') + '.pdf';
+        doc.save(nombreArchivo);
+      } catch (err) {
+        console.error(err);
+        window.toast ? window.toast('No se pudo generar el PDF: ' + err.message, 'error') : alert('No se pudo generar el PDF: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+      }
     };
-
-    window.addEventListener('afterprint', () => {
-      document.body.classList.remove('printing-tiempos');
-    });
 
     const chevronSvg = `<svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
 
@@ -2654,6 +2801,12 @@
           <h4 style="margin-bottom:8px; color: var(--accent-primary); font-size: 14px; display:flex; align-items:center; gap:6px;">${iconCategory}${cat}</h4>
           ${buildResultTable(byCat[cat])}
         </div>`).join('');
+    }
+
+    function escPrintText(str) {
+      const d = document.createElement('div');
+      d.textContent = str || '';
+      return d.innerHTML;
     }
 
     // Suma el tiempo de un vehículo en un recorrido. Normalmente hay 1 sola fila (rally clásico) y
@@ -3073,6 +3226,7 @@
       document.getElementById('stats-content').style.display = 'none';
       document.getElementById('btn-stats-pdf').style.display = 'none';
       document.getElementById('stats-clasif-section').style.display = 'none';
+      document.getElementById('stats-view-toggle').style.display = 'none';
       const selector = document.getElementById('stats-pilot-selector');
       selector.innerHTML = '<option value="">Cargando pilotos...</option>';
       selector.disabled = true; // Disable until everything is loaded
@@ -3080,6 +3234,11 @@
       currentRallyStats = rallyId;
       window.statsRallyData = null;
       window.statsClasifData = null;
+      window.statsViewMode = 'general';
+
+      const esCircuitoStats = allRallies.find(r => r.id === rallyId)?.tipo_evento === 'circuito';
+      document.getElementById('stats-view-btn-general-label').textContent = esCircuitoStats ? 'Circuito General' : 'General';
+      window.statsSwitchView('general');
 
       const { data, error } = await supabase.schema('rally').from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido, pais), navegante:navegantes(nombre, apellido, pais), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
 
@@ -3149,13 +3308,27 @@
             clasifRecorridoOrden.push(key);
           }
           window.statsClasifData = { recorridoInfo: clasifRecorridoInfo, recorridoOrden: clasifRecorridoOrden, tiemposRally: tiemposClasif };
-          document.getElementById('clasif-title').textContent = etapaClasif.nombre || 'Clasificación';
-          document.getElementById('stats-clasif-section').style.display = tiemposClasif.length > 0 ? '' : 'none';
+          document.getElementById('stats-view-btn-clasif-label').textContent = etapaClasif.nombre || 'Clasificación';
+          // El botón para cambiar de vista solo aparece si esta sesión tiene
+          // datos -- por defecto siempre se ve "General" primero (nunca ambas
+          // vistas mezcladas, se elige una u otra con los botones de arriba).
+          document.getElementById('stats-view-toggle').style.display = tiemposClasif.length > 0 ? 'flex' : 'none';
         }
       }
 
       // Now that all data is loaded, enable the selector
       selector.disabled = false;
+    };
+
+    // Alterna entre la vista "General" (Circuito/Rally) y la de Clasificación/
+    // Shakedown dentro de Stats -- nunca las dos a la vez, para que la
+    // pantalla no sea un scroll interminable con todo junto.
+    window.statsSwitchView = function (mode) {
+      window.statsViewMode = mode;
+      document.getElementById('stats-general-section').style.display = mode === 'general' ? '' : 'none';
+      document.getElementById('stats-clasif-section').style.display = mode === 'clasif' ? '' : 'none';
+      document.getElementById('stats-view-btn-general').classList.toggle('active', mode === 'general');
+      document.getElementById('stats-view-btn-clasif').classList.toggle('active', mode === 'clasif');
     };
 
     function kpiCard(label, value, sub, cls) {
@@ -3419,7 +3592,10 @@
           })
           .filter(Boolean);
 
-        clasifSection.style.display = '';
+        // No pisar la vista actual: si el usuario está viendo "General", esta
+        // sección se sigue armando en segundo plano pero se queda oculta
+        // hasta que toque el botón "Clasificación" (window.statsSwitchView).
+        clasifSection.style.display = window.statsViewMode === 'clasif' ? '' : 'none';
 
         if (filasPiloto.length === 0) {
           document.getElementById('clasif-kpi-grid').innerHTML = '';

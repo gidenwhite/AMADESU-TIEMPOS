@@ -899,8 +899,11 @@
 
               <div class="form-group full-width" style="margin-top: 16px;">
                 <label class="form-label" id="edit-shakedown-label">Vueltas de Shakedown (opcional)</label>
-                <input type="number" id="edit-shakedown-vueltas" class="form-control" min="1" step="1" placeholder="Ej. 3 — déjalo vacío si este rally no tiene">
-                <p style="font-size: 12px; color: var(--text-muted, #8E9BAE); margin-top: 6px;">Tramo de práctica no oficial (no afecta el tiempo oficial de la carrera).</p>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                  <input type="number" id="edit-shakedown-vueltas" class="form-control" min="1" step="1" placeholder="Ej. 3 — déjalo vacío si este rally no tiene">
+                  <input type="number" id="edit-shakedown-distancia" class="form-control" min="0.01" step="0.01" placeholder="Distancia propia en km, ej. 2.10">
+                </div>
+                <p id="edit-shakedown-hint" style="font-size: 12px; color: var(--text-muted, #8E9BAE); margin-top: 6px;">Tramo de práctica no oficial (no afecta el tiempo oficial de la carrera). Tiene su propia distancia -- no usa la de la Prueba Especial -- así la velocidad promedio sale bien calculada.</p>
               </div>
 
               <!-- CONTENEDOR DE ETAPAS (EDIT) — solo tipo "rally" -->
@@ -1269,8 +1272,11 @@
               </div>
               <div class="form-group full-width" id="crear-shakedown-wrapper">
                 <label class="form-label" id="crear-shakedown-label">Vueltas de Shakedown (opcional)</label>
-                <input type="number" id="crear-shakedown-vueltas" class="form-control" min="1" step="1" placeholder="Ej. 3 — déjalo vacío si este rally no tiene">
-                <p style="font-size: 12px; color: var(--text-muted, #8E9BAE); margin-top: 6px;">Tramo de práctica no oficial (no afecta el tiempo oficial de la carrera). Vacío = no se crea; puedes activarlo después desde "Control de Tiempos".</p>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                  <input type="number" id="crear-shakedown-vueltas" class="form-control" min="1" step="1" placeholder="Ej. 3 — déjalo vacío si este rally no tiene">
+                  <input type="number" id="crear-shakedown-distancia" class="form-control" min="0.01" step="0.01" placeholder="Distancia propia en km, ej. 2.10">
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted, #8E9BAE); margin-top: 6px;">Tramo de práctica no oficial (no afecta el tiempo oficial de la carrera). Tiene su propia distancia -- no usa la de la Prueba Especial. Vacío = no se crea; puedes activarlo después desde "Control de Tiempos".</p>
               </div>
             </div>
           </div>
@@ -2909,8 +2915,9 @@
 
         // 3. Shakedown / Clasificación (opcional)
         const vueltasShakedown = parseInt(document.getElementById('crear-shakedown-vueltas').value, 10);
+        const distanciaShakedown = parseFloat(document.getElementById('crear-shakedown-distancia').value);
         if (vueltasShakedown > 0) {
-          await window.crearOActualizarShakedown(rallyId, tipoEvento, vueltasShakedown);
+          await window.crearOActualizarShakedown(rallyId, tipoEvento, vueltasShakedown, distanciaShakedown);
         }
 
         // 4. Guardar categorías habilitadas
@@ -2924,7 +2931,7 @@
           });
           if (catError) {
              console.error("Error al guardar categorías:", catError);
-             window.toast('Error al guardar categorías: ' + catError.message, 'error');
+             window.toast('El resto se guardó, pero las categorías no: ' + catError.message, 'error');
           }
         }
 
@@ -3516,15 +3523,20 @@
       const { data: shakedownEtapaExistente } = await supabase.schema('rally').from('etapas')
         .select('id').eq('rally_id', id).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
       let shakedownVueltasActuales = '';
+      let shakedownDistanciaActual = '';
       if (shakedownEtapaExistente) {
         // .maybeSingle() fallaba en silencio si por algún motivo quedó más de un
         // recorrido activo para esta etapa (ver window.crearOActualizarShakedown,
         // que ahora limpia duplicados) -- se toma el más antiguo como canónico.
         const { data: shakedownRecsExistentes } = await supabase.schema('rally').from('recorridos')
-          .select('numero_vueltas').eq('etapa_id', shakedownEtapaExistente.id).is('deleted_at', null).order('created_at', { ascending: true }).limit(1);
-        if (shakedownRecsExistentes && shakedownRecsExistentes[0]) shakedownVueltasActuales = shakedownRecsExistentes[0].numero_vueltas || '';
+          .select('numero_vueltas, distancia_km').eq('etapa_id', shakedownEtapaExistente.id).is('deleted_at', null).order('created_at', { ascending: true }).limit(1);
+        if (shakedownRecsExistentes && shakedownRecsExistentes[0]) {
+          shakedownVueltasActuales = shakedownRecsExistentes[0].numero_vueltas || '';
+          shakedownDistanciaActual = shakedownRecsExistentes[0].distancia_km || '';
+        }
       }
       document.getElementById('edit-shakedown-vueltas').value = shakedownVueltasActuales;
+      document.getElementById('edit-shakedown-distancia').value = shakedownDistanciaActual;
 
       // Mismo problema que en el formulario de creación: los campos "required" ocultos
       // bloquean el submit en silencio si no se les quita "required". Hay que aplicarlo
@@ -3548,8 +3560,12 @@
       });
 
       if (esCircuito) {
-        // Cargar la (única) etapa/recorrido del circuito + sus puntos de control
-        const { data: etapasDb } = await supabase.schema('rally').from('etapas').select('*, recorridos(*)').eq('rally_id', id).is('deleted_at', null).order('numero');
+        // Cargar la (única) etapa/recorrido del circuito + sus puntos de control.
+        // OJO: excluir es_shakedown=true -- si no, como la Clasificación se
+        // guarda con numero=0, quedaba PRIMERA al ordenar y esta pantalla
+        // terminaba leyendo (y al guardar, PISANDO) el recorrido de la
+        // Clasificación en vez del de la Prueba Especial real.
+        const { data: etapasDb } = await supabase.schema('rally').from('etapas').select('*, recorridos(*)').eq('rally_id', id).eq('es_shakedown', false).is('deleted_at', null).order('numero');
         const recorrido = etapasDb && etapasDb[0] && etapasDb[0].recorridos ? etapasDb[0].recorridos.find(r => !r.deleted_at) : null;
 
         document.getElementById('edit-circuito-recorrido-id').value = recorrido ? recorrido.id : '';
@@ -3582,7 +3598,9 @@
         const editStagesContainer = document.getElementById('edit-stages-container');
         editStagesContainer.innerHTML = '<span style="color:var(--text-muted);">Cargando configuración de etapas...</span>';
 
-        const { data: etapasDb } = await supabase.schema('rally').from('etapas').select('*, recorridos(*)').eq('rally_id', id).order('numero');
+        // Mismo motivo que en la rama de circuito: sin este filtro, el
+        // Shakedown (numero=0) aparecía como una Etapa editable más.
+        const { data: etapasDb } = await supabase.schema('rally').from('etapas').select('*, recorridos(*)').eq('rally_id', id).eq('es_shakedown', false).order('numero');
 
         editStagesContainer.innerHTML = '';
         window.editStageCount = 0;
@@ -3692,7 +3710,7 @@
           });
           if (catError) {
              console.error("Error al guardar categorías:", catError);
-             window.toast('Error guardando categorías: ' + catError.message, 'error');
+             window.toast('El resto se guardó, pero las categorías no: ' + catError.message, 'error');
           }
         }
 
@@ -3701,8 +3719,9 @@
         // Shakedown / Clasificación (opcional): crea o actualiza el número de vueltas.
         // Si el campo queda vacío no se toca nada (no borra uno ya existente).
         const vueltasShakedownEdit = parseInt(document.getElementById('edit-shakedown-vueltas').value, 10);
+        const distanciaShakedownEdit = parseFloat(document.getElementById('edit-shakedown-distancia').value);
         if (vueltasShakedownEdit > 0) {
-          await window.crearOActualizarShakedown(rallyId, tipoEvento, vueltasShakedownEdit);
+          await window.crearOActualizarShakedown(rallyId, tipoEvento, vueltasShakedownEdit, distanciaShakedownEdit);
         }
 
         if (tipoEvento === 'circuito') {
@@ -3760,7 +3779,8 @@
 
           const puntosABorrar = (dbPuntos || []).filter(dbP => !formPuntosIds.includes(dbP.id)).map(dbP => dbP.id);
           if (puntosABorrar.length > 0) {
-            await supabase.schema('rally').from('puntos_control').update({ deleted_at: new Date().toISOString() }).in('id', puntosABorrar);
+            const { error: pBorrarErr } = await supabase.schema('rally').from('puntos_control').update({ deleted_at: new Date().toISOString() }).in('id', puntosABorrar);
+            if (pBorrarErr) throw new Error('Error eliminando puntos de control: ' + pBorrarErr.message);
           }
 
           let puntoOrder = 1;
@@ -3772,7 +3792,10 @@
             if (!nombrePunto) return;
 
             if (puntoId) {
-              puntoUpdates.push(supabase.schema('rally').from('puntos_control').update({ nombre: nombrePunto, numero: puntoOrder }).eq('id', puntoId));
+              puntoUpdates.push(
+                supabase.schema('rally').from('puntos_control').update({ nombre: nombrePunto, numero: puntoOrder }).eq('id', puntoId)
+                  .then(({ error }) => { if (error) throw new Error('Error actualizando punto de control: ' + error.message); })
+              );
             } else {
               puntosNuevos.push({ recorrido_id: recorridoId, numero: puntoOrder, nombre: nombrePunto });
             }
@@ -3780,7 +3803,8 @@
           });
           await Promise.all(puntoUpdates);
           if (puntosNuevos.length > 0) {
-            await supabase.schema('rally').from('puntos_control').insert(puntosNuevos);
+            const { error: pInsErr } = await supabase.schema('rally').from('puntos_control').insert(puntosNuevos);
+            if (pInsErr) throw new Error('Error insertando puntos de control: ' + pInsErr.message);
           }
 
           // Diff de mangas: mismo tratamiento que puntos de control arriba.
@@ -3790,7 +3814,8 @@
 
           const mangasABorrar = (dbMangas || []).filter(dbM => !formMangasIds.includes(dbM.id)).map(dbM => dbM.id);
           if (mangasABorrar.length > 0) {
-            await supabase.schema('rally').from('mangas').update({ deleted_at: new Date().toISOString() }).in('id', mangasABorrar);
+            const { error: mBorrarErr } = await supabase.schema('rally').from('mangas').update({ deleted_at: new Date().toISOString() }).in('id', mangasABorrar);
+            if (mBorrarErr) throw new Error('Error eliminando mangas: ' + mBorrarErr.message);
           }
 
           let mangaOrder = 1;
@@ -3802,7 +3827,10 @@
             if (!nombreManga) return;
 
             if (mangaId) {
-              mangaUpdates.push(supabase.schema('rally').from('mangas').update({ nombre: nombreManga, numero: mangaOrder }).eq('id', mangaId));
+              mangaUpdates.push(
+                supabase.schema('rally').from('mangas').update({ nombre: nombreManga, numero: mangaOrder }).eq('id', mangaId)
+                  .then(({ error }) => { if (error) throw new Error('Error actualizando manga: ' + error.message); })
+              );
             } else {
               mangasNuevas.push({ rally_id: rallyId, numero: mangaOrder, nombre: nombreManga });
             }
@@ -3810,7 +3838,8 @@
           });
           await Promise.all(mangaUpdates);
           if (mangasNuevas.length > 0) {
-            await supabase.schema('rally').from('mangas').insert(mangasNuevas);
+            const { error: mInsErr } = await supabase.schema('rally').from('mangas').insert(mangasNuevas);
+            if (mInsErr) throw new Error('Error insertando mangas: ' + mInsErr.message);
           }
         } else {
           // 3. Guardar Etapas y Recorridos. Antes cada paso (borrar quitados,
@@ -3830,10 +3859,12 @@
             const etapasABorrar = dbEtapas.filter(dbE => !formEtapasIds.includes(dbE.id)).map(dbE => dbE.id);
             const recorridosABorrar = dbEtapas.flatMap(dbE => (dbE.recorridos || []).filter(dbR => !formRecorridosIds.includes(dbR.id)).map(dbR => dbR.id));
 
-            await Promise.all([
-              etapasABorrar.length > 0 ? supabase.schema('rally').from('etapas').update({ deleted_at: new Date().toISOString() }).in('id', etapasABorrar) : null,
-              recorridosABorrar.length > 0 ? supabase.schema('rally').from('recorridos').update({ deleted_at: new Date().toISOString() }).in('id', recorridosABorrar) : null
+            const [etapasBorradoRes, recorridosBorradoRes] = await Promise.all([
+              etapasABorrar.length > 0 ? supabase.schema('rally').from('etapas').update({ deleted_at: new Date().toISOString() }).in('id', etapasABorrar) : Promise.resolve({ error: null }),
+              recorridosABorrar.length > 0 ? supabase.schema('rally').from('recorridos').update({ deleted_at: new Date().toISOString() }).in('id', recorridosABorrar) : Promise.resolve({ error: null })
             ]);
+            if (etapasBorradoRes.error) throw new Error('Error eliminando etapas: ' + etapasBorradoRes.error.message);
+            if (recorridosBorradoRes.error) throw new Error('Error eliminando recorridos: ' + recorridosBorradoRes.error.message);
           }
 
           // Etapas: actualizar existentes en paralelo, insertar nuevas en un solo lote.
@@ -4885,6 +4916,19 @@
       if (inscritosRes.data) {
         console.log('Inscritos cargados:', inscritosRes.data.length, inscritosRes.data.map(i => '#' + i.numero));
       }
+
+      // En circuito solo existe UNA etapa (la de la Prueba Especial única) --
+      // mostrar el selector de "Etapa" ahí es un paso redundante que además
+      // confundía con la Clasificación. Se oculta y se autoselecciona.
+      const esCircuitoTiempos = window.adminCurrentTipoEvento === 'circuito';
+      const etapaWrapper = etapaSelect.closest('.form-group');
+      if (esCircuitoTiempos && etapas.length > 0) {
+        etapaWrapper.style.display = 'none';
+        etapaSelect.value = etapas[0].id;
+        window.filtrarRecorridosPorEtapa();
+      } else {
+        etapaWrapper.style.display = '';
+      }
     };
 
     // ==========================================
@@ -4914,13 +4958,17 @@
       if (recorridos && recorridos[0]) window.shakedownRecorridoData = recorridos[0];
     };
 
-    // Crea (o actualiza el número de vueltas de) el Shakedown/Clasificación de un
+    // Crea (o actualiza vueltas/distancia de) el Shakedown/Clasificación de un
     // rally desde los formularios de Crear/Editar Circuito -- mismo mecanismo que
     // usa el botón de "Control de Tiempos" (etapa oculta es_shakedown=true), pero
     // configurado de una vez al crear o editar en vez de con un prompt() aparte.
-    window.crearOActualizarShakedown = async function(rallyId, tipoEvento, vueltas) {
+    // La distancia es SIEMPRE la propia de este tramo -- nunca la de la Prueba
+    // Especial -- así el cálculo de velocidad promedio (que usa distancia_km
+    // del recorrido, ver fn_upsert_tiempo_desde_llegada) sale correcto.
+    window.crearOActualizarShakedown = async function(rallyId, tipoEvento, vueltas, distancia) {
       if (!vueltas || vueltas < 1) return;
       const label = tipoEvento === 'circuito' ? 'Clasificación' : 'Shakedown';
+      const distanciaFinal = (distancia && distancia > 0) ? distancia : 1;
 
       const { data: etapaExistente } = await supabase.schema('rally').from('etapas')
         .select('id').eq('rally_id', rallyId).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
@@ -4943,9 +4991,13 @@
             }
           }
           const duplicados = recorridosExistentes.filter(r => r.id !== canonico.id);
-          await supabase.schema('rally').from('recorridos').update({ numero_vueltas: vueltas }).eq('id', canonico.id);
+          const updateData = { numero_vueltas: vueltas };
+          if (distancia && distancia > 0) updateData.distancia_km = distancia; // sin distancia explícita, no se toca la ya guardada
+          const { error: updErr } = await supabase.schema('rally').from('recorridos').update(updateData).eq('id', canonico.id);
+          if (updErr) throw new Error('Error guardando el recorrido de ' + label + ': ' + updErr.message);
           if (duplicados.length > 0) {
-            await supabase.schema('rally').from('recorridos').update({ deleted_at: new Date().toISOString() }).in('id', duplicados.map(d => d.id));
+            const { error: delErr } = await supabase.schema('rally').from('recorridos').update({ deleted_at: new Date().toISOString() }).in('id', duplicados.map(d => d.id));
+            if (delErr) throw new Error('Error limpiando duplicados de ' + label + ': ' + delErr.message);
           }
         }
         return;
@@ -4954,13 +5006,14 @@
       const { data: etapaIns, error: etapaErr } = await supabase.schema('rally').from('etapas').insert({
         rally_id: rallyId, numero: 0, nombre: label, fecha: new Date().toISOString().split('T')[0], es_shakedown: true
       }).select().single();
-      if (etapaErr) { console.error('Error creando ' + label + ':', etapaErr); return; }
+      if (etapaErr) throw new Error('Error creando ' + label + ': ' + etapaErr.message);
 
-      await supabase.schema('rally').from('recorridos').insert({
+      const { error: recErr } = await supabase.schema('rally').from('recorridos').insert({
         etapa_id: etapaIns.id, numero: 1, nombre: label,
         lugar_inicio: label, lugar_final: label,
-        distancia_km: 1, hora_inicio_prevista: new Date().toISOString(), numero_vueltas: vueltas
+        distancia_km: distanciaFinal, hora_inicio_prevista: new Date().toISOString(), numero_vueltas: vueltas
       });
+      if (recErr) throw new Error('Error guardando el recorrido de ' + label + ': ' + recErr.message);
     };
 
     window.abrirShakedown = async function() {
@@ -4973,13 +5026,20 @@
       if (!window.shakedownRecorridoData) {
         // En circuito la cantidad de vueltas de la Clasificación es configurable
         // (puede ser 1 o más); en rally clásico el Shakedown se mantiene fijo en
-        // 3 intentos, como siempre.
+        // 3 intentos, como siempre. La distancia SIEMPRE es propia de este tramo,
+        // nunca la de la Prueba Especial (si no, la velocidad promedio sale mal).
         let vueltas = 3;
+        let distancia = 1;
         if (esCircuito) {
           const input = prompt('¿Cuántas vueltas tiene la Clasificación de este circuito?', '1');
           if (input === null) return;
           vueltas = parseInt(input, 10);
           if (!vueltas || vueltas < 1) return window.toast('Número de vueltas inválido.', 'warn');
+
+          const inputDist = prompt('¿Cuántos km tiene CADA VUELTA de la Clasificación? (su propia distancia, no la de la PE)', '');
+          if (inputDist === null) return;
+          distancia = parseFloat(inputDist);
+          if (!distancia || distancia <= 0) return window.toast('Distancia inválida.', 'warn');
         }
 
         const btn = document.getElementById('btn-shakedown');
@@ -4995,7 +5055,7 @@
           const { data: recIns, error: recErr } = await supabase.schema('rally').from('recorridos').insert({
             etapa_id: etapaIns.id, numero: 1, nombre: label,
             lugar_inicio: label, lugar_final: label,
-            distancia_km: 1, hora_inicio_prevista: new Date().toISOString(), numero_vueltas: vueltas
+            distancia_km: distancia, hora_inicio_prevista: new Date().toISOString(), numero_vueltas: vueltas
           }).select().single();
           if (recErr) throw recErr;
 

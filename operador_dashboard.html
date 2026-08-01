@@ -1247,6 +1247,19 @@
       if (inscritosRes.data) {
         console.log('Inscritos cargados:', inscritosRes.data.length, inscritosRes.data.map(i => '#' + i.numero));
       }
+
+      // En circuito solo existe UNA etapa (la de la Prueba Especial única) --
+      // mostrar el selector de "Etapa" ahí es un paso redundante que además
+      // confundía con la Clasificación. Se oculta y se autoselecciona.
+      const esCircuitoTiempos = window.adminCurrentTipoEvento === 'circuito';
+      const etapaWrapper = etapaSelect.closest('.form-group');
+      if (esCircuitoTiempos && etapas.length > 0) {
+        etapaWrapper.style.display = 'none';
+        etapaSelect.value = etapas[0].id;
+        window.filtrarRecorridosPorEtapa();
+      } else {
+        etapaWrapper.style.display = '';
+      }
     };
 
     // ==========================================
