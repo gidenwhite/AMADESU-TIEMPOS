@@ -822,6 +822,21 @@
       .grid-container {
         grid-template-columns: 1fr;
       }
+
+      /* Más espacio útil dentro de los modales en pantallas angostas -- el
+         padding de 32px de escritorio deja muy poco lugar para tablas y
+         formularios en un celular. */
+      .modal-content {
+        padding: 18px !important;
+        width: 92vw !important;
+        max-width: 92vw !important;
+        border-radius: 12px !important;
+      }
+
+      .data-table th, .data-table td {
+        padding: 10px 8px;
+        font-size: 13px;
+      }
     }
 
     /* Secret Admin Trigger */
@@ -1012,6 +1027,60 @@
       margin-bottom: 24px;
     }
 
+    .pilots-toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .pilots-search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .pilots-search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .pilots-search-input {
+      width: 100% !important;
+      padding-left: 34px !important;
+      padding-right: 30px !important;
+    }
+
+    .pilots-search-clear {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 6px;
+      line-height: 1;
+      border-radius: 50%;
+      transition: all 0.15s;
+    }
+
+    .pilots-search-clear:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
     .pilots-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -1090,6 +1159,24 @@
       text-transform: uppercase;
       letter-spacing: 0.1em;
       backdrop-filter: blur(4px);
+    }
+
+    .pilot-manga-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      background: rgba(255, 209, 102, 0.12);
+      color: var(--status-finished);
+      border: 1px solid rgba(255, 209, 102, 0.3);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      width: fit-content;
     }
 
     .pilot-card-content {
@@ -1393,14 +1480,10 @@
   <!-- MODAL PILOTOS -->
   <div id="modal-pilotos" class="modal-overlay">
     <div class="modal-content" style="width: 1200px;">
-      <div class="pilots-header" style="align-items: flex-start; gap: 16px;">
+      <div class="pilots-header" style="align-items: flex-start; gap: 16px; margin-bottom: 4px;">
         <h2 class="modal-title" id="pilotos-title" style="margin:0;">Pilotos Inscritos <span id="pilotos-count"
             style="color:var(--text-muted); font-size: 16px;"></span></h2>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap; justify-content: flex-end;">
-          <input type="text" id="pilotos-search" class="custom-select" style="width: 190px;" placeholder="Buscar Nº o Categoría...">
-          <select id="pilotos-filter" class="custom-select" style="width: 200px;">
-            <option value="TODAS">TODAS LAS CLASES</option>
-          </select>
+        <div style="display:flex; gap:10px; flex-shrink:0;">
           <button class="modal-back" onclick="closeModal('modal-pilotos')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             Atrás
@@ -1408,6 +1491,23 @@
           <button class="modal-close" style="position: static;" onclick="closeModal('modal-pilotos')">Cerrar</button>
         </div>
       </div>
+
+      <div class="pilots-toolbar">
+        <div class="pilots-search-wrap">
+          <svg class="pilots-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="pilotos-search" class="custom-select pilots-search-input" placeholder="Buscar por número o categoría...">
+          <button type="button" class="pilots-search-clear" id="pilotos-search-clear" style="display:none;" onclick="window.limpiarBusquedaPilotos()" aria-label="Limpiar búsqueda">✕</button>
+        </div>
+        <select id="pilotos-filter" class="custom-select" style="width: 200px;">
+          <option value="TODAS">TODAS LAS CLASES</option>
+        </select>
+        <select id="pilotos-sort" class="custom-select" style="width: 195px;">
+          <option value="numero">Ordenar por Número</option>
+          <option value="piloto">Ordenar por Piloto (A-Z)</option>
+          <option value="categoria">Ordenar por Categoría</option>
+        </select>
+      </div>
+
       <div class="pilots-grid" id="pilotos-grid"></div>
     </div>
   </div>
@@ -1852,26 +1952,77 @@
     // --- PILOTOS ---
     let currentPilotosData = [];
 
+    function pilotSkeletonCard() {
+      return `<div class="pilot-card" style="pointer-events:none;">
+        <div class="pilot-card-top">
+          <div class="skeleton-shimmer" style="height:26px; width:64px; border-radius:4px;"></div>
+          <div class="skeleton-shimmer" style="height:20px; width:70px; border-radius:20px;"></div>
+        </div>
+        <div class="pilot-card-content">
+          <div class="pilot-person-group">
+            <div class="skeleton-shimmer" style="height:10px; width:40px; border-radius:3px;"></div>
+            <div class="skeleton-shimmer" style="height:18px; width:75%; border-radius:4px;"></div>
+          </div>
+          <div class="pilot-person-group">
+            <div class="skeleton-shimmer" style="height:10px; width:60px; border-radius:3px;"></div>
+            <div class="skeleton-shimmer" style="height:18px; width:60%; border-radius:4px;"></div>
+          </div>
+        </div>
+        <div class="pilot-footer-grid">
+          <div class="skeleton-shimmer" style="height:30px; border-radius:4px;"></div>
+          <div class="skeleton-shimmer" style="height:30px; border-radius:4px;"></div>
+        </div>
+      </div>`;
+    }
+
+    // Colorea la insignia de categoría de forma estable (hash del nombre),
+    // para poder distinguir clases de un vistazo en listas largas.
+    const PILOT_CAT_PALETTE = [
+      '#E63946', '#00F5A0', '#FFD166', '#00E5FF',
+      '#B794F6', '#FF8C42', '#4DD8B8', '#FF6B9D'
+    ];
+    function categoriaColorFor(nombre) {
+      if (!nombre) return '#8E9BAE';
+      let hash = 0;
+      for (let i = 0; i < nombre.length; i++) hash = (hash * 31 + nombre.charCodeAt(i)) >>> 0;
+      return PILOT_CAT_PALETTE[hash % PILOT_CAT_PALETTE.length];
+    }
+
     window.openPilotos = async function (rallyId) {
       document.getElementById('modal-pilotos').classList.add('active');
       const grid = document.getElementById('pilotos-grid');
       const filter = document.getElementById('pilotos-filter');
 
-      grid.innerHTML = '<div style="text-align:center; grid-column: 1 / -1;">Cargando...</div>';
+      grid.innerHTML = Array(6).fill(pilotSkeletonCard()).join('');
       filter.innerHTML = '<option value="TODAS">TODAS LAS CLASES</option>';
       document.getElementById('pilotos-count').innerText = '';
       document.getElementById('pilotos-search').value = '';
+      document.getElementById('pilotos-search-clear').style.display = 'none';
+      document.getElementById('pilotos-sort').value = 'numero';
 
-      const { data, error } = await supabase.schema('rally').from('inscripciones').select('numero, piloto:pilotos(nombre, apellido, pais, celular), navegante:navegantes(nombre, apellido, pais, celular), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre), asociacion:asociaciones(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
+      const { data, error } = await supabase.schema('rally').from('inscripciones').select('numero, piloto:pilotos(nombre, apellido, pais, celular), navegante:navegantes(nombre, apellido, pais, celular), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre), asociacion:asociaciones(nombre), manga:mangas(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
 
-      if (error || !data || data.length === 0) {
-        grid.innerHTML = '<div style="text-align:center; grid-column: 1 / -1; color: var(--text-muted);">No hay pilotos inscritos.</div>';
+      if (error) {
+        grid.innerHTML = `<div class="no-results">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+          <strong>No se pudo cargar la lista</strong>
+          <span>Intenta cerrar y volver a abrir esta ventana.</span>
+        </div>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        grid.innerHTML = `<div class="no-results">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <strong>Sin pilotos inscritos</strong>
+          <span>Todavía no hay pilotos registrados en este rally.</span>
+        </div>`;
         return;
       }
 
       currentPilotosData = data;
 
-      const categories = [...new Set(data.map(d => d.categoria?.nombre).filter(Boolean))];
+      const categories = [...new Set(data.map(d => d.categoria?.nombre).filter(Boolean))].sort();
       categories.forEach(c => {
         filter.innerHTML += `<option value="${c}">${c}</option>`;
       });
@@ -1887,6 +2038,22 @@
       renderPilotosCards(document.getElementById('pilotos-filter').value);
     });
 
+    document.getElementById('pilotos-sort').addEventListener('change', () => {
+      renderPilotosCards(document.getElementById('pilotos-filter').value);
+    });
+
+    window.limpiarBusquedaPilotos = function () {
+      document.getElementById('pilotos-search').value = '';
+      renderPilotosCards(document.getElementById('pilotos-filter').value);
+      document.getElementById('pilotos-search').focus();
+    };
+
+    window.limpiarFiltrosPilotos = function () {
+      document.getElementById('pilotos-search').value = '';
+      document.getElementById('pilotos-filter').value = 'TODAS';
+      renderPilotosCards('TODAS');
+    };
+
     function getFlagHtml(countryName) {
       if (!countryName) return '';
       const countries = [{ "code": "ar", "name": "Argentina" }, { "code": "bo", "name": "Bolivia" }, { "code": "br", "name": "Brasil" }, { "code": "ca", "name": "Canadá" }, { "code": "cl", "name": "Chile" }, { "code": "cn", "name": "China" }, { "code": "co", "name": "Colombia" }, { "code": "cr", "name": "Costa Rica" }, { "code": "cu", "name": "Cuba" }, { "code": "ec", "name": "Ecuador" }, { "code": "sv", "name": "El Salvador" }, { "code": "es", "name": "España" }, { "code": "us", "name": "Estados Unidos" }, { "code": "fr", "name": "Francia" }, { "code": "gt", "name": "Guatemala" }, { "code": "hn", "name": "Honduras" }, { "code": "it", "name": "Italia" }, { "code": "jp", "name": "Japón" }, { "code": "mx", "name": "México" }, { "code": "ni", "name": "Nicaragua" }, { "code": "pa", "name": "Panamá" }, { "code": "py", "name": "Paraguay" }, { "code": "pe", "name": "Perú" }, { "code": "pr", "name": "Puerto Rico" }, { "code": "gb", "name": "Reino Unido" }, { "code": "do", "name": "República Dominicana" }, { "code": "uy", "name": "Uruguay" }, { "code": "ve", "name": "Venezuela" }];
@@ -1899,11 +2066,12 @@
 
     function renderPilotosCards(categoriaFiltro) {
       const grid = document.getElementById('pilotos-grid');
-      grid.innerHTML = '';
 
       const searchVal = (document.getElementById('pilotos-search')?.value || '').trim().toLowerCase();
+      const sortVal = document.getElementById('pilotos-sort')?.value || 'numero';
+      document.getElementById('pilotos-search-clear').style.display = searchVal ? 'inline-flex' : 'none';
 
-      const filtered = currentPilotosData.filter(ins => {
+      let filtered = currentPilotosData.filter(ins => {
         if (categoriaFiltro !== 'TODAS' && ins.categoria?.nombre !== categoriaFiltro) return false;
         if (searchVal) {
           const numMatch = String(ins.numero).toLowerCase().includes(searchVal);
@@ -1913,44 +2081,68 @@
         return true;
       });
 
+      filtered = filtered.slice().sort((a, b) => {
+        if (sortVal === 'piloto') {
+          const an = a.piloto ? `${a.piloto.nombre} ${a.piloto.apellido}` : 'zzzzzz';
+          const bn = b.piloto ? `${b.piloto.nombre} ${b.piloto.apellido}` : 'zzzzzz';
+          return an.localeCompare(bn);
+        }
+        if (sortVal === 'categoria') {
+          const ac = a.categoria?.nombre || 'zzzzzz';
+          const bc = b.categoria?.nombre || 'zzzzzz';
+          return ac.localeCompare(bc) || a.numero - b.numero;
+        }
+        return a.numero - b.numero;
+      });
+
       document.getElementById('pilotos-count').innerText = `(${filtered.length})`;
 
       if (filtered.length === 0) {
-        grid.innerHTML = '<div style="text-align:center; grid-column: 1 / -1; color: var(--text-muted);">No hay pilotos en esta clase.</div>';
+        const hayFiltroActivo = !!searchVal || categoriaFiltro !== 'TODAS';
+        grid.innerHTML = `<div class="no-results">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <strong>${hayFiltroActivo ? 'Sin resultados' : 'No hay pilotos en esta clase'}</strong>
+          <span>${hayFiltroActivo ? 'Prueba con otro número, clase o quita el filtro.' : ''}</span>
+          ${hayFiltroActivo ? `<button type="button" onclick="window.limpiarFiltrosPilotos()" style="margin-top:4px; background: var(--accent-primary); color:white; border:none; padding:10px 22px; border-radius:8px; font-family:var(--font-body); font-size:13px; font-weight:700; cursor:pointer;">Limpiar filtros</button>` : ''}
+        </div>`;
         return;
       }
 
-      filtered.forEach((ins, index) => {
+      grid.innerHTML = filtered.map(ins => {
         const p = ins.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : 'Desconocido';
         const pFlag = getFlagHtml(ins.piloto?.pais || 'Bolivia');
         const n = ins.navegante ? `${ins.navegante.nombre} ${ins.navegante.apellido}` : '-';
         const nFlag = ins.navegante ? getFlagHtml(ins.navegante?.pais || 'Bolivia') : '';
         const v = ins.vehiculo ? `${ins.vehiculo.marca} ${ins.vehiculo.modelo}` : 'N/A';
         const c = ins.categoria ? ins.categoria.nombre : 'N/A';
+        const catColor = categoriaColorFor(ins.categoria?.nombre);
         const team = ins.equipo ? ins.equipo.nombre : 'Sin Equipo';
         const asoc = ins.asociacion ? ins.asociacion.nombre : 'Independiente';
 
-        grid.innerHTML += `
+        return `
           <div class="pilot-card">
             <div class="pilot-number-watermark">#${ins.numero}</div>
-            
+
             <div class="pilot-card-top">
-              <div class="pilot-number-large">#${ins.numero}</div>
-              <div class="pilot-cat-badge">${c}</div>
+              <div>
+                <div class="pilot-number-large">#${ins.numero}</div>
+                ${ins.manga ? `<div class="pilot-manga-badge">${ins.manga.nombre}</div>` : ''}
+              </div>
+              <div class="pilot-cat-badge" style="color:${catColor}; border-color:${catColor}66; background:${catColor}22;">${c}</div>
             </div>
-            
+
             <div class="pilot-card-content">
               <div class="pilot-person-group">
                 <div class="pilot-card-label">Piloto</div>
                 <div class="pilot-card-value">${p} ${pFlag}</div>
               </div>
-              
+
               <div class="pilot-person-group">
                 <div class="pilot-card-label">Navegante</div>
                 <div class="pilot-card-value" style="color: var(--text-muted);">${n} ${nFlag}</div>
               </div>
             </div>
-            
+
             <div class="pilot-footer-grid">
               <div class="pilot-footer-item">
                 <div class="pilot-footer-label">Team / Marca</div>
@@ -1963,7 +2155,7 @@
             </div>
           </div>
         `;
-      });
+      }).join('');
     }
 
     // --- TIEMPOS (acordeón: Shakedown / General / Etapas > PEs) ---

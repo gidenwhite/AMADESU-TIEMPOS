@@ -289,6 +289,13 @@
       [style*="grid-column"] { grid-column: 1 !important; }
       .form-grid { grid-template-columns: 1fr !important; }
       .form-group.full-width { grid-column: 1 !important; }
+
+      /* Más espacio útil para el contenido en pantallas angostas -- el
+         padding de 32px de escritorio se come casi una quinta parte del
+         ancho de un celular chico. */
+      .modal-content { padding: 18px !important; width: 92vw !important; max-width: 92vw !important; border-radius: 12px !important; }
+      .card-panel { padding: 18px !important; }
+      .data-table th, .data-table td { padding: 10px 8px; font-size: 13px; }
     }
 
     .page-header { margin-bottom: 32px; }
@@ -925,6 +932,7 @@
           <!-- Tabla de penalizaciones existentes -->
           <div id="penal-lista-container" style="margin-top: 16px; display: none;">
             <h4 style="color: var(--text-muted); font-size: 13px; margin-bottom: 8px;">Penalizaciones aplicadas a este vehículo en esta PE:</h4>
+            <div style="overflow-x: auto;">
             <table class="data-table" style="font-size: 13px;">
               <thead>
                 <tr>
@@ -936,6 +944,7 @@
               </thead>
               <tbody id="penal-tbody"></tbody>
             </table>
+            </div>
           </div>
         </div>
 
@@ -960,10 +969,12 @@
 
           <div id="pasos-control-lista-container" style="margin-top: 16px; display: none;">
             <h4 style="color: var(--text-muted); font-size: 13px; margin-bottom: 8px;">Pasos registrados en esta vuelta:</h4>
+            <div style="overflow-x: auto;">
             <table class="data-table" style="font-size: 13px;">
               <thead><tr><th>Punto de Control</th><th>Hora de Paso</th></tr></thead>
               <tbody id="pasos-control-tbody"></tbody>
             </table>
+            </div>
           </div>
         </div>
 
@@ -1193,46 +1204,48 @@
 
       etapaSelect.innerHTML = '<option value="">Cargando Etapas...</option>';
 
-      // El Shakedown se maneja aparte (botón dedicado), nunca se mezcla con las Etapas oficiales.
-      await window.cargarShakedownInfo(rallyId);
+      // Antes esto se hacía en cadena (shakedown -> etapas -> UNA consulta de
+      // recorridos POR etapa -> inscritos -> cronograma), sumando la latencia
+      // de red de cada paso una tras otra -- con 3 etapas eran ~8 viajes
+      // seguidos solo para entrar a esta pantalla. Ahora se piden en paralelo
+      // las partes que no dependen entre sí, y los recorridos de TODAS las
+      // etapas en una sola consulta con "in(...)" en vez de una por etapa.
+      const [, etapasRes, inscritosRes, rallyRes] = await Promise.all([
+        window.cargarShakedownInfo(rallyId), // El Shakedown se maneja aparte (botón dedicado), nunca se mezcla con las Etapas oficiales.
+        supabase.schema('rally').from('etapas').select('id, nombre').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero'),
+        supabase.schema('rally').from('inscripciones').select(`
+          id, numero, categoria_id, manga_id,
+          piloto:pilotos(nombre, apellido),
+          categoria:categorias(nombre, codigo),
+          manga:mangas(nombre)
+        `).eq('rally_id', rallyId).is('deleted_at', null).order('numero'),
+        supabase.schema('rally').from('rallies').select('cronograma_filas').eq('id', rallyId).maybeSingle()
+      ]);
 
-      const { data: etapas } = await supabase.schema('rally').from('etapas').select('id, nombre').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero');
+      const etapas = etapasRes.data;
       if(!etapas || etapas.length === 0) {
         etapaSelect.innerHTML = '<option value="">No hay Cronograma generado</option>';
         return;
       }
 
       etapaSelect.innerHTML = '<option value="">Selecciona Etapa...</option>';
-      for(let etapa of etapas) {
-        etapaSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
-        
-        const { data: recorridos, error } = await supabase.schema('rally').from('recorridos').select('id, nombre, distancia_km, etapa_id, numero_vueltas').eq('etapa_id', etapa.id).is('deleted_at', null).order('numero');
-        if(recorridos) {
-          recorridos.forEach(r => {
-            r.etapa_nombre = etapa.nombre;
-            r.distancia = r.distancia_km; // Map for later use
-            window.tiemposTodosRecorridosCache.push(r);
-          });
-        }
-      }
+      etapas.forEach(etapa => { etapaSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`; });
 
-      // Cargar inscritos y cronograma para auto-rellenar
-      window.tiemposInscritosCache = [];
-      window.tiemposCronogramaCache = null;
+      const etapaNombrePorId = Object.fromEntries(etapas.map(e => [e.id, e.nombre]));
+      const { data: recorridosTodos } = await supabase.schema('rally').from('recorridos')
+        .select('id, nombre, distancia_km, etapa_id, numero_vueltas')
+        .in('etapa_id', etapas.map(e => e.id)).is('deleted_at', null).order('numero');
+      (recorridosTodos || []).forEach(r => {
+        r.etapa_nombre = etapaNombrePorId[r.etapa_id];
+        r.distancia = r.distancia_km; // Map for later use
+        window.tiemposTodosRecorridosCache.push(r);
+      });
 
-      const { data: inscritos } = await supabase.schema('rally').from('inscripciones').select(`
-        id, numero, categoria_id, manga_id,
-        piloto:pilotos(nombre, apellido),
-        categoria:categorias(nombre, codigo),
-        manga:mangas(nombre)
-      `).eq('rally_id', rallyId).is('deleted_at', null).order('numero');
-      
-      const { data: rallyData } = await supabase.schema('rally').from('rallies').select('cronograma_filas').eq('id', rallyId).maybeSingle();
-      if(rallyData) window.tiemposCronogramaCache = rallyData.cronograma_filas;
+      window.tiemposInscritosCache = inscritosRes.data || [];
+      window.tiemposCronogramaCache = rallyRes.data ? rallyRes.data.cronograma_filas : null;
 
-      if (inscritos) {
-        window.tiemposInscritosCache = inscritos;
-        console.log('Inscritos cargados:', inscritos.length, inscritos.map(i => '#' + i.numero));
+      if (inscritosRes.data) {
+        console.log('Inscritos cargados:', inscritosRes.data.length, inscritosRes.data.map(i => '#' + i.numero));
       }
     };
 

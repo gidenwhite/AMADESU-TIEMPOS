@@ -292,6 +292,13 @@
       [style*="grid-column"] { grid-column: 1 !important; }
       .form-grid { grid-template-columns: 1fr !important; }
       .form-group.full-width { grid-column: 1 !important; }
+
+      /* Más espacio útil para el contenido en pantallas angostas -- el
+         padding de 32px de escritorio se come casi una quinta parte del
+         ancho de un celular chico. */
+      .modal-content { padding: 18px !important; width: 92vw !important; max-width: 92vw !important; border-radius: 12px !important; }
+      .card-panel { padding: 18px !important; }
+      .data-table th, .data-table td { padding: 10px 8px; font-size: 13px; }
     }
 
     .page-header { margin-bottom: 32px; }
@@ -1010,6 +1017,7 @@
           <div style="display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
             <button class="btn-secondary" id="tab-btn-lista" style="background: var(--bg-surface-elevated); color: white; border-color: var(--accent-primary);" onclick="window.switchInsTab('lista')">Lista de Inscritos</button>
             <button class="btn-secondary" id="tab-btn-nuevo" onclick="window.switchInsTab('nuevo')">+ Inscribir Piloto</button>
+            <button class="btn-secondary" id="tab-btn-mangas" style="display:none;" onclick="window.switchInsTab('mangas')">Asignar Mangas</button>
           </div>
 
           <!-- TAB: LISTA DE INSCRITOS -->
@@ -1021,6 +1029,31 @@
             </div>
             <div id="ins-lista-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
               <!-- Se cargarán las tarjetas de los pilotos aquí -->
+            </div>
+          </div>
+
+          <!-- TAB: ASIGNAR MANGAS (solo circuito) — primero eliges la manga,
+               luego buscas pilotos por número y los vas añadiendo a esa manga. -->
+          <div id="ins-tab-mangas" style="display: none;">
+            <div class="form-group" style="max-width: 320px; margin-bottom: 20px;">
+              <label class="form-label">Manga</label>
+              <select id="manga-activa-select" class="form-control" onchange="window.mangaSeleccionarActiva()">
+                <option value="">Selecciona una manga...</option>
+              </select>
+            </div>
+
+            <p id="manga-sin-seleccion" style="color: var(--text-muted); font-size: 13px;">Elige una manga arriba para empezar a añadir pilotos.</p>
+
+            <div id="manga-activa-wrap" style="display:none;">
+              <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Escribe el número del coche y añádelo a la manga elegida. Si el número corre en varias clases, aparecerán todas por separado.</p>
+              <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" inputmode="numeric" id="manga-buscar-numero" class="form-control" style="max-width: 220px;" placeholder="Nº de coche a añadir..." onkeydown="if(event.key==='Enter'){event.preventDefault(); window.mangaBuscarPorNumero();}">
+                <button type="button" class="btn-secondary" onclick="window.mangaBuscarPorNumero()">Buscar</button>
+              </div>
+              <div id="manga-buscar-resultado"></div>
+
+              <h3 style="color: var(--pe-cyan); margin: 28px 0 12px;">Pilotos en esta manga (<span id="manga-activa-count">0</span>)</h3>
+              <div id="manga-activa-lista"></div>
             </div>
           </div>
 
@@ -1474,7 +1507,8 @@
         <!-- TABLA DE OPERADORES EXISTENTES -->
         <div class="card-panel">
           <h2 class="panel-title">Operadores Registrados</h2>
-          
+
+          <div style="overflow-x: auto;">
           <table class="data-table">
             <thead>
               <tr>
@@ -1489,6 +1523,7 @@
               <tr><td colspan="4">Cargando operadores...</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <!-- MODAL DE GESTIÓN DE OPERADOR -->
@@ -1712,6 +1747,7 @@
           <!-- Tabla de penalizaciones existentes -->
           <div id="penal-lista-container" style="margin-top: 16px; display: none;">
             <h4 style="color: var(--text-muted); font-size: 13px; margin-bottom: 8px;">Penalizaciones aplicadas a este vehículo en esta PE:</h4>
+            <div style="overflow-x: auto;">
             <table class="data-table" style="font-size: 13px;">
               <thead>
                 <tr>
@@ -1723,6 +1759,7 @@
               </thead>
               <tbody id="penal-tbody"></tbody>
             </table>
+            </div>
           </div>
         </div>
 
@@ -1747,10 +1784,12 @@
 
           <div id="pasos-control-lista-container" style="margin-top: 16px; display: none;">
             <h4 style="color: var(--text-muted); font-size: 13px; margin-bottom: 8px;">Pasos registrados en esta vuelta:</h4>
+            <div style="overflow-x: auto;">
             <table class="data-table" style="font-size: 13px;">
               <thead><tr><th>Punto de Control</th><th>Hora de Paso</th></tr></thead>
               <tbody id="pasos-control-tbody"></tbody>
             </table>
+            </div>
           </div>
         </div>
 
@@ -2106,13 +2145,17 @@
 
         <div class="card-panel" style="margin-bottom: 24px;">
           <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Logo del Sitio</h3>
-          <div class="form-grid">
-            <div class="form-group full-width">
-              <label class="form-label">Enlace de la imagen del logo</label>
-              <input type="text" id="sw-logo-url" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
+          <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom: 14px;">
+            <div id="sw-logo-preview-wrap" style="width:80px; height:80px; border-radius:12px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+              <img id="sw-logo-preview" style="width:100%; height:100%; object-fit:contain; display:none;" alt="Logo actual">
+              <span id="sw-logo-preview-empty" style="font-size:11px; color:var(--text-dim); text-align:center;">Sin logo</span>
             </div>
+            <div style="flex:1; min-width:220px;">
+              <input type="file" id="sw-logo-file" class="form-control" accept="image/*">
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Se sube directo a Supabase (no hace falta Google Drive). Reemplaza el ícono por defecto en la barra superior de la página pública, del panel admin y de la página de Información.</p>
+            </div>
+            <button type="button" class="btn-secondary" id="sw-logo-quitar-btn" style="display:none; color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.quitarLogoSitio()">Quitar logo</button>
           </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Reemplaza el ícono por defecto en la barra superior de la página pública, del panel admin y de la página de Información. Déjalo vacío para usar el ícono por defecto.</p>
         </div>
 
         <div class="card-panel" style="margin-bottom: 24px;">
@@ -2789,66 +2832,67 @@
             if (mangasError) throw mangasError;
           }
         } else {
-          // Rally clásico: iterar sobre Etapas y guardarlas
-          const stageElements = document.querySelectorAll('.stage-item');
-          let stageCount = 1;
-          let peCount = 1;
+          // Rally clásico: recolectar todas las Etapas y todos los Recorridos
+          // primero, y guardarlos en 2 inserciones en lote. Antes se hacía 1
+          // inserción POR etapa y 1 MÁS por cada PE dentro de ella, todas en
+          // cadena -- con 3 etapas y 6 PEs eran hasta 9 viajes de ida y vuelta
+          // seguidos solo para guardar el circuito.
+          const stageElements = Array.from(document.querySelectorAll('.stage-item'));
 
-          for (const stageEl of stageElements) {
-            const nombreEtapa = stageEl.querySelector('.input-etapa-nombre').value;
-            const fechaEtapa = stageEl.querySelector('.input-etapa-fecha').value;
+          const etapasData = stageElements.map((stageEl, i) => ({
+            rally_id: rallyId,
+            numero: i + 1,
+            nombre: stageEl.querySelector('.input-etapa-nombre').value,
+            fecha: stageEl.querySelector('.input-etapa-fecha').value
+          }));
 
-            const etapaData = {
-              rally_id: rallyId,
-              numero: stageCount,
-              nombre: nombreEtapa,
-              fecha: fechaEtapa
-            };
-
-            const { data: etapaInserted, error: etapaError } = await supabase
+          let etapasInsertadas = [];
+          if (etapasData.length > 0) {
+            const { data: etapasRows, error: etapasError } = await supabase
               .schema('rally')
               .from('etapas')
-              .insert(etapaData)
-              .select()
-              .single();
+              .insert(etapasData)
+              .select();
+            if (etapasError) throw etapasError;
+            etapasInsertadas = etapasRows; // Postgres preserva el orden de un INSERT ... VALUES (...) múltiple en el RETURNING, así que etapasInsertadas[i] corresponde a stageElements[i].
+          }
 
-            if (etapaError) throw etapaError;
-            const etapaId = etapaInserted.id;
-            stageCount++;
+          let peCount = 1;
+          const recorridosData = [];
+          stageElements.forEach((stageEl, i) => {
+            const etapaId = etapasInsertadas[i]?.id;
+            if (!etapaId) return;
 
-            // Iterar sobre Recorridos de esta Etapa
             const recorridoElements = stageEl.querySelectorAll('.recorrido-item');
-            for (const recEl of recorridoElements) {
-               const lugarInicio = recEl.querySelector('.input-pe-inicio').value;
-               const lugarFin = recEl.querySelector('.input-pe-fin').value;
-               const distancia = parseFloat(recEl.querySelector('.input-pe-distancia').value);
-               const horaInicioStr = recEl.querySelector('.input-pe-hora').value;
-               let horaInicio = null;
-               if (horaInicioStr) {
-                 try {
-                   const d = new Date(horaInicioStr);
-                   if (!isNaN(d.getTime())) horaInicio = d.toISOString();
-                 } catch(e) {}
-               }
+            recorridoElements.forEach(recEl => {
+              const lugarInicio = recEl.querySelector('.input-pe-inicio').value;
+              const lugarFin = recEl.querySelector('.input-pe-fin').value;
+              const distancia = parseFloat(recEl.querySelector('.input-pe-distancia').value);
+              const horaInicioStr = recEl.querySelector('.input-pe-hora').value;
+              let horaInicio = null;
+              if (horaInicioStr) {
+                try {
+                  const d = new Date(horaInicioStr);
+                  if (!isNaN(d.getTime())) horaInicio = d.toISOString();
+                } catch (e) {}
+              }
 
-               const recorridoData = {
-                 etapa_id: etapaId,
-                 numero: peCount,
-                 nombre: `PE ${peCount}`,
-                 lugar_inicio: lugarInicio,
-                 lugar_final: lugarFin,
-                 distancia_km: distancia,
-                 hora_inicio_prevista: horaInicio
-               };
+              recorridosData.push({
+                etapa_id: etapaId,
+                numero: peCount,
+                nombre: `PE ${peCount}`,
+                lugar_inicio: lugarInicio,
+                lugar_final: lugarFin,
+                distancia_km: distancia,
+                hora_inicio_prevista: horaInicio
+              });
+              peCount++;
+            });
+          });
 
-               const { error: recError } = await supabase
-                 .schema('rally')
-                 .from('recorridos')
-                 .insert(recorridoData);
-
-               if (recError) throw recError;
-               peCount++;
-            }
+          if (recorridosData.length > 0) {
+            const { error: recError } = await supabase.schema('rally').from('recorridos').insert(recorridosData);
+            if (recError) throw recError;
           }
         }
 
@@ -3693,146 +3737,175 @@
             recorridoId = newRec.id;
           }
 
-          // Diff de puntos de control: borrar (soft) los quitados, actualizar existentes, insertar nuevos
+          // Diff de puntos de control: borrar (soft) los quitados, actualizar
+          // existentes, insertar nuevos. Antes cada paso era 1 consulta POR
+          // fila en cadena; ahora el borrado usa un solo "in(...)", las
+          // actualizaciones (con valores distintos por fila) van en paralelo
+          // con Promise.all en vez de esperarse una a la otra, y las
+          // inserciones van todas en un solo lote.
           const { data: dbPuntos } = await supabase.schema('rally').from('puntos_control').select('id').eq('recorrido_id', recorridoId).is('deleted_at', null);
-          const puntoElements = document.querySelectorAll('.edit-punto-control-item');
-          const formPuntosIds = Array.from(puntoElements).map(el => el.dataset.puntoControlId).filter(Boolean);
+          const puntoElements = Array.from(document.querySelectorAll('.edit-punto-control-item'));
+          const formPuntosIds = puntoElements.map(el => el.dataset.puntoControlId).filter(Boolean);
 
-          if (dbPuntos) {
-            for (const dbP of dbPuntos) {
-              if (!formPuntosIds.includes(dbP.id)) {
-                await supabase.schema('rally').from('puntos_control').update({ deleted_at: new Date().toISOString() }).eq('id', dbP.id);
-              }
-            }
+          const puntosABorrar = (dbPuntos || []).filter(dbP => !formPuntosIds.includes(dbP.id)).map(dbP => dbP.id);
+          if (puntosABorrar.length > 0) {
+            await supabase.schema('rally').from('puntos_control').update({ deleted_at: new Date().toISOString() }).in('id', puntosABorrar);
           }
 
           let puntoOrder = 1;
-          for (const puntoEl of puntoElements) {
+          const puntoUpdates = [];
+          const puntosNuevos = [];
+          puntoElements.forEach(puntoEl => {
             const puntoId = puntoEl.dataset.puntoControlId;
             const nombrePunto = puntoEl.querySelector('.input-punto-nombre').value.trim();
-            if (!nombrePunto) continue;
+            if (!nombrePunto) return;
 
             if (puntoId) {
-              await supabase.schema('rally').from('puntos_control').update({ nombre: nombrePunto, numero: puntoOrder }).eq('id', puntoId);
+              puntoUpdates.push(supabase.schema('rally').from('puntos_control').update({ nombre: nombrePunto, numero: puntoOrder }).eq('id', puntoId));
             } else {
-              await supabase.schema('rally').from('puntos_control').insert({ recorrido_id: recorridoId, numero: puntoOrder, nombre: nombrePunto });
+              puntosNuevos.push({ recorrido_id: recorridoId, numero: puntoOrder, nombre: nombrePunto });
             }
             puntoOrder++;
+          });
+          await Promise.all(puntoUpdates);
+          if (puntosNuevos.length > 0) {
+            await supabase.schema('rally').from('puntos_control').insert(puntosNuevos);
           }
 
-          // Diff de mangas: borrar (soft) las quitadas, actualizar existentes, insertar nuevas
+          // Diff de mangas: mismo tratamiento que puntos de control arriba.
           const { data: dbMangas } = await supabase.schema('rally').from('mangas').select('id').eq('rally_id', rallyId).is('deleted_at', null);
-          const mangaElements = document.querySelectorAll('.edit-manga-item');
-          const formMangasIds = Array.from(mangaElements).map(el => el.dataset.mangaId).filter(Boolean);
+          const mangaElements = Array.from(document.querySelectorAll('.edit-manga-item'));
+          const formMangasIds = mangaElements.map(el => el.dataset.mangaId).filter(Boolean);
 
-          if (dbMangas) {
-            for (const dbM of dbMangas) {
-              if (!formMangasIds.includes(dbM.id)) {
-                await supabase.schema('rally').from('mangas').update({ deleted_at: new Date().toISOString() }).eq('id', dbM.id);
-              }
-            }
+          const mangasABorrar = (dbMangas || []).filter(dbM => !formMangasIds.includes(dbM.id)).map(dbM => dbM.id);
+          if (mangasABorrar.length > 0) {
+            await supabase.schema('rally').from('mangas').update({ deleted_at: new Date().toISOString() }).in('id', mangasABorrar);
           }
 
           let mangaOrder = 1;
-          for (const mangaEl of mangaElements) {
+          const mangaUpdates = [];
+          const mangasNuevas = [];
+          mangaElements.forEach(mangaEl => {
             const mangaId = mangaEl.dataset.mangaId;
             const nombreManga = mangaEl.querySelector('.input-manga-nombre').value.trim();
-            if (!nombreManga) continue;
+            if (!nombreManga) return;
 
             if (mangaId) {
-              await supabase.schema('rally').from('mangas').update({ nombre: nombreManga, numero: mangaOrder }).eq('id', mangaId);
+              mangaUpdates.push(supabase.schema('rally').from('mangas').update({ nombre: nombreManga, numero: mangaOrder }).eq('id', mangaId));
             } else {
-              await supabase.schema('rally').from('mangas').insert({ rally_id: rallyId, numero: mangaOrder, nombre: nombreManga });
+              mangasNuevas.push({ rally_id: rallyId, numero: mangaOrder, nombre: nombreManga });
             }
             mangaOrder++;
+          });
+          await Promise.all(mangaUpdates);
+          if (mangasNuevas.length > 0) {
+            await supabase.schema('rally').from('mangas').insert(mangasNuevas);
           }
         } else {
-          // 3. Guardar Etapas y Recorridos
-          const stageElements = document.querySelectorAll('.edit-stage-item');
-          let stageOrder = 1;
-          let globalPeOrder = 1;
+          // 3. Guardar Etapas y Recorridos. Antes cada paso (borrar quitados,
+          // actualizar existentes, insertar nuevos) era 1 consulta POR fila en
+          // cadena -- con varias etapas y PEs eran muchos viajes seguidos.
+          // Ahora: el borrado usa "in(...)" en una sola consulta, las
+          // actualizaciones (valores distintos por fila, no se pueden batchear
+          // en un solo UPDATE) van en paralelo con Promise.all, y las
+          // inserciones nuevas van todas juntas en un solo lote.
+          const stageElements = Array.from(document.querySelectorAll('.edit-stage-item'));
 
-          // Eliminar logicamente los borrados en UI
           const { data: dbEtapas } = await supabase.schema('rally').from('etapas').select('id, recorridos(id)').eq('rally_id', rallyId).is('deleted_at', null);
-          const formEtapasIds = Array.from(stageElements).map(el => el.dataset.etapaId).filter(Boolean);
+          const formEtapasIds = stageElements.map(el => el.dataset.etapaId).filter(Boolean);
           const formRecorridosIds = Array.from(document.querySelectorAll('.edit-recorrido-item')).map(el => el.dataset.recorridoId).filter(Boolean);
 
           if (dbEtapas) {
-             for (const dbE of dbEtapas) {
-               if (!formEtapasIds.includes(dbE.id)) {
-                  await supabase.schema('rally').from('etapas').update({ deleted_at: new Date().toISOString() }).eq('id', dbE.id);
-               }
-               if (dbE.recorridos) {
-                 for (const dbR of dbE.recorridos) {
-                   if (!formRecorridosIds.includes(dbR.id)) {
-                     await supabase.schema('rally').from('recorridos').update({ deleted_at: new Date().toISOString() }).eq('id', dbR.id);
-                   }
-                 }
-               }
-             }
+            const etapasABorrar = dbEtapas.filter(dbE => !formEtapasIds.includes(dbE.id)).map(dbE => dbE.id);
+            const recorridosABorrar = dbEtapas.flatMap(dbE => (dbE.recorridos || []).filter(dbR => !formRecorridosIds.includes(dbR.id)).map(dbR => dbR.id));
+
+            await Promise.all([
+              etapasABorrar.length > 0 ? supabase.schema('rally').from('etapas').update({ deleted_at: new Date().toISOString() }).in('id', etapasABorrar) : null,
+              recorridosABorrar.length > 0 ? supabase.schema('rally').from('recorridos').update({ deleted_at: new Date().toISOString() }).in('id', recorridosABorrar) : null
+            ]);
           }
 
-          for (const stageEl of stageElements) {
+          // Etapas: actualizar existentes en paralelo, insertar nuevas en un solo lote.
+          let stageOrder = 1;
+          const etapaUpdates = [];
+          const etapasNuevas = [];
+          stageElements.forEach(stageEl => {
             const etapaId = stageEl.dataset.etapaId;
             const nombreEtapa = stageEl.querySelector('.input-etapa-nombre').value;
             const fechaEtapa = stageEl.querySelector('.input-etapa-fecha').value;
 
-            let savedEtapaId = etapaId;
             if (etapaId) {
-               const { error: updErr } = await supabase.schema('rally').from('etapas').update({
-                 nombre: nombreEtapa,
-                 fecha: fechaEtapa || null,
-                 numero: stageOrder
-               }).eq('id', etapaId);
-               if (updErr) throw new Error("Error actualizando etapa: " + updErr.message);
+              etapaUpdates.push(
+                supabase.schema('rally').from('etapas').update({ nombre: nombreEtapa, fecha: fechaEtapa || null, numero: stageOrder }).eq('id', etapaId)
+                  .then(({ error }) => { if (error) throw new Error("Error actualizando etapa: " + error.message); })
+              );
             } else {
-               const { data: newEtapa, error: insErr } = await supabase.schema('rally').from('etapas').insert({
-                 rally_id: rallyId,
-                 numero: stageOrder,
-                 nombre: nombreEtapa,
-                 fecha: fechaEtapa || null
-               }).select().single();
-               if (insErr) throw new Error("Error insertando etapa: " + insErr.message);
-               if (newEtapa) savedEtapaId = newEtapa.id;
+              etapasNuevas.push({ stageEl, numero: stageOrder, nombre: nombreEtapa, fecha: fechaEtapa || null });
             }
             stageOrder++;
+          });
 
-            if (!savedEtapaId) continue;
+          await Promise.all(etapaUpdates);
+
+          if (etapasNuevas.length > 0) {
+            const { data: etapasInsertadas, error: insErr } = await supabase.schema('rally').from('etapas').insert(
+              etapasNuevas.map(e => ({ rally_id: rallyId, numero: e.numero, nombre: e.nombre, fecha: e.fecha }))
+            ).select();
+            if (insErr) throw new Error("Error insertando etapas: " + insErr.message);
+            // Postgres preserva el orden del INSERT ... VALUES múltiple en el RETURNING.
+            etapasNuevas.forEach((e, i) => { e.stageEl.dataset.etapaId = etapasInsertadas[i].id; });
+          }
+
+          // Recorridos: ahora que todas las etapas (nuevas y existentes) tienen
+          // id, mismo tratamiento -- actualizar en paralelo, insertar en lote.
+          let globalPeOrder = 1;
+          const recUpdates = [];
+          const recorridosNuevos = [];
+          stageElements.forEach(stageEl => {
+            const savedEtapaId = stageEl.dataset.etapaId;
+            if (!savedEtapaId) return;
 
             const recorridoElements = stageEl.querySelectorAll('.edit-recorrido-item');
-            for (const recEl of recorridoElements) {
-               const recId = recEl.dataset.recorridoId;
-               const lugarInicio = recEl.querySelector('.input-pe-inicio').value;
-               const lugarFin = recEl.querySelector('.input-pe-fin').value;
-               const distancia = parseFloat(recEl.querySelector('.input-pe-distancia').value) || 0;
-               const horaInicioStr = recEl.querySelector('.input-pe-hora').value;
-               let horaInicio = null;
-               if (horaInicioStr) {
-                 try {
-                   const d = new Date(horaInicioStr);
-                   if (!isNaN(d.getTime())) horaInicio = d.toISOString();
-                 } catch(e) {}
-               }
+            recorridoElements.forEach(recEl => {
+              const recId = recEl.dataset.recorridoId;
+              const lugarInicio = recEl.querySelector('.input-pe-inicio').value;
+              const lugarFin = recEl.querySelector('.input-pe-fin').value;
+              const distancia = parseFloat(recEl.querySelector('.input-pe-distancia').value) || 0;
+              const horaInicioStr = recEl.querySelector('.input-pe-hora').value;
+              let horaInicio = null;
+              if (horaInicioStr) {
+                try {
+                  const d = new Date(horaInicioStr);
+                  if (!isNaN(d.getTime())) horaInicio = d.toISOString();
+                } catch (e) {}
+              }
 
-               const recData = {
-                 etapa_id: savedEtapaId,
-                 numero: globalPeOrder,
-                 nombre: `PE ${globalPeOrder}`,
-                 lugar_inicio: lugarInicio,
-                 lugar_final: lugarFin,
-                 distancia_km: distancia,
-                 hora_inicio_prevista: horaInicio
-               };
+              const recData = {
+                etapa_id: savedEtapaId,
+                numero: globalPeOrder,
+                nombre: `PE ${globalPeOrder}`,
+                lugar_inicio: lugarInicio,
+                lugar_final: lugarFin,
+                distancia_km: distancia,
+                hora_inicio_prevista: horaInicio
+              };
 
-               if (recId) {
-                 const { error: rUpdErr } = await supabase.schema('rally').from('recorridos').update(recData).eq('id', recId);
-                 if (rUpdErr) throw new Error("Error actualizando recorrido: " + rUpdErr.message);
-               } else {
-                 const { error: rInsErr } = await supabase.schema('rally').from('recorridos').insert(recData);
-                 if (rInsErr) throw new Error("Error insertando recorrido: " + rInsErr.message);
-               }
-               globalPeOrder++;
-            }
+              if (recId) {
+                recUpdates.push(
+                  supabase.schema('rally').from('recorridos').update(recData).eq('id', recId)
+                    .then(({ error }) => { if (error) throw new Error("Error actualizando recorrido: " + error.message); })
+                );
+              } else {
+                recorridosNuevos.push(recData);
+              }
+              globalPeOrder++;
+            });
+          });
+
+          await Promise.all(recUpdates);
+          if (recorridosNuevos.length > 0) {
+            const { error: rInsErr } = await supabase.schema('rally').from('recorridos').insert(recorridosNuevos);
+            if (rInsErr) throw new Error("Error insertando recorridos: " + rInsErr.message);
           }
         }
 
@@ -3876,22 +3949,35 @@
     window.switchInsTab = function(tab) {
       document.getElementById('ins-tab-lista').style.display = tab === 'lista' ? 'block' : 'none';
       document.getElementById('ins-tab-nuevo').style.display = tab === 'nuevo' ? 'block' : 'none';
-      
-      document.getElementById('tab-btn-lista').style.background = tab === 'lista' ? 'var(--bg-surface-elevated)' : 'transparent';
-      document.getElementById('tab-btn-lista').style.color = tab === 'lista' ? 'white' : 'var(--text-muted)';
-      
-      document.getElementById('tab-btn-nuevo').style.background = tab === 'nuevo' ? 'var(--bg-surface-elevated)' : 'transparent';
-      document.getElementById('tab-btn-nuevo').style.color = tab === 'nuevo' ? 'white' : 'var(--text-muted)';
-      
+      document.getElementById('ins-tab-mangas').style.display = tab === 'mangas' ? 'block' : 'none';
+
+      ['lista', 'nuevo', 'mangas'].forEach(t => {
+        const btn = document.getElementById('tab-btn-' + t);
+        if (!btn) return;
+        btn.style.background = tab === t ? 'var(--bg-surface-elevated)' : 'transparent';
+        btn.style.color = tab === t ? 'white' : 'var(--text-muted)';
+      });
+
       if (tab === 'nuevo' && !window.inscripcionEditandoId) {
         document.getElementById('form-nueva-inscripcion').reset();
         const submitBtn = document.querySelector('#form-nueva-inscripcion button[type="submit"]');
         if(submitBtn) submitBtn.innerHTML = 'Confirmar y Registrar Inscripción';
-        
+
         if (document.getElementById('ins-p-pais') && document.getElementById('ins-p-pais').tomselect) {
           document.getElementById('ins-p-pais').tomselect.clear();
           document.getElementById('ins-n-pais').tomselect.clear();
         }
+      }
+
+      if (tab === 'mangas') {
+        const sel = document.getElementById('manga-activa-select');
+        sel.innerHTML = '<option value="">Selecciona una manga...</option>' +
+          (window.currentCircuitoMangas || []).map(m => `<option value="${m.id}">${escapeHtml(m.nombre)}</option>`).join('');
+        sel.value = '';
+        document.getElementById('manga-activa-wrap').style.display = 'none';
+        document.getElementById('manga-sin-seleccion').style.display = '';
+        document.getElementById('manga-buscar-numero').value = '';
+        document.getElementById('manga-buscar-resultado').innerHTML = '';
       }
     };
 
@@ -3907,6 +3993,7 @@
       const esCircuitoIns = rally.tipo_evento === 'circuito';
       document.getElementById('ins-manga-wrapper').style.display = esCircuitoIns ? '' : 'none';
       document.getElementById('ins-mangas-toolbar').style.display = esCircuitoIns ? 'flex' : 'none';
+      document.getElementById('tab-btn-mangas').style.display = esCircuitoIns ? '' : 'none';
 
       const selectManga = document.getElementById('ins-manga');
       selectManga.innerHTML = '<option value="">Sin asignar</option>';
@@ -4051,6 +4138,109 @@
           </div>
         `;
       });
+    };
+
+    // Asignación de mangas (solo circuito): primero se elige la manga activa
+    // (manga-activa-select), y desde ahí se buscan pilotos por número y se
+    // van añadiendo uno por uno a esa manga -- se ve en todo momento la
+    // lista de quiénes ya están dentro. Todo opera sobre los inscritos ya
+    // cargados en memoria (window.currentPilotosInscritos).
+    window.mangaSeleccionarActiva = function() {
+      const mangaId = document.getElementById('manga-activa-select').value;
+      document.getElementById('manga-buscar-resultado').innerHTML = '';
+      document.getElementById('manga-buscar-numero').value = '';
+      if (!mangaId) {
+        document.getElementById('manga-activa-wrap').style.display = 'none';
+        document.getElementById('manga-sin-seleccion').style.display = '';
+        return;
+      }
+      document.getElementById('manga-activa-wrap').style.display = '';
+      document.getElementById('manga-sin-seleccion').style.display = 'none';
+      window.mangaRenderMiembros();
+    };
+
+    window.mangaRenderMiembros = function() {
+      const mangaId = document.getElementById('manga-activa-select').value;
+      const lista = document.getElementById('manga-activa-lista');
+      const miembros = (window.currentPilotosInscritos || []).filter(i => i.manga_id === mangaId).sort((a, b) => a.numero - b.numero);
+      document.getElementById('manga-activa-count').textContent = miembros.length;
+
+      if (miembros.length === 0) {
+        lista.innerHTML = `<p style="color: var(--text-muted); font-size:13px;">Todavía no hay pilotos en esta manga.</p>`;
+        return;
+      }
+
+      lista.innerHTML = miembros.map(ins => {
+        const p = ins.piloto, n = ins.navegante, c = ins.categoria;
+        return `
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:12px 16px; border:1px solid var(--border-subtle); border-radius:8px; margin-bottom:8px; background: var(--bg-base);">
+          <div style="font-family: var(--font-display); font-size:22px; color: var(--accent-primary); min-width:56px;">#${ins.numero}</div>
+          <div style="flex:1; min-width:200px;">
+            <div style="font-size:11px; color:#8E24AA; font-weight:bold; text-transform:uppercase;">${c ? escapeHtml(c.codigo) : 'Sin clase'}</div>
+            <div style="font-weight:600;">${p ? escapeHtml(p.nombre + ' ' + p.apellido) : 'Desconocido'}${n ? ' / ' + escapeHtml(n.nombre + ' ' + n.apellido) : ''}</div>
+          </div>
+          <button type="button" class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.mangaQuitar('${ins.id}')">Quitar</button>
+        </div>`;
+      }).join('');
+    };
+
+    window.mangaBuscarPorNumero = function() {
+      const val = document.getElementById('manga-buscar-numero').value.trim();
+      const resultado = document.getElementById('manga-buscar-resultado');
+      const mangaId = document.getElementById('manga-activa-select').value;
+      if (!val) { resultado.innerHTML = ''; return; }
+      if (!mangaId) { resultado.innerHTML = `<p style="color: var(--text-muted);">Elige primero una manga.</p>`; return; }
+
+      const matches = (window.currentPilotosInscritos || []).filter(i => String(i.numero) === val);
+      if (matches.length === 0) {
+        resultado.innerHTML = `<p style="color: var(--text-muted);">No se encontró ningún piloto con el número ${escapeHtml(val)}.</p>`;
+        return;
+      }
+
+      resultado.innerHTML = matches.map(ins => {
+        const p = ins.piloto, n = ins.navegante, c = ins.categoria;
+        const yaEnEstaManga = ins.manga_id === mangaId;
+        const otraManga = ins.manga && ins.manga_id !== mangaId ? ins.manga.nombre : null;
+
+        return `
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:16px; border:1px solid var(--border-strong); border-radius:10px; margin-bottom:12px; background: var(--bg-base);">
+          <div style="font-family: var(--font-display); font-size:30px; color: var(--accent-primary); min-width:70px; line-height:1;">#${ins.numero}</div>
+          <div style="flex:1; min-width:220px;">
+            <div style="font-size:11px; color:#8E24AA; font-weight:bold; text-transform:uppercase;">${c ? escapeHtml(c.codigo) + ' - ' + escapeHtml(c.nombre) : 'Sin clase'}</div>
+            <div style="font-weight:600; font-family: var(--font-display); font-size:16px;">${p ? escapeHtml(p.nombre + ' ' + p.apellido) : 'Desconocido'}</div>
+            <div style="font-size:13px; color: var(--text-muted);">${n ? 'Navegante: ' + escapeHtml(n.nombre + ' ' + n.apellido) : 'Sin navegante'}</div>
+            ${otraManga ? `<div style="margin-top:6px; font-size:12px; color:#ff9800;">Actualmente en: ${escapeHtml(otraManga)}</div>` : ''}
+          </div>
+          ${yaEnEstaManga
+            ? `<span style="color: var(--live-green); font-weight:bold; font-size:13px;">✓ Ya está en esta manga</span>`
+            : `<button type="button" class="btn-primary" onclick="window.mangaAnadirRapido('${ins.id}')">+ Añadir a esta manga</button>`
+          }
+        </div>`;
+      }).join('');
+    };
+
+    window.mangaAnadirRapido = async function(inscripcionId) {
+      const mangaId = document.getElementById('manga-activa-select').value;
+      if (!mangaId) return;
+      const { error } = await supabase.schema('rally').from('inscripciones').update({ manga_id: mangaId }).eq('id', inscripcionId);
+      if (error) { window.toast('Error al añadir: ' + error.message, 'error'); return; }
+      window.toast('Piloto añadido a la manga.', 'ok');
+
+      const rallyId = document.getElementById('ins-rally-id').value;
+      await window.cargarPilotosInscritos(rallyId);
+      window.mangaBuscarPorNumero();
+      window.mangaRenderMiembros();
+    };
+
+    window.mangaQuitar = async function(inscripcionId) {
+      const { error } = await supabase.schema('rally').from('inscripciones').update({ manga_id: null }).eq('id', inscripcionId);
+      if (error) { window.toast('Error al quitar: ' + error.message, 'error'); return; }
+      window.toast('Piloto quitado de la manga.', 'ok');
+
+      const rallyId = document.getElementById('ins-rally-id').value;
+      await window.cargarPilotosInscritos(rallyId);
+      window.mangaRenderMiembros();
+      window.mangaBuscarPorNumero();
     };
 
     // Reparte a todos los inscritos activos del circuito en grupos de salida
@@ -4595,45 +4785,47 @@
 
       etapaSelect.innerHTML = '<option value="">Cargando Etapas...</option>';
 
-      // El Shakedown se maneja aparte (botón dedicado), nunca se mezcla con las Etapas oficiales.
-      await window.cargarShakedownInfo(rallyId);
+      // Antes esto se hacía en cadena (shakedown -> etapas -> UNA consulta de
+      // recorridos POR etapa -> inscritos -> cronograma), sumando la latencia
+      // de red de cada paso una tras otra -- con 3 etapas eran ~8 viajes
+      // seguidos solo para entrar a esta pantalla. Ahora se piden en paralelo
+      // las partes que no dependen entre sí, y los recorridos de TODAS las
+      // etapas en una sola consulta con "in(...)" en vez de una por etapa.
+      const [, etapasRes, inscritosRes, rallyRes] = await Promise.all([
+        window.cargarShakedownInfo(rallyId), // El Shakedown se maneja aparte (botón dedicado), nunca se mezcla con las Etapas oficiales.
+        supabase.schema('rally').from('etapas').select('id, nombre').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero'),
+        supabase.schema('rally').from('inscripciones').select(`
+          id, numero, categoria_id,
+          piloto:pilotos(nombre, apellido),
+          categoria:categorias(nombre, codigo)
+        `).eq('rally_id', rallyId).is('deleted_at', null).order('numero'),
+        supabase.schema('rally').from('rallies').select('cronograma_filas').eq('id', rallyId).maybeSingle()
+      ]);
 
-      const { data: etapas } = await supabase.schema('rally').from('etapas').select('id, nombre').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero');
+      const etapas = etapasRes.data;
       if(!etapas || etapas.length === 0) {
         etapaSelect.innerHTML = '<option value="">No hay Cronograma generado</option>';
         return;
       }
 
       etapaSelect.innerHTML = '<option value="">Selecciona Etapa...</option>';
-      for(let etapa of etapas) {
-        etapaSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
-        
-        const { data: recorridos, error } = await supabase.schema('rally').from('recorridos').select('id, nombre, distancia_km, etapa_id, numero_vueltas').eq('etapa_id', etapa.id).is('deleted_at', null).order('numero');
-        if(recorridos) {
-          recorridos.forEach(r => {
-            r.etapa_nombre = etapa.nombre;
-            r.distancia = r.distancia_km; // Map for later use
-            window.tiemposTodosRecorridosCache.push(r);
-          });
-        }
-      }
+      etapas.forEach(etapa => { etapaSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`; });
 
-      // Cargar inscritos y cronograma para auto-rellenar
-      window.tiemposInscritosCache = [];
-      window.tiemposCronogramaCache = null;
+      const etapaNombrePorId = Object.fromEntries(etapas.map(e => [e.id, e.nombre]));
+      const { data: recorridosTodos } = await supabase.schema('rally').from('recorridos')
+        .select('id, nombre, distancia_km, etapa_id, numero_vueltas')
+        .in('etapa_id', etapas.map(e => e.id)).is('deleted_at', null).order('numero');
+      (recorridosTodos || []).forEach(r => {
+        r.etapa_nombre = etapaNombrePorId[r.etapa_id];
+        r.distancia = r.distancia_km; // Map for later use
+        window.tiemposTodosRecorridosCache.push(r);
+      });
 
-      const { data: inscritos } = await supabase.schema('rally').from('inscripciones').select(`
-        id, numero, categoria_id,
-        piloto:pilotos(nombre, apellido),
-        categoria:categorias(nombre, codigo)
-      `).eq('rally_id', rallyId).is('deleted_at', null).order('numero');
-      
-      const { data: rallyData } = await supabase.schema('rally').from('rallies').select('cronograma_filas').eq('id', rallyId).maybeSingle();
-      if(rallyData) window.tiemposCronogramaCache = rallyData.cronograma_filas;
+      window.tiemposInscritosCache = inscritosRes.data || [];
+      window.tiemposCronogramaCache = rallyRes.data ? rallyRes.data.cronograma_filas : null;
 
-      if (inscritos) {
-        window.tiemposInscritosCache = inscritos;
-        console.log('Inscritos cargados:', inscritos.length, inscritos.map(i => '#' + i.numero));
+      if (inscritosRes.data) {
+        console.log('Inscritos cargados:', inscritosRes.data.length, inscritosRes.data.map(i => '#' + i.numero));
       }
     };
 
@@ -6160,20 +6352,34 @@
       container.innerHTML = '<p style="color: var(--text-muted);">Cargando...</p>';
 
       const { data: etapas } = await supabase.schema('rally').from('etapas').select('id, nombre, es_shakedown').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
-      const recorridos = [];
-      for (const etapa of (etapas || [])) {
-        const { data: recs } = await supabase.schema('rally').from('recorridos').select('id, nombre, numero_vueltas').eq('etapa_id', etapa.id).is('deleted_at', null).order('numero');
-        (recs || []).forEach(r => recorridos.push({ ...r, etapa_nombre: etapa.nombre, es_shakedown: etapa.es_shakedown }));
+      if (!etapas || etapas.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted);">Este rally no tiene ninguna PE ni Clasificación/Shakedown configurada.</p>';
+        return;
       }
+
+      // Antes: 1 consulta de recorridos POR etapa, y luego 1 consulta de
+      // conteo de tiempos POR recorrido -- con 3 etapas y 5 PEs eran ~8
+      // viajes seguidos solo para armar esta lista. Ahora: una sola consulta
+      // de recorridos para TODAS las etapas ("in") y una sola de tiempos
+      // para TODOS los recorridos, agrupando el conteo en el cliente.
+      const etapaInfoPorId = Object.fromEntries(etapas.map(e => [e.id, { nombre: e.nombre, es_shakedown: e.es_shakedown }]));
+      const { data: recs } = await supabase.schema('rally').from('recorridos').select('id, nombre, numero_vueltas, etapa_id').in('etapa_id', etapas.map(e => e.id)).is('deleted_at', null).order('numero');
+      const recorridos = (recs || []).map(r => ({ ...r, etapa_nombre: etapaInfoPorId[r.etapa_id].nombre, es_shakedown: etapaInfoPorId[r.etapa_id].es_shakedown }));
 
       if (recorridos.length === 0) {
         container.innerHTML = '<p style="color: var(--text-muted);">Este rally no tiene ninguna PE ni Clasificación/Shakedown configurada.</p>';
         return;
       }
 
+      const { data: tiemposTodos } = await supabase.schema('rally').from('tiempos').select('vuelta, recorrido_id').in('recorrido_id', recorridos.map(r => r.id)).is('deleted_at', null);
+      const tiemposPorRecorrido = {};
+      (tiemposTodos || []).forEach(t => {
+        (tiemposPorRecorrido[t.recorrido_id] = tiemposPorRecorrido[t.recorrido_id] || []).push(t);
+      });
+
       let filas = '';
       for (const rec of recorridos) {
-        const { data: tiempos } = await supabase.schema('rally').from('tiempos').select('vuelta').eq('recorrido_id', rec.id).is('deleted_at', null);
+        const tiempos = tiemposPorRecorrido[rec.id];
         if (!tiempos || tiempos.length === 0) continue;
 
         const porVuelta = {};
@@ -7090,16 +7296,95 @@
       if (error) { window.toast('Error al cargar la configuración: ' + error.message, 'error'); return; }
       const cfg = {};
       (data || []).forEach(r => { cfg[r.clave] = r.valor; });
-      document.getElementById('sw-logo-url').value = cfg.logo_url || '';
+      window.swCurrentLogoUrl = cfg.logo_url || null;
+      swPendingLogoBlob = null;
+      document.getElementById('sw-logo-file').value = '';
+      const preview = document.getElementById('sw-logo-preview');
+      const previewEmpty = document.getElementById('sw-logo-preview-empty');
+      const quitarBtn = document.getElementById('sw-logo-quitar-btn');
+      if (window.swCurrentLogoUrl) {
+        preview.src = window.swCurrentLogoUrl;
+        preview.style.display = 'block';
+        previewEmpty.style.display = 'none';
+        quitarBtn.style.display = '';
+      } else {
+        preview.style.display = 'none';
+        previewEmpty.style.display = 'block';
+        quitarBtn.style.display = 'none';
+      }
+
       document.getElementById('sw-inicio-titulo').value = cfg.inicio_titulo || '';
       document.getElementById('sw-inicio-subtitulo').value = cfg.inicio_subtitulo || '';
       document.getElementById('sw-inicio-texto').value = cfg.inicio_texto || '';
       document.getElementById('sw-inicio-imagen').value = cfg.inicio_imagen_url || '';
     };
 
+    // Reescala el logo a un cuadrado razonable y lo mantiene en PNG (a
+    // diferencia de optimizeRallyImage, que fuerza JPEG) porque los logos
+    // suelen tener fondo transparente y perderlo se ve mal en el topbar.
+    let swPendingLogoBlob = null;
+    function optimizeLogoImage(file, maxW = 480, maxH = 480) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+          let { width, height } = img;
+          const scale = Math.min(1, maxW / width, maxH / height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            URL.revokeObjectURL(objectUrl);
+            if (!blob) return reject(new Error('No se pudo procesar la imagen.'));
+            resolve(blob);
+          }, 'image/png');
+        };
+        img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('No se pudo leer la imagen.')); };
+        img.src = objectUrl;
+      });
+    }
+
+    document.getElementById('sw-logo-file').addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) { swPendingLogoBlob = null; return; }
+      try {
+        swPendingLogoBlob = await optimizeLogoImage(file);
+        const preview = document.getElementById('sw-logo-preview');
+        preview.src = URL.createObjectURL(swPendingLogoBlob);
+        preview.style.display = 'block';
+        document.getElementById('sw-logo-preview-empty').style.display = 'none';
+        document.getElementById('sw-logo-quitar-btn').style.display = '';
+      } catch (err) {
+        window.toast('No se pudo procesar la imagen: ' + err.message, 'error');
+        swPendingLogoBlob = null;
+      }
+    });
+
+    window.quitarLogoSitio = function () {
+      window.swCurrentLogoUrl = null;
+      swPendingLogoBlob = null;
+      document.getElementById('sw-logo-file').value = '';
+      document.getElementById('sw-logo-preview').style.display = 'none';
+      document.getElementById('sw-logo-preview-empty').style.display = 'block';
+      document.getElementById('sw-logo-quitar-btn').style.display = 'none';
+      window.toast('Logo quitado. Dale "Guardar Cambios" para confirmar.', 'info');
+    };
+
     window.guardarSitioWeb = async function () {
+      let logoUrl = window.swCurrentLogoUrl;
+      if (swPendingLogoBlob) {
+        const fileName = `logo-${Date.now()}.png`;
+        const { error: upErr } = await supabase.storage.from('logo-sitio').upload(fileName, swPendingLogoBlob, { upsert: true });
+        if (upErr) { window.toast('Error al subir el logo: ' + upErr.message, 'error'); return; }
+        const { data: pub } = supabase.storage.from('logo-sitio').getPublicUrl(fileName);
+        logoUrl = pub.publicUrl;
+      }
+
       const valores = {
-        logo_url: document.getElementById('sw-logo-url').value.trim() || null,
+        logo_url: logoUrl,
         inicio_titulo: document.getElementById('sw-inicio-titulo').value.trim() || null,
         inicio_subtitulo: document.getElementById('sw-inicio-subtitulo').value.trim() || null,
         inicio_texto: document.getElementById('sw-inicio-texto').value.trim() || null,
@@ -7108,6 +7393,10 @@
       const filas = Object.entries(valores).map(([clave, valor]) => ({ clave, valor }));
       const { error } = await supabase.schema('rally').from('sitio_config').upsert(filas, { onConflict: 'clave' });
       if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
+
+      window.swCurrentLogoUrl = logoUrl;
+      swPendingLogoBlob = null;
+      document.getElementById('sw-logo-file').value = '';
       window.toast('Configuración del sitio guardada.', 'ok');
     };
   </script>
