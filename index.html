@@ -2333,7 +2333,8 @@
     // requerida -- muestra cuántas sí completó) o Sin Tiempo (genérico).
     function labelEstadoEspecial(r) {
       if (r.estadoEspecial === 'incompleto') {
-        return { label: `${r.vueltasCompletadas}/${r.vueltasRequeridas} VUELTAS`, color: '#8e24aa' };
+        const tiempoTexto = (r.msParcial != null) ? ` — ${fmtInterval(msToIntervalStrPublic(r.msParcial))}` : '';
+        return { label: `${r.vueltasCompletadas}/${r.vueltasRequeridas} VUELTAS${tiempoTexto}`, color: '#8e24aa' };
       }
       const MAPA = {
         no_presentado: { label: 'NO LARGÓ', color: '#FFD166' },
@@ -2402,16 +2403,24 @@
     // sí completó (o el motivo, si no completó ninguna).
     function resolverGeneralCircuito(rows, numeroVueltasReq, penalMs = 0) {
       const vueltasValidas = rows.filter(r => intervalToMsPublic(r.tiempo_bruto));
+      let sumaCompletadas = 0;
+      vueltasValidas.forEach(r => { sumaCompletadas += intervalToMsPublic(r.tiempo_bruto); });
+
       if (numeroVueltasReq && vueltasValidas.length < numeroVueltasReq) {
         if (vueltasValidas.length === 0) {
           const especial = rows.find(r => r.estado === 'no_presentado' || r.estado === 'abandono' || r.estado === 'doblado');
           return { ms: null, estado: especial ? especial.estado : 'pendiente' };
         }
-        return { ms: null, estado: 'incompleto', vueltasCompletadas: vueltasValidas.length, vueltasRequeridas: numeroVueltasReq };
+        // No completó todas -- no se clasifica por tiempo, pero se muestra igual
+        // cuánto hizo en las vueltas que sí completó (suma de esas, con su
+        // penalización si la tuviera).
+        return {
+          ms: null, estado: 'incompleto',
+          vueltasCompletadas: vueltasValidas.length, vueltasRequeridas: numeroVueltasReq,
+          msParcial: sumaCompletadas + penalMs
+        };
       }
-      let sum = 0;
-      vueltasValidas.forEach(r => { sum += intervalToMsPublic(r.tiempo_bruto); });
-      return { ms: sum + penalMs, estado: 'valido' };
+      return { ms: sumaCompletadas + penalMs, estado: 'valido' };
     }
 
     // ==========================================
@@ -2832,7 +2841,8 @@
           navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
           estadoEspecial: e.estado || 'pendiente',
           vueltasCompletadas: e.vueltasCompletadas,
-          vueltasRequeridas: e.vueltasRequeridas
+          vueltasRequeridas: e.vueltasRequeridas,
+          msParcial: e.msParcial
         }));
         out[cat] = [...filasValidas, ...filasEspeciales];
       }
@@ -2874,15 +2884,15 @@
     function acumularEntradas(entradas) {
       const acc = {};
       entradas.forEach(e => {
-        const g = acc[e.inscripcion_id] || { inscripcion: e.inscripcion, ms: 0, tiene: false, ultimoEstado: e.estado, vueltasCompletadas: e.vueltasCompletadas, vueltasRequeridas: e.vueltasRequeridas };
+        const g = acc[e.inscripcion_id] || { inscripcion: e.inscripcion, ms: 0, tiene: false, ultimoEstado: e.estado, vueltasCompletadas: e.vueltasCompletadas, vueltasRequeridas: e.vueltasRequeridas, msParcial: e.msParcial };
         if (e.ms !== null) { g.ms += e.ms; g.tiene = true; }
         g.ultimoEstado = e.estado;
-        if (e.vueltasCompletadas !== undefined) { g.vueltasCompletadas = e.vueltasCompletadas; g.vueltasRequeridas = e.vueltasRequeridas; }
+        if (e.vueltasCompletadas !== undefined) { g.vueltasCompletadas = e.vueltasCompletadas; g.vueltasRequeridas = e.vueltasRequeridas; g.msParcial = e.msParcial; }
         acc[e.inscripcion_id] = g;
       });
       return Object.values(acc).map(g => g.tiene
         ? { inscripcion: g.inscripcion, ms: g.ms, estado: 'valido' }
-        : { inscripcion: g.inscripcion, ms: null, estado: g.ultimoEstado, vueltasCompletadas: g.vueltasCompletadas, vueltasRequeridas: g.vueltasRequeridas });
+        : { inscripcion: g.inscripcion, ms: null, estado: g.ultimoEstado, vueltasCompletadas: g.vueltasCompletadas, vueltasRequeridas: g.vueltasRequeridas, msParcial: g.msParcial });
     }
 
     // mangaFilter solo se aplica dentro del panel "Vueltas" (ver más abajo) --

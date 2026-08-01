@@ -853,14 +853,21 @@
           <div id="tiempo-piloto-info" style="font-size: 14px; margin-top: 16px; font-weight: bold; color: var(--accent-primary); text-align: right;"></div>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 16px;">
+            <!-- Entrada con precisión de segundos/centésimas: en un circuito, la
+                 Entrada de la Vuelta 2+ se copia del instante EXACTO de la
+                 Llegada de la vuelta anterior (ver window.seleccionarInscrito) --
+                 con solo HH:MM se perdían los segundos y cada vuelta salía con
+                 varios segundos de más, corriendo mal el tiempo general. -->
             <div class="form-group">
-              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Entrada (HH:MM)</label>
-              <div class="time-display-container">
+              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Entrada (HH:MM:SS.cc)</label>
+              <div class="time-display-container" id="sal-container">
                 <input type="text" id="sal-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'sal-mm', 23); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, null)">
                 <span class="colon">:</span>
-                <input type="text" id="sal-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'emp-hh', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
+                <input type="text" id="sal-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'sal-ss', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
                 <span class="colon">:</span>
-                <input type="text" class="readonly" value="00" readonly tabindex="-1">
+                <input type="text" id="sal-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, 'sal-cc', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')">
+                <span class="dot">.</span>
+                <input type="text" id="sal-cc" maxlength="2" placeholder="cc" oninput="window.autoTabTime(this, 'emp-hh', 99); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'sal-ss')">
               </div>
             </div>
             <!-- Se completa UNO de los dos: Tiempo Empleado (duración) o Tiempo
@@ -869,7 +876,7 @@
             <div class="form-group">
               <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Tiempo Empleado (HH:MM:SS.cc)</label>
               <div class="time-display-container" id="emp-container" style="border-color: rgba(255, 176, 32, 0.3); transition: opacity 0.15s;">
-                <input type="text" id="emp-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'emp-mm', 23); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')" style="color: #ffb020;">
+                <input type="text" id="emp-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'emp-mm', 23); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'sal-cc')" style="color: #ffb020;">
                 <span class="colon">:</span>
                 <input type="text" id="emp-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'emp-ss', 59); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'emp-hh')" style="color: #ffb020;">
                 <span class="colon">:</span>
@@ -1471,7 +1478,7 @@
     };
 
     window.limpiarFormTiemposParcial = function() {
-      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
+      ['sal-hh','sal-mm','sal-ss','sal-cc','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
       window.tiempoModoIngreso = null;
       window.setGrupoLocked('lle', false);
       window.setGrupoLocked('emp', false);
@@ -1487,7 +1494,7 @@
     window.limpiarFormTiempos = function() {
       const inputNum = document.getElementById('tiempo-numero-input');
       if(inputNum) inputNum.value = '';
-      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
+      ['sal-hh','sal-mm','sal-ss','sal-cc','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
       window.tiempoModoIngreso = null;
       window.setGrupoLocked('lle', false);
       window.setGrupoLocked('emp', false);
@@ -1585,10 +1592,7 @@
     window.tiempoModoIngreso = null;
 
     function getEntradaMs() {
-      const sH = document.getElementById('sal-hh').value;
-      const sM = document.getElementById('sal-mm').value;
-      if (!sH && !sM) return null;
-      return parseTimeStr(`${(sH || '0').padStart(2, '0')}:${(sM || '0').padStart(2, '0')}:00.00`);
+      return getGrupoMs('sal');
     }
 
     function getGrupoMs(prefix) {
@@ -1676,7 +1680,7 @@
 
     window.seleccionarInscrito = function(insId) {
       document.getElementById('tiempo-piloto-info').innerText = '';
-      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
+      ['sal-hh','sal-mm','sal-ss','sal-cc','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
       window.tiempoModoIngreso = null;
       window.setGrupoLocked('lle', false);
       window.setGrupoLocked('emp', false);
@@ -1708,10 +1712,18 @@
           window.tiempoCurrentTiempoId = existingTime.id;
           if (existingTime.hora_salida) {
             loadedFromDB = true;
-            const timePart = existingTime.hora_salida.split('T')[1].replace('Z',''); // "10:00:00"
+            const timePart = existingTime.hora_salida.split('T')[1].replace('Z',''); // "10:00:00.00"
             const parts = timePart.split(':');
             document.getElementById('sal-hh').value = parts[0] || '';
             document.getElementById('sal-mm').value = parts[1] || '';
+            if (parts[2]) {
+              const secParts = parts[2].split('.');
+              document.getElementById('sal-ss').value = secParts[0] || '';
+              document.getElementById('sal-cc').value = secParts[1] ? secParts[1].substring(0, 2).padEnd(2, '0') : '00';
+            } else {
+              document.getElementById('sal-ss').value = '00';
+              document.getElementById('sal-cc').value = '00';
+            }
           }
           if (existingTime.hora_llegada) {
             loadedFromDB = true;
@@ -1743,7 +1755,7 @@
       // volver a tipearla. Si la vuelta actual ya trae su propia Entrada
       // guardada, no se toca.
       let entradaDeVueltaAnterior = false;
-      const salidaYaCargada = !!(document.getElementById('sal-hh').value || document.getElementById('sal-mm').value);
+      const salidaYaCargada = !!(document.getElementById('sal-hh').value || document.getElementById('sal-mm').value || document.getElementById('sal-ss').value || document.getElementById('sal-cc').value);
       if (!salidaYaCargada && vueltaActual > 1 && window.tiemposCurrentVueltaRaw) {
         const tiempoVueltaPrevia = window.tiemposCurrentVueltaRaw.find(t => t.inscripcion_id === insId && t.vuelta === vueltaActual - 1 && t.hora_llegada);
         if (tiempoVueltaPrevia) {
@@ -1751,6 +1763,14 @@
           const parts = timePart.split(':');
           document.getElementById('sal-hh').value = parts[0] || '';
           document.getElementById('sal-mm').value = parts[1] || '';
+          if (parts[2]) {
+            const secParts = parts[2].split('.');
+            document.getElementById('sal-ss').value = secParts[0] || '';
+            document.getElementById('sal-cc').value = secParts[1] ? secParts[1].substring(0, 2).padEnd(2, '0') : '00';
+          } else {
+            document.getElementById('sal-ss').value = '00';
+            document.getElementById('sal-cc').value = '00';
+          }
           entradaDeVueltaAnterior = true;
         }
       }
@@ -1763,6 +1783,8 @@
           if (parts.length >= 2) {
              document.getElementById('sal-hh').value = parts[0];
              document.getElementById('sal-mm').value = parts[1];
+             document.getElementById('sal-ss').value = '00';
+             document.getElementById('sal-cc').value = '00';
           }
         }
       }
@@ -2067,12 +2089,14 @@
 
       const sH = document.getElementById('sal-hh').value;
       const sM = document.getElementById('sal-mm').value;
+      const sS = document.getElementById('sal-ss').value;
+      const sC = document.getElementById('sal-cc').value;
       const lH = document.getElementById('lle-hh').value;
       const lM = document.getElementById('lle-mm').value;
       const lS = document.getElementById('lle-ss').value;
       const lC = document.getElementById('lle-cc').value;
 
-      const isSalEmpty = !sH && !sM;
+      const isSalEmpty = !sH && !sM && !sS && !sC;
       const isLleEmpty = !lH && !lM && !lS && !lC;
 
       if (isSalEmpty || isLleEmpty) {
@@ -2080,7 +2104,7 @@
         return;
       }
 
-      const salMs = parseTimeStr(`${sH.padStart(2,'0')}:${sM.padStart(2,'0')}:00.00`);
+      const salMs = parseTimeStr(`${(sH || '0').padStart(2,'0')}:${(sM || '0').padStart(2,'0')}:${(sS || '0').padStart(2,'0')}.${(sC || '0').padStart(2,'0')}`);
       const lleMs = parseTimeStr(`${lH.padStart(2,'0')}:${lM.padStart(2,'0')}:${(lS || '0').padStart(2,'0')}.${(lC || '0').padStart(2,'0')}`);
 
       if (lleMs < salMs) {
@@ -2105,8 +2129,10 @@
 
       const sH = document.getElementById('sal-hh').value;
       const sM = document.getElementById('sal-mm').value;
-      const isSalEmpty = !sH && !sM;
-      const salStr = isSalEmpty ? null : `${sH.padStart(2,'0')}:${sM.padStart(2,'0')}:00.00`;
+      const sS = document.getElementById('sal-ss').value;
+      const sC = document.getElementById('sal-cc').value;
+      const isSalEmpty = !sH && !sM && !sS && !sC;
+      const salStr = isSalEmpty ? null : `${(sH || '0').padStart(2,'0')}:${(sM || '0').padStart(2,'0')}:${(sS || '0').padStart(2,'0')}.${(sC || '0').padStart(2,'0')}`;
 
       const lH = document.getElementById('lle-hh').value;
       const lM = document.getElementById('lle-mm').value;
@@ -2189,7 +2215,7 @@
           inputNum.value = '';
           inputNum.focus();
         }
-        ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
+        ['sal-hh','sal-mm','sal-ss','sal-cc','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
         window.tiempoModoIngreso = null;
         window.setGrupoLocked('lle', false);
         window.setGrupoLocked('emp', false);
