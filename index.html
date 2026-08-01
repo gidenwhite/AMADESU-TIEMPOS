@@ -2328,6 +2328,21 @@
       return str;
     }
 
+    // Texto y color de una fila "sin puesto": No Largó / Abandono / Doblado
+    // (sin tiempo esa vuelta), Incompleto (le faltó completar alguna vuelta
+    // requerida -- muestra cuántas sí completó) o Sin Tiempo (genérico).
+    function labelEstadoEspecial(r) {
+      if (r.estadoEspecial === 'incompleto') {
+        return { label: `${r.vueltasCompletadas}/${r.vueltasRequeridas} VUELTAS`, color: '#8e24aa' };
+      }
+      const MAPA = {
+        no_presentado: { label: 'NO LARGÓ', color: '#FFD166' },
+        abandono: { label: 'ABANDONO', color: '#ff4d5a' },
+        doblado: { label: 'DOBLADO', color: '#8e24aa' },
+      };
+      return MAPA[r.estadoEspecial] || { label: 'SIN TIEMPO', color: 'var(--text-dim)' };
+    }
+
     function buildResultTable(rows) {
       if (!rows || rows.length === 0) return '<p style="color:var(--text-muted); text-align:center; padding: 24px;">Sin datos registrados.</p>';
       return `<div style="overflow-x:auto;">
@@ -2342,8 +2357,7 @@
           </tr></thead>
           <tbody>${rows.map((r, i) => {
         if (r.estadoEspecial) {
-          const label = r.estadoEspecial === 'no_presentado' ? 'NO LARGÓ' : r.estadoEspecial === 'abandono' ? 'ABANDONO' : 'SIN TIEMPO';
-          const color = r.estadoEspecial === 'no_presentado' ? '#FFD166' : r.estadoEspecial === 'abandono' ? '#ff4d5a' : 'var(--text-dim)';
+          const { label, color } = labelEstadoEspecial(r);
           return `<tr>
               <td><span style="font-family:var(--font-mono); font-size:15px; color:var(--text-dim); padding-left:6px;">—</span></td>
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
@@ -2373,11 +2387,31 @@
     // Determina el "estado a mostrar" de un piloto en un tramo a partir de sus filas de
     // tiempos: si tiene tiempo válido, ms; si no, y alguna fila viene marcada No Largó/
     // Abandono, se conserva esa razón (en vez de simplemente desaparecer de la tabla).
-    function resolverEntradaTiempo(rows) {
-      const ms = sumarTiempoRecorridoInscripcion(rows);
+    function resolverEntradaTiempo(rows, penalMs = 0) {
+      const ms = sumarTiempoRecorridoInscripcion(rows, penalMs);
       if (ms !== null) return { ms, estado: 'valido' };
-      const especial = rows.find(r => r.estado === 'no_presentado' || r.estado === 'abandono');
+      const especial = rows.find(r => r.estado === 'no_presentado' || r.estado === 'abandono' || r.estado === 'doblado');
       return { ms: null, estado: especial ? especial.estado : 'pendiente' };
+    }
+
+    // Para el Tiempo General de un circuito: solo cuenta como resultado
+    // terminado si completó TODAS las vueltas requeridas de esa PE -- si le
+    // falta alguna (no largó/abandonó/quedó doblado en el medio), no se lo
+    // clasifica por su tiempo parcial (podría terminar mejor puesto que
+    // alguien que sí completó todas). Va al final indicando cuántas vueltas
+    // sí completó (o el motivo, si no completó ninguna).
+    function resolverGeneralCircuito(rows, numeroVueltasReq, penalMs = 0) {
+      const vueltasValidas = rows.filter(r => intervalToMsPublic(r.tiempo_bruto));
+      if (numeroVueltasReq && vueltasValidas.length < numeroVueltasReq) {
+        if (vueltasValidas.length === 0) {
+          const especial = rows.find(r => r.estado === 'no_presentado' || r.estado === 'abandono' || r.estado === 'doblado');
+          return { ms: null, estado: especial ? especial.estado : 'pendiente' };
+        }
+        return { ms: null, estado: 'incompleto', vueltasCompletadas: vueltasValidas.length, vueltasRequeridas: numeroVueltasReq };
+      }
+      let sum = 0;
+      vueltasValidas.forEach(r => { sum += intervalToMsPublic(r.tiempo_bruto); });
+      return { ms: sum + penalMs, estado: 'valido' };
     }
 
     // ==========================================
@@ -2454,11 +2488,12 @@
 
     // Convierte las filas de agruparPorCategoriaYClasificar al formato que
     // espera autoTable, marcando los estados especiales (No Largó/Abandono/
-    // Sin Tiempo) para pintarlos distinto en vez de mostrarles un puesto.
+    // Doblado/Incompleto/Sin Tiempo) para pintarlos distinto en vez de
+    // mostrarles un puesto.
     function filasParaPdf(rows) {
       return rows.map(r => {
         if (r.estadoEspecial) {
-          const label = r.estadoEspecial === 'no_presentado' ? 'NO LARGÓ' : r.estadoEspecial === 'abandono' ? 'ABANDONO' : 'SIN TIEMPO';
+          const label = labelEstadoEspecial(r).label;
           return { pos: '-', num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: label, dif: '', _especial: true };
         }
         return { pos: String(r.pos), num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: r.tiempo, dif: r.dif == null ? 'LÍDER' : '+' + r.dif, _especial: false };
@@ -2477,7 +2512,7 @@
       if (btn) { btn.disabled = true; btn.innerHTML = 'Generando PDF...'; }
 
       try {
-        const { etapas, tiemposRally, shakeFilas, esCircuito, mangas, rallyNombre } = window.tiemposAccordionData;
+        const { etapas, tiemposRally, shakeFilas, esCircuito, mangas, penalMap, rallyNombre } = window.tiemposAccordionData;
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const pageW = doc.internal.pageSize.getWidth();
@@ -2613,8 +2648,16 @@
           if (!porRecorridoInscripcion[key]) porRecorridoInscripcion[key] = { inscripcion: t.inscripcion, inscripcion_id: t.inscripcion_id, recorrido_id: t.recorrido_id, rows: [] };
           porRecorridoInscripcion[key].rows.push(t);
         });
+        const vueltasReqPorRecorridoPdf = {};
+        if (esCircuito) etapas.forEach(e => e.recorridos.forEach(r => { vueltasReqPorRecorridoPdf[r.id] = r.numero_vueltas; }));
         const entradas = Object.values(porRecorridoInscripcion)
-          .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resolverEntradaTiempo(e.rows) }));
+          .map(e => {
+            const penalMs = (penalMap || {})[e.recorrido_id + '||' + e.inscripcion_id] || 0;
+            const resuelto = esCircuito
+              ? resolverGeneralCircuito(e.rows, vueltasReqPorRecorridoPdf[e.recorrido_id], penalMs)
+              : resolverEntradaTiempo(e.rows, penalMs);
+            return { inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resuelto };
+          });
 
         let huboContenido = false;
 
@@ -2760,7 +2803,8 @@
 
     // Agrupa un array de { inscripcion, ms, estado } por categoría y arma la tabla de
     // posiciones (ascendente). Los que no tienen tiempo válido (No Largó/Abandono/
-    // pendiente) van al final de su categoría, mostrando el motivo en vez de un puesto.
+    // Doblado/Incompleto/pendiente) van al final de su categoría, mostrando el
+    // motivo en vez de un puesto.
     function agruparPorCategoriaYClasificar(entries) {
       const byCat = {};
       entries.forEach(e => {
@@ -2786,7 +2830,9 @@
           num: e.inscripcion?.numero || '-',
           name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
           navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
-          estadoEspecial: e.estado || 'pendiente'
+          estadoEspecial: e.estado || 'pendiente',
+          vueltasCompletadas: e.vueltasCompletadas,
+          vueltasRequeridas: e.vueltasRequeridas
         }));
         out[cat] = [...filasValidas, ...filasEspeciales];
       }
@@ -2811,12 +2857,15 @@
 
     // Suma el tiempo de un vehículo en un recorrido. Normalmente hay 1 sola fila (rally clásico) y
     // se usa tiempo_neto (ya incluye penalización); si hay varias filas (circuito, una por vuelta)
-    // se suman los tiempo_bruto de todas (ver [[project-shakedown-feature]] para la misma lógica).
-    function sumarTiempoRecorridoInscripcion(rows) {
+    // se suman los tiempo_bruto de todas y se agrega la penalización UNA sola vez (penalMs) --
+    // nunca se usa tiempo_neto acá porque cada fila ya trae la penalización TOTAL del recorrido
+    // metida adentro (se calcula así al guardar cada vuelta), así que sumar tiempo_neto de varias
+    // vueltas la contaría una vez por vuelta en vez de una sola vez.
+    function sumarTiempoRecorridoInscripcion(rows, penalMs = 0) {
       if (rows.length === 1) return intervalToMsPublic(rows[0].tiempo_neto) || null;
       let sum = 0, tiene = false;
       rows.forEach(r => { const ms = intervalToMsPublic(r.tiempo_bruto); if (ms) { sum += ms; tiene = true; } });
-      return tiene ? sum : null;
+      return tiene ? sum + penalMs : null;
     }
 
     // Suma un conjunto de entradas {inscripcion, ms, estado} por inscripción, conservando
@@ -2825,19 +2874,20 @@
     function acumularEntradas(entradas) {
       const acc = {};
       entradas.forEach(e => {
-        const g = acc[e.inscripcion_id] || { inscripcion: e.inscripcion, ms: 0, tiene: false, ultimoEstado: e.estado };
+        const g = acc[e.inscripcion_id] || { inscripcion: e.inscripcion, ms: 0, tiene: false, ultimoEstado: e.estado, vueltasCompletadas: e.vueltasCompletadas, vueltasRequeridas: e.vueltasRequeridas };
         if (e.ms !== null) { g.ms += e.ms; g.tiene = true; }
         g.ultimoEstado = e.estado;
+        if (e.vueltasCompletadas !== undefined) { g.vueltasCompletadas = e.vueltasCompletadas; g.vueltasRequeridas = e.vueltasRequeridas; }
         acc[e.inscripcion_id] = g;
       });
       return Object.values(acc).map(g => g.tiene
         ? { inscripcion: g.inscripcion, ms: g.ms, estado: 'valido' }
-        : { inscripcion: g.inscripcion, ms: null, estado: g.ultimoEstado });
+        : { inscripcion: g.inscripcion, ms: null, estado: g.ultimoEstado, vueltasCompletadas: g.vueltasCompletadas, vueltasRequeridas: g.vueltasRequeridas });
     }
 
     // mangaFilter solo se aplica dentro del panel "Vueltas" (ver más abajo) --
     // Clasificación/Shakedown y General siguen mostrando todas las mangas juntas.
-    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, mangaFilter) {
+    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, mangaFilter, penalMap) {
       const pasaFiltro = (ins) => !catFilter || catFilter === 'ALL' || (ins?.categoria?.nombre || 'Sin Categoría') === catFilter;
 
       const porRecorridoInscripcion = {};
@@ -2849,8 +2899,20 @@
         }
         porRecorridoInscripcion[key].rows.push(t);
       });
+      // En circuito, "General" no reparte por tiempo parcial a quien le faltó
+      // completar alguna vuelta (ver resolverGeneralCircuito) -- necesita
+      // saber cuántas vueltas tiene la PE de cada recorrido.
+      const vueltasReqPorRecorrido = {};
+      if (esCircuito) etapas.forEach(e => e.recorridos.forEach(r => { vueltasReqPorRecorrido[r.id] = r.numero_vueltas; }));
+
       const entradas = Object.values(porRecorridoInscripcion)
-        .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resolverEntradaTiempo(e.rows) }));
+        .map(e => {
+          const penalMs = (penalMap || {})[e.recorrido_id + '||' + e.inscripcion_id] || 0;
+          const resuelto = esCircuito
+            ? resolverGeneralCircuito(e.rows, vueltasReqPorRecorrido[e.recorrido_id], penalMs)
+            : resolverEntradaTiempo(e.rows, penalMs);
+          return { inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resuelto };
+        });
 
       let html = '';
 
@@ -2988,9 +3050,9 @@
 
     window.filtrarAccordionTiempos = function () {
       if (!window.tiemposAccordionData) return;
-      const { etapas, tiemposRally, shakeFilas, esCircuito, mangas } = window.tiemposAccordionData;
+      const { etapas, tiemposRally, shakeFilas, esCircuito, mangas, penalMap } = window.tiemposAccordionData;
       const catFilter = document.getElementById('tiempos-cat-filter').value;
-      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, window.tiemposVueltaMangaFilter);
+      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, window.tiemposVueltaMangaFilter, penalMap);
     };
 
     // Busca por Nº de coche O por nombre de piloto/navegante entre todos los tiempos
@@ -3078,16 +3140,31 @@
       const recorridoIds = etapas.flatMap(e => e.recorridos.map(r => r.id));
 
       let tiemposRally = [];
+      let penalMap = {};
       if (recorridoIds.length > 0) {
-        const { data } = await supabase.schema('rally').from('tiempos')
-          .select('recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
-          .in('recorrido_id', recorridoIds).is('deleted_at', null);
-        tiemposRally = data || [];
+        const [tiemposRes, penalRes] = await Promise.all([
+          supabase.schema('rally').from('tiempos')
+            .select('recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
+            .in('recorrido_id', recorridoIds).is('deleted_at', null),
+          // Solo hace falta para circuitos: un PE de una sola vuelta usa tiempo_neto (ya
+          // trae la penalización), pero uno de varias vueltas suma tiempo_bruto por vuelta
+          // (ver sumarTiempoRecorridoInscripcion) y necesita este total aparte.
+          esCircuito
+            ? supabase.schema('rally').from('penalizaciones')
+                .select('recorrido_id, inscripcion_id, tiempo_penalizacion')
+                .in('recorrido_id', recorridoIds).eq('tipo', 'tiempo').is('deleted_at', null)
+            : Promise.resolve({ data: [] })
+        ]);
+        tiemposRally = tiemposRes.data || [];
+        (penalRes.data || []).forEach(p => {
+          const key = p.recorrido_id + '||' + p.inscripcion_id;
+          penalMap[key] = (penalMap[key] || 0) + (intervalToMsPublic(p.tiempo_penalizacion) || 0);
+        });
       }
 
       const mangas = mangasRes.data || [];
 
-      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito, mangas, rallyNombre: rallyInfo?.nombre || '' };
+      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito, mangas, penalMap, rallyNombre: rallyInfo?.nombre || '' };
 
       const hayDatos = tiemposRally.length > 0 || (shakeFilas && shakeFilas.length > 0);
       if (hayDatos) {

@@ -892,6 +892,7 @@
               <div style="display:flex; gap:8px; margin-top:8px;">
                 <button type="button" id="btn-no-largo" class="btn-secondary" onclick="window.toggleEstadoEspecialLlegada('no_presentado')" style="flex:1; padding:6px; font-size:11px;">No Largó</button>
                 <button type="button" id="btn-abandono" class="btn-secondary" onclick="window.toggleEstadoEspecialLlegada('abandono')" style="flex:1; padding:6px; font-size:11px;">Abandono</button>
+                <button type="button" id="btn-doblado" class="btn-secondary" onclick="window.toggleEstadoEspecialLlegada('doblado')" style="flex:1; padding:6px; font-size:11px;" title="Auto alcanzado/rezagado por otro">Doblado</button>
               </div>
             </div>
           </div>
@@ -1454,6 +1455,7 @@
       if (activo) window.tiempoModoIngreso = null;
       const btnNL = document.getElementById('btn-no-largo');
       const btnAB = document.getElementById('btn-abandono');
+      const btnDB = document.getElementById('btn-doblado');
       if (btnNL) {
         btnNL.style.background = window.tiempoEstadoEspecial === 'no_presentado' ? '#ff9800' : '';
         btnNL.style.color = window.tiempoEstadoEspecial === 'no_presentado' ? '#000' : '';
@@ -1461,6 +1463,10 @@
       if (btnAB) {
         btnAB.style.background = window.tiempoEstadoEspecial === 'abandono' ? '#ff4d5a' : '';
         btnAB.style.color = window.tiempoEstadoEspecial === 'abandono' ? '#fff' : '';
+      }
+      if (btnDB) {
+        btnDB.style.background = window.tiempoEstadoEspecial === 'doblado' ? '#8e24aa' : '';
+        btnDB.style.color = window.tiempoEstadoEspecial === 'doblado' ? '#fff' : '';
       }
     };
 
@@ -1723,7 +1729,7 @@
               }
             }
           }
-          if (existingTime.estado === 'no_presentado' || existingTime.estado === 'abandono') {
+          if (existingTime.estado === 'no_presentado' || existingTime.estado === 'abandono' || existingTime.estado === 'doblado') {
             loadedFromDB = true;
             window.tiempoEstadoEspecial = existingTime.estado;
             window.actualizarBotonesEstadoEspecial();
@@ -2051,8 +2057,10 @@
       if (!el) return;
 
       if (window.tiempoEstadoEspecial) {
-        const texto = window.tiempoEstadoEspecial === 'no_presentado' ? 'No Largó' : 'Abandono';
-        const color = window.tiempoEstadoEspecial === 'no_presentado' ? '#ff9800' : '#ff4d5a';
+        const textos = { no_presentado: 'No Largó', abandono: 'Abandono', doblado: 'Doblado' };
+        const colores = { no_presentado: '#ff9800', abandono: '#ff4d5a', doblado: '#8e24aa' };
+        const texto = textos[window.tiempoEstadoEspecial] || window.tiempoEstadoEspecial;
+        const color = colores[window.tiempoEstadoEspecial] || '#ff9800';
         el.innerHTML = `<span style="color:${color}; font-weight:bold;">${texto}</span> — sin tiempo neto.`;
         return;
       }
