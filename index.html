@@ -1365,42 +1365,60 @@
 
     .print-doc { font-family: var(--font-body); color: #111; padding: 16px 4px; }
     .print-doc-header {
-      display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
-      padding-bottom: 14px; border-bottom: 3px solid #E63946;
+      display: flex; align-items: center; gap: 18px; margin-bottom: 26px;
+      padding-bottom: 16px; border-bottom: 3px solid #E63946;
     }
     .print-doc-brand {
-      font-family: var(--font-display); font-size: 22px; font-weight: 900;
-      text-transform: uppercase; letter-spacing: 0.03em; color: #111; line-height: 1.1;
+      font-family: var(--font-display); font-size: 26px; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 0.04em; color: #111; line-height: 1.1;
     }
-    .print-doc-rally { font-size: 15px; color: #444; font-weight: 600; margin-top: 2px; }
-    .print-doc-meta { margin-left: auto; text-align: right; font-size: 11px; color: #666; line-height: 1.6; }
-    .print-seccion { margin-bottom: 22px; break-inside: avoid-page; }
+    .print-doc-tagline {
+      font-size: 11px; color: #E63946; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; margin-top: 2px;
+    }
+    .print-doc-rally {
+      flex: 1; text-align: center; font-family: var(--font-display); font-size: 22px;
+      font-weight: 800; color: #111; text-transform: uppercase; letter-spacing: 0.02em;
+    }
+    .print-doc-rally-sub { font-size: 11px; color: #666; font-weight: 600; margin-top: 3px; text-transform: none; letter-spacing: 0; }
+    .print-doc-meta { text-align: right; font-size: 11px; color: #666; line-height: 1.7; flex-shrink: 0; }
+    .print-seccion { margin-bottom: 30px; }
     .print-seccion-title {
       font-family: var(--font-display); font-size: 15px; font-weight: 800; text-transform: uppercase;
-      letter-spacing: 0.04em; color: #fff; background: #111; padding: 6px 12px; border-radius: 4px;
-      margin-bottom: 10px;
+      letter-spacing: 0.04em; color: #fff; background: #111; padding: 7px 14px; border-radius: 4px;
+      margin-bottom: 14px;
     }
     .print-doc h4 { break-inside: avoid; }
     .print-doc table { break-inside: auto; }
     .print-doc tr { break-inside: avoid; }
     .print-doc div[style*="overflow-x"] { overflow: visible !important; }
+    .print-doc div[style="margin-bottom: 16px;"] { margin-bottom: 32px !important; }
     .print-doc .data-table { width: 100%; border-collapse: collapse; }
     .print-doc .data-table th {
       background: #eee !important; color: #111 !important; border: 1px solid #bbb !important;
       font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
     }
     .print-doc .data-table td { color: #111 !important; border: 1px solid #ccc !important; font-size: 12px; }
+    .print-doc-footer {
+      margin-top: 34px; padding-top: 14px; border-top: 1px solid #ddd;
+      text-align: center; font-size: 10px; color: #888; letter-spacing: 0.02em;
+    }
+    .print-doc-footer b { color: #555; }
 
     @media print {
       @page { size: landscape; }
       body * { visibility: hidden; }
 
-      /* PDF de Tiempos: documento armado aparte, ver window.printTiempos(). */
+      /* PDF de Tiempos: documento armado aparte, ver window.printTiempos().
+         Se saca a los hermanos del flujo con display:none (no solo
+         visibility:hidden) y el root queda en flujo normal (sin
+         position:absolute) para que el navegador pueda paginarlo en varias
+         hojas -- position:absolute cortaba el contenido a una sola página. */
+      body.printing-tiempos > *:not(#print-tiempos-root) { display: none !important; }
       #print-tiempos-root:not(:empty),
       #print-tiempos-root:not(:empty) * { visibility: visible; }
       #print-tiempos-root:not(:empty) {
         display: block !important;
-        position: absolute; left: 0; top: 0; width: 100%;
         background: #fff; color: #111;
       }
 
@@ -2495,19 +2513,33 @@
             ${logoHtml}
             <div>
               <div class="print-doc-brand">AMADESU RALLYS</div>
-              <div class="print-doc-rally">${escPrintText(rallyNombre)}</div>
+              <div class="print-doc-tagline">Cronometraje Oficial en Vivo</div>
+            </div>
+            <div class="print-doc-rally">
+              ${escPrintText(rallyNombre)}
+              <div class="print-doc-rally-sub">Resultados Oficiales</div>
             </div>
             <div class="print-doc-meta">
-              <div>Resultados Oficiales</div>
-              <div>Generado: ${fecha}</div>
+              <div>Generado</div>
+              <div>${fecha}</div>
             </div>
           </div>
           ${seccionesHtml}
+          <div class="print-doc-footer">
+            <b>GIDEN TECHNOLOGY</b> — Página web · Diseños 3D · Industria · Tecnología · Ingeniería · Sistemas y más &nbsp;·&nbsp; 📞 62402261
+          </div>
         </div>
       `;
 
+      // Saca del flujo a todo lo demás (display:none, no solo visibility)
+      // para que el documento pueda paginar en varias hojas sin cortarse.
+      document.body.classList.add('printing-tiempos');
       window.print();
     };
+
+    window.addEventListener('afterprint', () => {
+      document.body.classList.remove('printing-tiempos');
+    });
 
     const chevronSvg = `<svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
 
