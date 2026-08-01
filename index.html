@@ -848,7 +848,7 @@
 
       /* Estos selects tienen un min-width fijo en línea pensado para
          escritorio; en un celular angosto eso los hace desbordar. */
-      #stats-pilot-selector, #tiempos-cat-filter {
+      #stats-pilot-search-wrap, #stats-pilot-search, #tiempos-cat-filter {
         min-width: 0 !important;
         width: 100% !important;
       }
@@ -1391,7 +1391,7 @@
         width: 100%; max-width: 100%; max-height: none; box-shadow: none; background: #fff !important;
       }
       #modal-stats .modal-close,
-      #stats-pilot-selector,
+      #stats-pilot-search-wrap,
       #btn-stats-pdf {
         display: none !important;
       }
@@ -1646,7 +1646,14 @@
 
       <!-- CONTROLES -->
       <div class="stats-controls-bar">
-        <select id="stats-pilot-selector" class="pilot-selector" style="width:auto; min-width:320px; margin-bottom:0; font-size: 15px;">
+        <div id="stats-pilot-search-wrap" style="position:relative; width:auto; min-width:320px;">
+          <input type="text" id="stats-pilot-search" class="pilot-selector" style="width:100%; margin-bottom:0; font-size:15px;" placeholder="Buscar piloto por nombre o número..." autocomplete="off"
+            oninput="window.statsRenderPilotDropdown(this.value)"
+            onfocus="window.statsRenderPilotDropdown(this.value)"
+            onblur="setTimeout(() => { document.getElementById('stats-pilot-dropdown').style.display = 'none'; }, 150)">
+          <div id="stats-pilot-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:280px; overflow-y:auto; background:var(--bg-surface); border:1px solid var(--border-strong); border-radius:8px; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
+        </div>
+        <select id="stats-pilot-selector" style="display:none;">
           <option value="">Selecciona un Piloto...</option>
         </select>
         <button id="btn-stats-pdf" style="display:none; align-items:center; gap:8px; background: rgba(255,255,255,0.05); color:var(--text-main); border: 1px solid var(--border-strong); border-radius:8px; padding:10px 18px; font-size:13px; font-weight:600; font-family: var(--font-body); cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" onclick="window.printStats()">
@@ -3367,6 +3374,11 @@
       const selector = document.getElementById('stats-pilot-selector');
       selector.innerHTML = '<option value="">Cargando pilotos...</option>';
       selector.disabled = true; // Disable until everything is loaded
+      document.getElementById('stats-pilot-search').value = '';
+      document.getElementById('stats-pilot-search').placeholder = 'Cargando pilotos...';
+      document.getElementById('stats-pilot-search').disabled = true;
+      document.getElementById('stats-pilot-dropdown').style.display = 'none';
+      window.statsPilotOptions = [];
 
       currentRallyStats = rallyId;
       window.statsRallyData = null;
@@ -3382,6 +3394,7 @@
       if (error || !data || data.length === 0) {
         selector.innerHTML = '<option value="">No hay pilotos inscritos.</option>';
         selector.disabled = false;
+        document.getElementById('stats-pilot-search').placeholder = 'No hay pilotos inscritos.';
         return;
       }
 
@@ -3391,6 +3404,13 @@
         // Save the full pilot info in the option as a JSON string
         selector.innerHTML += `<option value="${ins.id}" data-info='${JSON.stringify(ins)}'>#${ins.numero} - ${p}</option>`;
       });
+      // Mismos datos que las <option> de arriba, pero en un array para poder
+      // filtrar por nombre O número desde el buscador (ver statsRenderPilotDropdown).
+      window.statsPilotOptions = data.map(ins => {
+        const p = ins.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : 'Desc.';
+        return { id: ins.id, label: `#${ins.numero} - ${p}` };
+      });
+      document.getElementById('stats-pilot-search').placeholder = 'Buscar piloto por nombre o número...';
 
       // Prefetch de TODOS los tiempos del rally (todas las inscripciones), necesario para
       // calcular posiciones y diferencias al líder — no solo los del piloto seleccionado.
@@ -3455,6 +3475,41 @@
 
       // Now that all data is loaded, enable the selector
       selector.disabled = false;
+      document.getElementById('stats-pilot-search').disabled = false;
+    };
+
+    // Buscador de piloto (nombre o número) que reemplaza al <select> nativo --
+    // el <select> #stats-pilot-selector se mantiene oculto y sigue siendo la
+    // fuente de verdad (todo el resto del código de Stats escucha su evento
+    // 'change'), este buscador solo le setea el valor y dispara ese evento.
+    window.statsRenderPilotDropdown = function (filtro) {
+      const dropdown = document.getElementById('stats-pilot-dropdown');
+      const texto = (filtro || '').trim().toLowerCase();
+      const filtrados = (window.statsPilotOptions || []).filter(p => !texto || p.label.toLowerCase().includes(texto));
+
+      if (filtrados.length === 0) {
+        dropdown.innerHTML = '<div style="padding:10px 14px; color:var(--text-muted); font-size:13px;">Sin resultados.</div>';
+      } else {
+        dropdown.innerHTML = filtrados.slice(0, 50).map(p => `
+          <div class="stats-pilot-option" style="padding:10px 14px; cursor:pointer; font-size:14px; border-bottom:1px solid var(--border-subtle);"
+            onmousedown="window.statsSeleccionarPiloto('${p.id}')"
+            onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background=''">
+            ${escPrintText(p.label)}
+          </div>`).join('');
+      }
+      dropdown.style.display = 'block';
+    };
+
+    // onmousedown (no onclick) en las opciones de arriba para que dispare ANTES
+    // del onblur del input -- si no, el blur cierra el dropdown primero y el
+    // click nunca llega a registrarse.
+    window.statsSeleccionarPiloto = function (inscripcionId) {
+      const select = document.getElementById('stats-pilot-selector');
+      const p = (window.statsPilotOptions || []).find(x => x.id === inscripcionId);
+      document.getElementById('stats-pilot-search').value = p ? p.label : '';
+      document.getElementById('stats-pilot-dropdown').style.display = 'none';
+      select.value = inscripcionId;
+      select.dispatchEvent(new Event('change'));
     };
 
     // Alterna entre la vista "General" (Circuito/Rally) y la de Clasificación/

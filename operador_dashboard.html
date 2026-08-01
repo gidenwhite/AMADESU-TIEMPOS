@@ -861,13 +861,13 @@
             <div class="form-group">
               <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Entrada (HH:MM:SS.cc)</label>
               <div class="time-display-container" id="sal-container">
-                <input type="text" id="sal-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'sal-mm', 23); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, null)">
+                <input type="text" id="sal-hh" maxlength="2" inputmode="numeric" placeholder="HH" oninput="window.autoTabTime(this, 'sal-mm', 23); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, null)">
                 <span class="colon">:</span>
-                <input type="text" id="sal-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'sal-ss', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
+                <input type="text" id="sal-mm" maxlength="2" inputmode="numeric" placeholder="MM" oninput="window.autoTabTime(this, 'sal-ss', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
                 <span class="colon">:</span>
-                <input type="text" id="sal-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, 'sal-cc', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')">
+                <input type="text" id="sal-ss" maxlength="2" inputmode="numeric" placeholder="SS" oninput="window.autoTabTime(this, 'sal-cc', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')">
                 <span class="dot">.</span>
-                <input type="text" id="sal-cc" maxlength="2" placeholder="cc" oninput="window.autoTabTime(this, 'emp-hh', 99); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'sal-ss')">
+                <input type="text" id="sal-cc" maxlength="2" inputmode="numeric" placeholder="cc" oninput="window.autoTabTime(this, 'emp-hh', 99); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'sal-ss')">
               </div>
             </div>
             <!-- Se completa UNO de los dos: Tiempo Empleado (duración) o Tiempo
@@ -876,25 +876,25 @@
             <div class="form-group">
               <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Tiempo Empleado (HH:MM:SS.cc)</label>
               <div class="time-display-container" id="emp-container" style="border-color: rgba(255, 176, 32, 0.3); transition: opacity 0.15s;">
-                <input type="text" id="emp-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'emp-mm', 23); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'sal-cc')" style="color: #ffb020;">
+                <input type="text" id="emp-hh" maxlength="2" inputmode="numeric" placeholder="HH" oninput="window.autoTabTime(this, 'emp-mm', 23); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'sal-cc')" style="color: #ffb020;">
                 <span class="colon">:</span>
-                <input type="text" id="emp-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'emp-ss', 59); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'emp-hh')" style="color: #ffb020;">
+                <input type="text" id="emp-mm" maxlength="2" inputmode="numeric" placeholder="MM" oninput="window.autoTabTime(this, 'emp-ss', 59); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'emp-hh')" style="color: #ffb020;">
                 <span class="colon">:</span>
-                <input type="text" id="emp-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, 'emp-cc', 59); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'emp-mm')" style="color: #ffb020;">
+                <input type="text" id="emp-ss" maxlength="2" inputmode="numeric" placeholder="SS" oninput="window.autoTabTime(this, 'emp-cc', 59); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'emp-mm')" style="color: #ffb020;">
                 <span class="dot">.</span>
-                <input type="text" id="emp-cc" maxlength="2" placeholder="cc" oninput="window.autoTabTime(this, 'lle-hh', 99); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'emp-ss')" style="color: #ffb020;">
+                <input type="text" id="emp-cc" maxlength="2" inputmode="numeric" placeholder="cc" oninput="window.autoTabTime(this, 'lle-hh', 99); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'emp-ss')" style="color: #ffb020;">
               </div>
             </div>
             <div class="form-group">
               <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Tiempo Llegada (HH:MM:SS.cc)</label>
               <div class="time-display-container" id="lle-container" style="border-color: rgba(0, 245, 160, 0.3); transition: opacity 0.15s;">
-                <input type="text" id="lle-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'lle-mm', 23); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'emp-cc')" style="color: #00F5A0;">
+                <input type="text" id="lle-hh" maxlength="2" inputmode="numeric" placeholder="HH" oninput="window.autoTabTime(this, 'lle-mm', 23); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'emp-cc')" style="color: #00F5A0;">
                 <span class="colon">:</span>
-                <input type="text" id="lle-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'lle-ss', 59); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-hh')" style="color: #00F5A0;">
+                <input type="text" id="lle-mm" maxlength="2" inputmode="numeric" placeholder="MM" oninput="window.autoTabTime(this, 'lle-ss', 59); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-hh')" style="color: #00F5A0;">
                 <span class="colon">:</span>
-                <input type="text" id="lle-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, 'lle-cc', 59); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-mm')" style="color: #00F5A0;">
+                <input type="text" id="lle-ss" maxlength="2" inputmode="numeric" placeholder="SS" oninput="window.autoTabTime(this, 'lle-cc', 59); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-mm')" style="color: #00F5A0;">
                 <span class="dot">.</span>
-                <input type="text" id="lle-cc" maxlength="2" placeholder="cc" oninput="window.autoTabTime(this, null, 99); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'lle-ss')" style="color: #00F5A0;">
+                <input type="text" id="lle-cc" maxlength="2" inputmode="numeric" placeholder="cc" oninput="window.autoTabTime(this, null, 99); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'lle-ss')" style="color: #00F5A0;">
               </div>
               <div style="display:flex; gap:8px; margin-top:8px;">
                 <button type="button" id="btn-no-largo" class="btn-secondary" onclick="window.toggleEstadoEspecialLlegada('no_presentado')" style="flex:1; padding:6px; font-size:11px;">No Largó</button>
@@ -921,9 +921,9 @@
             <div class="form-group">
               <label class="form-label" style="font-size: 11px;">Personalizado (MM:SS)</label>
               <div class="time-display-container" style="min-width: 90px;">
-                <input type="text" id="penal-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'penal-ss', 99)" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, null)" style="color:#ff9800;">
+                <input type="text" id="penal-mm" maxlength="2" inputmode="numeric" placeholder="MM" oninput="window.autoTabTime(this, 'penal-ss', 99)" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, null)" style="color:#ff9800;">
                 <span class="colon">:</span>
-                <input type="text" id="penal-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, null, 59)" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'penal-mm')" style="color:#ff9800;">
+                <input type="text" id="penal-ss" maxlength="2" inputmode="numeric" placeholder="SS" oninput="window.autoTabTime(this, null, 59)" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'penal-mm')" style="color:#ff9800;">
               </div>
             </div>
 
