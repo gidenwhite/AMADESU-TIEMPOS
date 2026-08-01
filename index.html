@@ -1104,6 +1104,14 @@
       margin-bottom: 16px;
     }
 
+    /* Estado deshabilitado (mientras carga) bien visible -- sin esto, un
+       <input> deshabilitado se ve casi igual que uno habilitado y parece
+       que el buscador "no responde" en vez de "está cargando". */
+    .pilot-selector:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+
     .pilot-selector option {
       background: var(--bg-surface-elevated);
     }
@@ -3439,7 +3447,19 @@
 
       window.statsRallyData = { recorridoInfo, recorridoOrden, tiemposRally };
 
+      // A partir de acá ya se puede buscar y elegir piloto (vista "General") --
+      // no hace falta esperar a la Clasificación, que es opcional (no todos los
+      // circuitos la tienen) y venía encadenada en serie, haciendo que la
+      // búsqueda pareciera "trabada" varios segundos en conexiones lentas.
+      selector.disabled = false;
+      document.getElementById('stats-pilot-search').disabled = false;
+
       // --- Clasificación (circuitos, si el rally ya tiene una configurada) ---
+      // Se carga en paralelo/de fondo, sin bloquear la búsqueda de arriba.
+      window.statsCargarClasificacionDeFondo(rallyId);
+    };
+
+    window.statsCargarClasificacionDeFondo = async function (rallyId) {
       const { data: etapaClasif } = await supabase.schema('rally').from('etapas')
         .select('id, nombre').eq('rally_id', rallyId).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
 
@@ -3472,10 +3492,6 @@
           document.getElementById('stats-view-toggle').style.display = tiemposClasif.length > 0 ? 'flex' : 'none';
         }
       }
-
-      // Now that all data is loaded, enable the selector
-      selector.disabled = false;
-      document.getElementById('stats-pilot-search').disabled = false;
     };
 
     // Buscador de piloto (nombre o número) que reemplaza al <select> nativo --
