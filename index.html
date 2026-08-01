@@ -2831,9 +2831,11 @@
     }
 
     // Agrupa un array de { inscripcion, ms, estado } por categoría y arma la tabla de
-    // posiciones (ascendente). Los que no tienen tiempo válido (No Largó/Abandono/
-    // Doblado/Incompleto/pendiente) van al final de su categoría, mostrando el
-    // motivo en vez de un puesto.
+    // posiciones, en 3 niveles: 1) quienes completaron todo, ordenados de menor a
+    // mayor tiempo; 2) quienes completaron MENOS vueltas de las requeridas, con su
+    // tiempo parcial -- entre ellos, primero quien llegó más lejos (más vueltas),
+    // y a igual cantidad de vueltas, quien fue más rápido; 3) al final, quienes no
+    // completaron ninguna vuelta (No Largó/Abandono/Doblado/pendiente), sin tiempo.
     function agruparPorCategoriaYClasificar(entries) {
       const byCat = {};
       entries.forEach(e => {
@@ -2844,7 +2846,9 @@
       const out = {};
       for (const [cat, arr] of Object.entries(byCat)) {
         const validos = arr.filter(e => e.ms !== null).sort((a, b) => a.ms - b.ms);
-        const especiales = arr.filter(e => e.ms === null);
+        const parciales = arr.filter(e => e.ms === null && e.estado === 'incompleto')
+          .sort((a, b) => (b.vueltasCompletadas - a.vueltasCompletadas) || (a.msParcial - b.msParcial));
+        const abandonos = arr.filter(e => e.ms === null && e.estado !== 'incompleto');
         const liderMs = validos.length ? validos[0].ms : null;
 
         const filasValidas = validos.map((e, i) => ({
@@ -2855,7 +2859,7 @@
           tiempo: msToIntervalStrPublic(e.ms),
           dif: i === 0 ? null : msToIntervalStrPublic(e.ms - liderMs)
         }));
-        const filasEspeciales = especiales.map(e => ({
+        const filaEspecial = (e) => ({
           num: e.inscripcion?.numero || '-',
           name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
           navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
@@ -2863,8 +2867,8 @@
           vueltasCompletadas: e.vueltasCompletadas,
           vueltasRequeridas: e.vueltasRequeridas,
           msParcial: e.msParcial
-        }));
-        out[cat] = [...filasValidas, ...filasEspeciales];
+        });
+        out[cat] = [...filasValidas, ...parciales.map(filaEspecial), ...abandonos.map(filaEspecial)];
       }
       return out;
     }
