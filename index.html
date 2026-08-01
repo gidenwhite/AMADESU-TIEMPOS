@@ -1659,7 +1659,7 @@
             oninput="window.statsRenderPilotDropdown(this.value)"
             onfocus="window.statsRenderPilotDropdown(this.value)"
             onblur="setTimeout(() => { document.getElementById('stats-pilot-dropdown').style.display = 'none'; }, 150)">
-          <div id="stats-pilot-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:280px; overflow-y:auto; background:var(--bg-surface); border:1px solid var(--border-strong); border-radius:8px; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
+          <div id="stats-pilot-dropdown" style="display:none; max-height:280px; overflow-y:auto; background:var(--bg-surface); border:1px solid var(--border-strong); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
         </div>
         <select id="stats-pilot-selector" style="display:none;">
           <option value="">Selecciona un Piloto...</option>
@@ -3498,6 +3498,24 @@
     // el <select> #stats-pilot-selector se mantiene oculto y sigue siendo la
     // fuente de verdad (todo el resto del código de Stats escucha su evento
     // 'change'), este buscador solo le setea el valor y dispara ese evento.
+    //
+    // El desplegable de resultados se mueve a document.body y se posiciona
+    // con position:fixed calculado a mano (en vez de vivir adentro del modal
+    // con position:absolute) -- el modal tiene su propio scroll y, cuando
+    // todavía no hay un piloto elegido, es muy bajo de alto, así que un
+    // desplegable "adentro" quedaba cortado por ese recorte.
+    window.statsPosicionarPilotDropdown = function () {
+      const dropdown = document.getElementById('stats-pilot-dropdown');
+      const input = document.getElementById('stats-pilot-search');
+      if (dropdown.parentElement !== document.body) document.body.appendChild(dropdown);
+      const rect = input.getBoundingClientRect();
+      dropdown.style.position = 'fixed';
+      dropdown.style.left = rect.left + 'px';
+      dropdown.style.top = (rect.bottom + 4) + 'px';
+      dropdown.style.width = rect.width + 'px';
+      dropdown.style.zIndex = '1100'; // por encima de .modal-overlay (1000)
+    };
+
     window.statsRenderPilotDropdown = function (filtro) {
       const dropdown = document.getElementById('stats-pilot-dropdown');
       const texto = (filtro || '').trim().toLowerCase();
@@ -3513,6 +3531,7 @@
             ${escPrintText(p.label)}
           </div>`).join('');
       }
+      window.statsPosicionarPilotDropdown();
       dropdown.style.display = 'block';
     };
 
