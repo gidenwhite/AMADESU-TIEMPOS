@@ -5652,8 +5652,26 @@
         }
       }
 
-      // Auto fill hora salida if exists in cronograma (y si no se cargó de la BD)
-      if (!loadedFromDB && recId && window.tiemposCronogramaCache) {
+      // Para vueltas > 1 de un circuito, la Entrada es el mismo instante en que
+      // se marcó la Llegada de la vuelta anterior (el auto no para en meta,
+      // arranca derecho la vuelta siguiente) -- se copia sola, no hace falta
+      // volver a tipearla. Si la vuelta actual ya trae su propia Entrada
+      // guardada, no se toca.
+      let entradaDeVueltaAnterior = false;
+      const salidaYaCargada = !!(document.getElementById('sal-hh').value || document.getElementById('sal-mm').value);
+      if (!salidaYaCargada && vueltaActual > 1 && window.tiemposCurrentVueltaRaw) {
+        const tiempoVueltaPrevia = window.tiemposCurrentVueltaRaw.find(t => t.inscripcion_id === insId && t.vuelta === vueltaActual - 1 && t.hora_llegada);
+        if (tiempoVueltaPrevia) {
+          const timePart = tiempoVueltaPrevia.hora_llegada.split('T')[1].replace('Z', '');
+          const parts = timePart.split(':');
+          document.getElementById('sal-hh').value = parts[0] || '';
+          document.getElementById('sal-mm').value = parts[1] || '';
+          entradaDeVueltaAnterior = true;
+        }
+      }
+
+      // Auto fill hora salida if exists in cronograma (y si no se cargó de la BD ni de la vuelta anterior)
+      if (!loadedFromDB && !entradaDeVueltaAnterior && recId && window.tiemposCronogramaCache) {
         const cronoRow = window.tiemposCronogramaCache.find(r => r.id === insId);
         if (cronoRow && cronoRow.tiempos && cronoRow.tiempos[recId]) {
           const parts = cronoRow.tiempos[recId].split(':');
