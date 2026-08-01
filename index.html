@@ -2280,6 +2280,23 @@
       header.classList.toggle('open', opening);
     };
 
+    // Colapsa filas duplicadas de rally.tiempos (mismo vehículo + mismo recorrido +
+    // misma vuelta) a una sola: se queda con la de updated_at más reciente y
+    // descarta el resto. Es un blindaje aparte de que la base esté limpia -- si
+    // alguna vez queda más de una fila activa para la misma vuelta (por ejemplo,
+    // una Carga Masiva reprocesada), esto evita que se sumen dos veces.
+    function dedupeTiemposPorVuelta(rows) {
+      const porClave = {};
+      (rows || []).forEach(r => {
+        const key = r.recorrido_id + '||' + r.inscripcion_id + '||' + r.vuelta;
+        const actual = porClave[key];
+        if (!actual || new Date(r.updated_at) >= new Date(actual.updated_at)) {
+          porClave[key] = r;
+        }
+      });
+      return Object.values(porClave);
+    }
+
     function intervalToMsPublic(iv) {
       if (iv === null || iv === undefined || iv === '') return 0;
       if (typeof iv === 'number') return iv * 1000;
@@ -2440,10 +2457,13 @@
       const recorrido = recorridos && recorridos[0];
       if (!recorrido) return null;
 
-      const { data: tiempos, error } = await supabase.schema('rally').from('tiempos')
-        .select('inscripcion_id, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
+      const { data: tiemposRaw, error } = await supabase.schema('rally').from('tiempos')
+        .select('recorrido_id, inscripcion_id, vuelta, updated_at, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
         .eq('recorrido_id', recorrido.id).is('deleted_at', null);
-      if (error || !tiempos || tiempos.length === 0) return null;
+      if (error || !tiemposRaw || tiemposRaw.length === 0) return null;
+
+      // Mismo blindaje ante duplicados que en obtenerShakedownFilas/openTiempos.
+      const tiempos = dedupeTiemposPorVuelta(tiemposRaw);
 
       const porInscripcion = {};
       tiempos.forEach(t => {
@@ -3154,7 +3174,7 @@
       if (recorridoIds.length > 0) {
         const [tiemposRes, penalRes] = await Promise.all([
           supabase.schema('rally').from('tiempos')
-            .select('recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
+            .select('id, updated_at, recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
             .in('recorrido_id', recorridoIds).is('deleted_at', null),
           // Solo hace falta para circuitos: un PE de una sola vuelta usa tiempo_neto (ya
           // trae la penalización), pero uno de varias vueltas suma tiempo_bruto por vuelta
@@ -3165,7 +3185,10 @@
                 .in('recorrido_id', recorridoIds).eq('tipo', 'tiempo').is('deleted_at', null)
             : Promise.resolve({ data: [] })
         ]);
-        tiemposRally = tiemposRes.data || [];
+        // Blindaje ante duplicados: si por un reproceso de la Carga Masiva (u otra
+        // causa) quedó más de una fila activa para el mismo vehículo+vuelta, se usa
+        // solo la más reciente -- nunca se suman filas repetidas de la misma vuelta.
+        tiemposRally = dedupeTiemposPorVuelta(tiemposRes.data || []);
         (penalRes.data || []).forEach(p => {
           const key = p.recorrido_id + '||' + p.inscripcion_id;
           penalMap[key] = (penalMap[key] || 0) + (intervalToMsPublic(p.tiempo_penalizacion) || 0);

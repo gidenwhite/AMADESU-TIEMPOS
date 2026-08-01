@@ -1571,7 +1571,24 @@
           document.getElementById('sal-mm').value = carryLlegada.mm;
           document.getElementById('sal-ss').value = carryLlegada.ss;
           document.getElementById('sal-cc').value = carryLlegada.cc;
-          window.onEntradaChange();
+
+          // Si esta vuelta YA tenía un Tiempo Empleado cargado (guardado de
+          // antes), esa duración cronometrada es el dato que vale -- se
+          // recalcula la Llegada a partir de la Entrada recién corregida,
+          // NUNCA al revés. Si se recalculara el Empleado usando la Llegada
+          // vieja (guardada con la Entrada rota), se inventaría una
+          // duración distinta a la que realmente se cronometró.
+          const empMsExistente = getGrupoMs('emp');
+          if (empMsExistente !== null) {
+            window.tiempoModoIngreso = 'empleado';
+            window.setGrupoLocked('lle', true);
+            window.setGrupoLocked('emp', false);
+            const entradaMs = getEntradaMs();
+            setGrupoFromMs('lle', entradaMs !== null ? entradaMs + empMsExistente : null);
+            window.actualizarPreviewTiempo();
+          } else {
+            window.onEntradaChange();
+          }
         }
       }
     };
@@ -1862,6 +1879,22 @@
       const pad = (n) => n.toString().padStart(2, '0');
       const padMs = (n) => Math.floor(n/10).toString().padStart(2, '0');
       return `${pad(h)}:${pad(m)}:${pad(s)}.${padMs(ms)}`;
+    }
+
+    // Colapsa filas duplicadas de rally.tiempos (mismo vehículo + misma vuelta,
+    // dentro de un mismo recorrido) a una sola: se queda con la de updated_at más
+    // reciente y descarta el resto. Blindaje ante datos duplicados (por ejemplo,
+    // una Carga Masiva reprocesada) para que nunca se sumen dos veces.
+    function dedupeTiemposPorVuelta(rows) {
+      const porClave = {};
+      (rows || []).forEach(r => {
+        const key = r.inscripcion_id + '||' + r.vuelta;
+        const actual = porClave[key];
+        if (!actual || new Date(r.updated_at) >= new Date(actual.updated_at)) {
+          porClave[key] = r;
+        }
+      });
+      return Object.values(porClave);
     }
 
     // Convierte un interval de Postgres (ej. "00:10:00", "10:00", "00:00:30.5",
@@ -2660,14 +2693,20 @@
       });
       window.penalPorInscripcion = penalPorInscripcion;
 
+      // Blindaje ante duplicados: si por un reproceso de la Carga Masiva (u otra
+      // causa) quedó más de una fila activa para el mismo vehículo+vuelta, se usa
+      // solo la más reciente (updated_at) -- nunca se suman filas repetidas de la
+      // misma vuelta ni se usa una al azar al reabrir el formulario.
+      const dataDedup = dedupeTiemposPorVuelta(data || []);
+
       // Guarda las filas crudas (una por vuelta) para poder buscar el tiempo exacto
       // de la vuelta seleccionada al elegir un vehículo (ver window.seleccionarInscrito).
-      window.tiemposCurrentVueltaRaw = data || [];
+      window.tiemposCurrentVueltaRaw = dataDedup;
 
       const recData = (tiemposRecorridosCache || []).find(r => r.id === recId);
       const esCircuito = !!(recData && recData.numero_vueltas);
 
-      let rows = data || [];
+      let rows = dataDedup;
 
       if (esCircuito) {
         // Un circuito tiene varias filas de 'tiempos' por inscripción (una por vuelta).
