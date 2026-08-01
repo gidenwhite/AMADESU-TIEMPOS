@@ -1605,7 +1605,7 @@
           <option value="ALL">Todas las Categorías</option>
         </select>
         <div style="display:flex; gap:6px; align-items:center;">
-          <input type="text" inputmode="numeric" id="tiempos-num-search" class="pilot-selector" style="width:110px; margin-bottom:0;" placeholder="Buscar Nº..." onkeydown="if(event.key==='Enter'){event.preventDefault(); window.buscarPorNumeroTiempos();}">
+          <input type="text" id="tiempos-num-search" class="pilot-selector" style="width:160px; margin-bottom:0;" placeholder="Buscar Nº o nombre..." onkeydown="if(event.key==='Enter'){event.preventDefault(); window.buscarPorNumeroTiempos();}">
           <button type="button" style="display:inline-flex; align-items:center; gap:6px; background: rgba(255,255,255,0.05); color:var(--text-main); border: 1px solid var(--border-strong); border-radius:8px; padding:10px 14px; font-size:13px; font-weight:600; font-family: var(--font-body); cursor:pointer;" onclick="window.buscarPorNumeroTiempos()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             Buscar
@@ -2398,7 +2398,7 @@
       if (!recorrido) return null;
 
       const { data: tiempos, error } = await supabase.schema('rally').from('tiempos')
-        .select('inscripcion_id, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
+        .select('inscripcion_id, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
         .eq('recorrido_id', recorrido.id).is('deleted_at', null);
       if (error || !tiempos || tiempos.length === 0) return null;
 
@@ -2835,7 +2835,9 @@
         : { inscripcion: g.inscripcion, ms: null, estado: g.ultimoEstado });
     }
 
-    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas) {
+    // mangaFilter solo se aplica dentro del panel "Vueltas" (ver más abajo) --
+    // Clasificación/Shakedown y General siguen mostrando todas las mangas juntas.
+    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, mangaFilter) {
       const pasaFiltro = (ins) => !catFilter || catFilter === 'ALL' || (ins?.categoria?.nombre || 'Sin Categoría') === catFilter;
 
       const porRecorridoInscripcion = {};
@@ -2869,12 +2871,15 @@
       html += accordionItem('general', generalLabel, 'acc-header-general', generalHtml);
 
       if (esCircuito) {
-        // --- CIRCUITO: sin envoltorio de "Etapa" (solo hay una) -- se listan
-        // directamente las vueltas del único PE, y dentro de cada vuelta se
-        // puede ver "General" (todos juntos) o filtrar por manga (grupo de salida). ---
+        // --- CIRCUITO: sin envoltorio de "Etapa" (solo hay una) -- todas las
+        // vueltas del único PE van dentro de UN solo panel "Vueltas", con el
+        // selector de Manga arriba de todo (adentro del panel, no afuera) --
+        // así se puede elegir la manga desde el primer momento, aunque
+        // todavía no haya ningún tiempo cargado. ---
         const porRecorridoVueltaInscripcion = {};
         tiemposRally.forEach(t => {
           if (!pasaFiltro(t.inscripcion)) return;
+          if (mangaFilter && mangaFilter !== 'ALL' && t.inscripcion?.manga_id !== mangaFilter) return;
           const key = t.recorrido_id + '||' + t.vuelta + '||' + t.inscripcion_id;
           if (!porRecorridoVueltaInscripcion[key]) {
             porRecorridoVueltaInscripcion[key] = { inscripcion: t.inscripcion, recorrido_id: t.recorrido_id, vuelta: t.vuelta, inscripcion_id: t.inscripcion_id, rows: [] };
@@ -2884,23 +2889,44 @@
         const entradasPorVuelta = Object.values(porRecorridoVueltaInscripcion)
           .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, vuelta: e.vuelta, ...resolverEntradaTiempo(e.rows) }));
 
+        let mangaSelectorHtml = '';
+        if (mangas && mangas.length > 0) {
+          const activo = mangaFilter || 'ALL';
+          mangaSelectorHtml = `<div style="margin-bottom:16px; max-width:280px;">
+            <select id="tiempos-manga-filter" class="pilot-selector" style="width:100%; margin-bottom:0;" onchange="window.onMangaFilterVueltasChange(this.value)">
+              <option value="ALL" ${activo === 'ALL' ? 'selected' : ''}>Todas las Mangas</option>
+              ${mangas.map(m => `<option value="${m.id}" ${activo === m.id ? 'selected' : ''}>${escPrintText(m.nombre)}</option>`).join('')}
+            </select>
+          </div>`;
+        }
+
         let vueltasHtml = '';
         etapas.forEach(etapa => {
           etapa.recorridos.forEach(rec => {
             const numVueltas = rec.numero_vueltas || 1;
             for (let v = 1; v <= numVueltas; v++) {
               const entradasVuelta = entradasPorVuelta.filter(e => e.recorrido_id === rec.id && e.vuelta === v);
-              if (entradasVuelta.length === 0) continue;
               const vueltaId = 'vuelta-' + rec.id + '-' + v;
-              vueltasHtml += accordionItem(vueltaId, `Vuelta ${v}`, 'acc-header-pe', buildVueltaConMangas(entradasVuelta, mangas, vueltaId));
+              const bodyVuelta = entradasVuelta.length > 0
+                ? renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasVuelta))
+                : '<p class="acc-empty">Sin tiempos registrados aún.</p>';
+              vueltasHtml += `
+                <div class="acc-item" style="margin: 0 0 8px 12px;">
+                  <button class="acc-header acc-header-pe" id="acc-header-${vueltaId}" onclick="window.toggleAcordeon('${vueltaId}')">
+                    <span>Vuelta ${v}</span>
+                    ${chevronSvg}
+                  </button>
+                  <div class="acc-wrap" id="acc-wrap-${vueltaId}"><div class="acc-clip"><div class="acc-body">${bodyVuelta}</div></div></div>
+                </div>`;
             }
           });
         });
 
-        if (!vueltasHtml) {
-          vueltasHtml = accordionItem('sin-vueltas', 'Vueltas', 'acc-header-pe', '<p class="acc-empty">Sin tiempos registrados aún.</p>');
-        }
-        html += vueltasHtml;
+        const vueltasBodyHtml = mangaSelectorHtml + (vueltasHtml
+          ? `<div class="acc-etapa-children">${vueltasHtml}</div>`
+          : '<p class="acc-empty">Todavía no hay vueltas configuradas para este circuito.</p>');
+
+        html += accordionItem('vueltas', 'Vueltas', 'acc-header-pe', vueltasBodyHtml);
       } else if (etapas.length === 0) {
         html += accordionItem('sin-etapas', 'Etapas', 'acc-header-etapa', '<p class="acc-empty">No hay etapas ni pruebas especiales registradas aún.</p>');
       } else {
@@ -2948,66 +2974,60 @@
       return html;
     }
 
-    // Dentro de una vuelta de circuito: pestaña "General" (todos los pilotos
-    // juntos) + una pestaña por cada manga que realmente tenga pilotos en esa
-    // vuelta -- si nadie tiene manga asignada, se omite el selector y se
-    // muestra directo el general (no tiene sentido mostrar pestañas vacías).
-    function buildVueltaConMangas(entradasVuelta, mangas, vueltaId) {
-      const mangasPresentes = (mangas || []).filter(m => entradasVuelta.some(e => e.inscripcion?.manga_id === m.id));
-      if (mangasPresentes.length === 0) {
-        return renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasVuelta));
-      }
-
-      let tabsHtml = `<button type="button" class="manga-tab active" data-manga="ALL" onclick="window.filtrarPorManga('${vueltaId}', 'ALL', this)">General</button>`;
-      let panelsHtml = `<div class="manga-panel" data-manga="ALL">${renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasVuelta))}</div>`;
-
-      mangasPresentes.forEach(m => {
-        tabsHtml += `<button type="button" class="manga-tab" data-manga="${m.id}" onclick="window.filtrarPorManga('${vueltaId}', '${m.id}', this)">${escPrintText(m.nombre)}</button>`;
-        const entradasManga = entradasVuelta.filter(e => e.inscripcion?.manga_id === m.id);
-        panelsHtml += `<div class="manga-panel" data-manga="${m.id}" style="display:none;">${renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasManga))}</div>`;
-      });
-
-      return `<div class="manga-tabs" id="manga-tabs-${vueltaId}">${tabsHtml}</div><div id="manga-panels-${vueltaId}">${panelsHtml}</div>`;
-    }
-
-    window.filtrarPorManga = function (vueltaId, mangaId, btnEl) {
-      document.querySelectorAll(`#manga-tabs-${CSS.escape(vueltaId)} .manga-tab`).forEach(b => b.classList.remove('active'));
-      btnEl.classList.add('active');
-      document.querySelectorAll(`#manga-panels-${CSS.escape(vueltaId)} .manga-panel`).forEach(p => {
-        p.style.display = p.dataset.manga === mangaId ? '' : 'none';
-      });
-    };
-
     window.tiemposAccordionData = null;
+
+    // El filtro de Manga vive DENTRO del panel "Vueltas" (el select se
+    // reconstruye cada vez que se re-arma el acordeón), así que su valor
+    // elegido se guarda acá aparte para sobrevivir a esos re-renders.
+    window.tiemposVueltaMangaFilter = 'ALL';
+
+    window.onMangaFilterVueltasChange = function (value) {
+      window.tiemposVueltaMangaFilter = value;
+      window.filtrarAccordionTiempos();
+    };
 
     window.filtrarAccordionTiempos = function () {
       if (!window.tiemposAccordionData) return;
       const { etapas, tiemposRally, shakeFilas, esCircuito, mangas } = window.tiemposAccordionData;
       const catFilter = document.getElementById('tiempos-cat-filter').value;
-      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas);
+      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, window.tiemposVueltaMangaFilter);
     };
 
-    // Busca un Nº de coche entre todos los tiempos cargados (sin importar la clase actual
-    // del filtro). Si el número está en una sola clase, salta directo a esa clase; si está
-    // repetido en varias (circuito multi-clase), ofrece un botón "Ir a Clase" por cada una.
+    // Busca por Nº de coche O por nombre de piloto/navegante entre todos los tiempos
+    // cargados (sin importar la clase actual del filtro). Si hay una sola clase con
+    // coincidencias, salta directo a esa clase; si hay varias (circuito multi-clase,
+    // u homónimos), ofrece un botón "Ir a Clase" por cada una.
     window.buscarPorNumeroTiempos = function () {
       if (!window.tiemposAccordionData) return;
       const resultDiv = document.getElementById('tiempos-num-resultado');
       const raw = document.getElementById('tiempos-num-search').value.trim();
-      const numVal = parseInt(raw, 10);
 
-      if (!raw || isNaN(numVal)) {
+      if (!raw) {
         resultDiv.innerHTML = '';
         return;
       }
 
+      const esNumero = /^\d+$/.test(raw);
+      const numVal = esNumero ? parseInt(raw, 10) : null;
+      const textoBusqueda = raw.toLowerCase();
+
+      const coincide = (ins) => {
+        if (!ins) return false;
+        if (esNumero) return parseInt(ins.numero, 10) === numVal;
+        const nombrePiloto = ins.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : '';
+        const nombreNav = ins.navegante ? `${ins.navegante.nombre} ${ins.navegante.apellido}` : '';
+        return nombrePiloto.toLowerCase().includes(textoBusqueda) || nombreNav.toLowerCase().includes(textoBusqueda);
+      };
+
       const { tiemposRally, shakeFilas } = window.tiemposAccordionData;
       const cats = new Set();
-      (tiemposRally || []).forEach(t => { if (parseInt(t.inscripcion?.numero, 10) === numVal) cats.add(t.inscripcion?.categoria?.nombre || 'Sin Categoría'); });
-      (shakeFilas || []).forEach(f => { if (parseInt(f.inscripcion?.numero, 10) === numVal) cats.add(f.inscripcion?.categoria?.nombre || 'Sin Categoría'); });
+      (tiemposRally || []).forEach(t => { if (coincide(t.inscripcion)) cats.add(t.inscripcion?.categoria?.nombre || 'Sin Categoría'); });
+      (shakeFilas || []).forEach(f => { if (coincide(f.inscripcion)) cats.add(f.inscripcion?.categoria?.nombre || 'Sin Categoría'); });
+
+      const etiqueta = esNumero ? `Nº ${numVal}` : `"${escPrintText(raw)}"`;
 
       if (cats.size === 0) {
-        resultDiv.innerHTML = `<p style="color:#ff4d5a; font-size:13px; margin: 4px 0 12px;">Nº ${numVal} no se encontró en este rally.</p>`;
+        resultDiv.innerHTML = `<p style="color:#ff4d5a; font-size:13px; margin: 4px 0 12px;">${etiqueta} no se encontró en este rally.</p>`;
         return;
       }
 
@@ -3015,12 +3035,12 @@
         const cat = [...cats][0];
         document.getElementById('tiempos-cat-filter').value = cat;
         window.filtrarAccordionTiempos();
-        resultDiv.innerHTML = `<p style="color:var(--live-green); font-size:13px; margin: 4px 0 12px;">Nº ${numVal} — mostrando clase ${cat}.</p>`;
+        resultDiv.innerHTML = `<p style="color:var(--live-green); font-size:13px; margin: 4px 0 12px;">${etiqueta} — mostrando clase ${cat}.</p>`;
         return;
       }
 
       resultDiv.innerHTML = `<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin: 4px 0 12px;">
-        <span style="color:var(--text-muted); font-size:13px;">Nº ${numVal} compite en varias clases:</span>
+        <span style="color:var(--text-muted); font-size:13px;">${etiqueta} compite en varias clases:</span>
         ${[...cats].sort().map(cat => `
           <button type="button" style="display:inline-flex; align-items:center; gap:6px; background: rgba(230,57,70,0.1); color:var(--accent-primary); border: 1px solid rgba(230,57,70,0.3); border-radius: 20px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer;" onclick="document.getElementById('tiempos-cat-filter').value=this.dataset.cat; window.filtrarAccordionTiempos();" data-cat="${cat.replace(/"/g, '&quot;')}">
             Ir a Clase: ${cat}
@@ -3033,7 +3053,10 @@
       const container = document.getElementById('tiempos-accordion');
       container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
       document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Categorías</option>';
+      document.getElementById('tiempos-num-resultado').innerHTML = '';
+      document.getElementById('tiempos-num-search').value = '';
       document.getElementById('btn-tiempos-pdf').style.display = 'none';
+      window.tiemposVueltaMangaFilter = 'ALL';
 
       const rallyInfo = allRallies.find(r => r.id === rallyId);
       const esCircuito = rallyInfo?.tipo_evento === 'circuito';
