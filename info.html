@@ -406,13 +406,23 @@
       return `<div class="badge" style="color:var(--status-upcoming); border-color:rgba(0,229,255,0.3);">PRÓXIMO</div>`;
     }
 
+    // Igual que en index.html: abrir el lightbox apila un estado en el
+    // historial, así el botón "atrás" físico del celular lo cierra en vez
+    // de sacar al usuario de la página.
     window.cerrarLightbox = function () {
+      const wasActive = document.getElementById('lightbox-overlay').classList.contains('active');
       document.getElementById('lightbox-overlay').classList.remove('active');
       document.getElementById('lightbox-body').innerHTML = '';
       document.getElementById('lightbox-pdf-note').style.display = 'none';
+      if (wasActive && history.state && history.state.lightboxOpen) {
+        history.back();
+      }
     };
     document.getElementById('lightbox-overlay').addEventListener('click', (e) => {
       if (e.target.id === 'lightbox-overlay') window.cerrarLightbox();
+    });
+    window.addEventListener('popstate', () => {
+      document.getElementById('lightbox-overlay').classList.remove('active');
     });
 
     window.abrirImagenLightbox = function (imgUrl, imgUrlFallback, titulo, descripcion) {
@@ -422,6 +432,7 @@
         `<img src="${imgUrl}" onerror="this.onerror=null; this.src='${imgUrlFallback}';" alt="${esc(titulo)}">` +
         (descripcion ? `<p>${esc(descripcion)}</p>` : '');
       document.getElementById('lightbox-overlay').classList.add('active');
+      history.pushState({ lightboxOpen: true }, '');
     };
 
     window.abrirPdfLightbox = function (pdfUrl, titulo) {
@@ -429,6 +440,7 @@
       document.getElementById('lightbox-body').innerHTML = `<iframe src="${pdfUrl}"></iframe>`;
       document.getElementById('lightbox-pdf-note').style.display = 'flex';
       document.getElementById('lightbox-overlay').classList.add('active');
+      history.pushState({ lightboxOpen: true }, '');
     };
 
     // -----------------------------------------------------------------

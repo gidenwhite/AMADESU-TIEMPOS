@@ -825,12 +825,27 @@
 
       /* Más espacio útil dentro de los modales en pantallas angostas -- el
          padding de 32px de escritorio deja muy poco lugar para tablas y
-         formularios en un celular. */
+         formularios en un celular. Solo se actualiza la variable (no la
+         propiedad "padding" directamente): así el modal de Stats, que fija
+         su propio padding:0 en línea para su encabezado fijo, no se ve
+         afectado -- un estilo en línea siempre gana sobre esto de todos
+         modos, la variable es solo para los modales que SÍ usan el default. */
       .modal-content {
-        padding: 18px !important;
-        width: 92vw !important;
-        max-width: 92vw !important;
+        --modal-pad: 16px;
+        width: 94vw !important;
+        max-width: 94vw !important;
         border-radius: 12px !important;
+      }
+
+      .modal-header-sticky {
+        padding: 14px var(--modal-pad);
+      }
+
+      /* Estos selects tienen un min-width fijo en línea pensado para
+         escritorio; en un celular angosto eso los hace desbordar. */
+      #stats-pilot-selector, #tiempos-cat-filter {
+        min-width: 0 !important;
+        width: 100% !important;
       }
 
       .data-table th, .data-table td {
@@ -887,10 +902,11 @@
     }
 
     .modal-content {
+      --modal-pad: 32px;
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: 16px;
-      padding: 32px;
+      padding: var(--modal-pad);
       width: 900px;
       max-width: 95vw;
       max-height: 90vh;
@@ -898,6 +914,63 @@
       position: relative;
       transform: translateY(20px);
       transition: transform 0.3s;
+    }
+
+    /* Encabezado de modal que se queda fijo arriba mientras se hace scroll
+       del contenido (tablas largas, listas de pilotos, acordeones) -- así
+       "Atrás"/"Cerrar" siempre están a mano, sobre todo en celular donde el
+       modal ocupa casi toda la pantalla. El margen negativo cancela el
+       padding del modal para que el encabezado llegue de borde a borde. */
+    .modal-header-sticky {
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      background: var(--bg-surface);
+      margin: calc(var(--modal-pad) * -1) calc(var(--modal-pad) * -1) 16px calc(var(--modal-pad) * -1);
+      padding: 18px var(--modal-pad);
+      border-bottom: 1px solid var(--border-subtle);
+      border-radius: 16px 16px 0 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .modal-header-sticky .modal-title {
+      margin: 0;
+    }
+
+    /* El modal de Stats maneja su propio scroll interno (padding:0 en
+       .modal-content + un div hijo con overflow-y:auto), así que su
+       encabezado y su barra de controles no necesitan el truco del margen
+       negativo -- solo necesitan poder ajustar su padding en celular y
+       nunca desbordar cuando el título/descr. son largos. */
+    .stats-header-sticky {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .stats-controls-bar {
+      padding: 20px 32px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 768px) {
+      .stats-header-sticky, .stats-controls-bar {
+        padding: 16px !important;
+      }
     }
 
     .modal-overlay.active .modal-content {
@@ -1020,13 +1093,6 @@
     }
 
     /* PILOTS GRID STYLES */
-    .pilots-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-
     .pilots-toolbar {
       display: flex;
       gap: 10px;
@@ -1292,35 +1358,51 @@
     .rank-badge.bronze { background: rgba(205, 127, 50, 0.15); color: #CD7F32; border: 1px solid rgba(205, 127, 50, 0.4); }
 
     /* ==========================================================
-       IMPRESIÓN / PDF DE TIEMPOS Y STATS (horizontal)
-       Solo se imprime el modal que esté ".active" (el que el usuario tiene abierto).
+       PDF DE TIEMPOS: documento armado aparte (no el modal en vivo), ver
+       window.printTiempos(). Oculto en pantalla, solo se ve al imprimir.
        ========================================================== */
+    #print-tiempos-root { display: none; }
+
+    .print-doc { font-family: var(--font-body); color: #111; padding: 16px 4px; }
+    .print-doc-header {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
+      padding-bottom: 14px; border-bottom: 3px solid #E63946;
+    }
+    .print-doc-brand {
+      font-family: var(--font-display); font-size: 22px; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 0.03em; color: #111; line-height: 1.1;
+    }
+    .print-doc-rally { font-size: 15px; color: #444; font-weight: 600; margin-top: 2px; }
+    .print-doc-meta { margin-left: auto; text-align: right; font-size: 11px; color: #666; line-height: 1.6; }
+    .print-seccion { margin-bottom: 22px; break-inside: avoid-page; }
+    .print-seccion-title {
+      font-family: var(--font-display); font-size: 15px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.04em; color: #fff; background: #111; padding: 6px 12px; border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .print-doc h4 { break-inside: avoid; }
+    .print-doc table { break-inside: auto; }
+    .print-doc tr { break-inside: avoid; }
+    .print-doc div[style*="overflow-x"] { overflow: visible !important; }
+    .print-doc .data-table { width: 100%; border-collapse: collapse; }
+    .print-doc .data-table th {
+      background: #eee !important; color: #111 !important; border: 1px solid #bbb !important;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .print-doc .data-table td { color: #111 !important; border: 1px solid #ccc !important; font-size: 12px; }
+
     @media print {
       @page { size: landscape; }
       body * { visibility: hidden; }
 
-      #modal-tiempos.active, #modal-tiempos.active * { visibility: visible; }
-      #modal-tiempos.active {
-        position: absolute; left: 0; top: 0; width: 100%; height: auto;
-        display: block !important; background: #fff !important;
+      /* PDF de Tiempos: documento armado aparte, ver window.printTiempos(). */
+      #print-tiempos-root:not(:empty),
+      #print-tiempos-root:not(:empty) * { visibility: visible; }
+      #print-tiempos-root:not(:empty) {
+        display: block !important;
+        position: absolute; left: 0; top: 0; width: 100%;
+        background: #fff; color: #111;
       }
-      #modal-tiempos.active .modal-content {
-        width: 100%; max-width: 100%; max-height: none; box-shadow: none; background: #fff !important;
-      }
-      #modal-tiempos .modal-close,
-      #tiempos-cat-filter,
-      #btn-tiempos-pdf {
-        display: none !important;
-      }
-      #modal-tiempos .modal-title,
-      #modal-tiempos p { color: #000 !important; }
-      #modal-tiempos .acc-item { border: 1px solid #ccc !important; background: #fff !important; }
-      #modal-tiempos .acc-header { color: #000 !important; border-left-color: #999 !important; background: #f2f2f2 !important; }
-      #modal-tiempos .acc-wrap { grid-template-rows: 1fr !important; }
-      #modal-tiempos .acc-chevron { display: none !important; }
-      #modal-tiempos .data-table th,
-      #modal-tiempos .data-table td { color: #000 !important; border: 1px solid #999 !important; }
-      #modal-tiempos .rank-badge { border: 1px solid #999 !important; color: #000 !important; background: transparent !important; }
 
       #modal-stats.active, #modal-stats.active * { visibility: visible; }
       #modal-stats.active {
@@ -1480,8 +1562,8 @@
   <!-- MODAL PILOTOS -->
   <div id="modal-pilotos" class="modal-overlay">
     <div class="modal-content" style="width: 1200px;">
-      <div class="pilots-header" style="align-items: flex-start; gap: 16px; margin-bottom: 4px;">
-        <h2 class="modal-title" id="pilotos-title" style="margin:0;">Pilotos Inscritos <span id="pilotos-count"
+      <div class="modal-header-sticky">
+        <h2 class="modal-title" id="pilotos-title">Pilotos Inscritos <span id="pilotos-count"
             style="color:var(--text-muted); font-size: 16px;"></span></h2>
         <div style="display:flex; gap:10px; flex-shrink:0;">
           <button class="modal-back" onclick="closeModal('modal-pilotos')">
@@ -1515,8 +1597,8 @@
   <!-- MODAL TIEMPOS -->
   <div id="modal-tiempos" class="modal-overlay">
     <div class="modal-content" style="width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom: 20px; flex-wrap: wrap;">
-        <h2 class="modal-title" id="tiempos-title" style="margin:0;">Tiempos & Clasificación</h2>
+      <div class="modal-header-sticky" style="margin-bottom: 20px;">
+        <h2 class="modal-title" id="tiempos-title">Tiempos & Clasificación</h2>
         <div style="display:flex; gap:10px; flex-shrink:0;">
           <button class="modal-back" onclick="closeModal('modal-tiempos')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -1556,8 +1638,8 @@
     <div class="modal-content" style="width: 1200px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
       
       <!-- HEADER FIJO DEL MODAL -->
-      <div style="padding: 24px 32px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start;">
-        <div>
+      <div class="stats-header-sticky">
+        <div style="min-width:0;">
           <h2 class="modal-title" id="stats-title" style="margin-bottom: 8px;">Telemetría & Estadísticas</h2>
           <p style="color:var(--text-muted); font-size:13px; margin:0; max-width: 600px;">Análisis de rendimiento tramo a tramo. Compara tiempos, velocidades y evolución de posiciones contra el líder de clase.</p>
         </div>
@@ -1571,7 +1653,7 @@
       </div>
 
       <!-- CONTROLES -->
-      <div style="padding: 20px 32px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-subtle); display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+      <div class="stats-controls-bar">
         <select id="stats-pilot-selector" class="pilot-selector" style="width:auto; min-width:320px; margin-bottom:0; font-size: 15px;">
           <option value="">Selecciona un Piloto...</option>
         </select>
@@ -1755,6 +1837,12 @@
     </div>
   </div>
 
+  <!-- Documento armado especialmente para el PDF de Tiempos (window.printTiempos)
+       -- no es una copia del modal, se construye aparte para que salga completo,
+       prolijo y con el logo, sin depender del acordeón colapsado ni del scroll
+       horizontal de las tablas. Oculto en pantalla, solo visible al imprimir. -->
+  <div id="print-tiempos-root"></div>
+
   <script type="module">
     import { supabase } from './supabase_config.js';
 
@@ -1915,6 +2003,7 @@
       const { data } = await supabase.schema('rally').from('sitio_config').select('clave, valor');
       const cfg = {};
       (data || []).forEach(r => { cfg[r.clave] = r.valor; });
+      window.sitioConfigCache = cfg; // usado también por el PDF de Tiempos para mostrar el logo
 
       if (cfg.logo_url) {
         const src = siteDriveImageUrl(cfg.logo_url);
@@ -1945,9 +2034,30 @@
     cargarConfigSitio();
 
     // 2. Modals Logic
+    // Cada vez que se abre un modal se apila un estado en el historial, así
+    // el botón "atrás" físico del celular cierra el modal en vez de sacar al
+    // usuario del sitio (comportamiento por defecto del navegador). Al
+    // cerrar con los botones "Atrás"/"Cerrar" se desapila ese mismo estado
+    // con history.back() para no dejar entradas fantasma en el historial.
+    window.openModalWithHistory = function (id) {
+      document.getElementById(id).classList.add('active');
+      history.pushState({ modalId: id }, '');
+    };
+
     window.closeModal = function (id) {
-      document.getElementById(id).classList.remove('active');
-    }
+      const el = document.getElementById(id);
+      const wasActive = el && el.classList.contains('active');
+      if (el) el.classList.remove('active');
+      if (wasActive && history.state && history.state.modalId === id) {
+        history.back();
+      }
+    };
+
+    window.addEventListener('popstate', () => {
+      // El navegador ya hizo el "atrás" (botón físico o gesto); solo queda
+      // cerrar visualmente cualquier modal que haya quedado abierto.
+      document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    });
 
     // --- PILOTOS ---
     let currentPilotosData = [];
@@ -1989,7 +2099,7 @@
     }
 
     window.openPilotos = async function (rallyId) {
-      document.getElementById('modal-pilotos').classList.add('active');
+      window.openModalWithHistory('modal-pilotos');
       const grid = document.getElementById('pilotos-grid');
       const filter = document.getElementById('pilotos-filter');
 
@@ -2302,7 +2412,100 @@
       return filas.length > 0 ? filas : null;
     }
 
+    function escPrintText(str) {
+      const d = document.createElement('div');
+      d.textContent = str || '';
+      return d.innerHTML;
+    }
+
+    function printSeccion(titulo, bodyHtml) {
+      return `<div class="print-seccion">
+        <div class="print-seccion-title">${escPrintText(titulo)}</div>
+        ${bodyHtml}
+      </div>`;
+    }
+
+    // Arma un documento aparte (no una foto del modal) con TODAS las
+    // categorías siempre expandidas -- Shakedown/Clasificación, General y
+    // cada Etapa > PE -- con el logo del sitio y el nombre del rally arriba,
+    // y lo manda a imprimir/guardar como PDF. Ignora el filtro de categoría
+    // que esté puesto en pantalla: el PDF siempre sale completo.
     window.printTiempos = function () {
+      if (!window.tiemposAccordionData) return;
+      const { etapas, tiemposRally, shakeFilas, esCircuito, rallyNombre } = window.tiemposAccordionData;
+
+      const logoUrl = window.sitioConfigCache && window.sitioConfigCache.logo_url;
+      const logoHtml = logoUrl
+        ? `<img src="${siteDriveImageUrl(logoUrl)}" onerror="this.onerror=null; this.src='${siteDriveImageUrlFallback(logoUrl)}';" alt="Logo" style="height:56px; width:56px; object-fit:contain; border-radius:10px; flex-shrink:0;">`
+        : `<div style="height:56px; width:56px; border-radius:10px; background:#E63946; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+           </div>`;
+
+      const fecha = new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      // Recalcula todo sin el filtro de categoría de pantalla (el PDF es siempre completo).
+      const porRecorridoInscripcion = {};
+      tiemposRally.forEach(t => {
+        const key = t.recorrido_id + '||' + t.inscripcion_id;
+        if (!porRecorridoInscripcion[key]) porRecorridoInscripcion[key] = { inscripcion: t.inscripcion, inscripcion_id: t.inscripcion_id, recorrido_id: t.recorrido_id, rows: [] };
+        porRecorridoInscripcion[key].rows.push(t);
+      });
+      const entradas = Object.values(porRecorridoInscripcion)
+        .map(e => ({ inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resolverEntradaTiempo(e.rows) }));
+
+      let seccionesHtml = '';
+
+      if (shakeFilas && shakeFilas.length > 0) {
+        const shakeLabel = esCircuito ? 'Clasificación' : 'Shakedown';
+        const shakeByCat = agruparPorCategoriaYClasificar(shakeFilas.map(f => ({ inscripcion: f.inscripcion, ms: f.ms, estado: f.estado })));
+        seccionesHtml += printSeccion(shakeLabel, renderCategoriasHtml(shakeByCat));
+      }
+
+      const generalFilas = acumularEntradas(entradas);
+      if (generalFilas.length > 0) {
+        const generalLabel = esCircuito ? 'Tiempo General Circuito' : 'General';
+        seccionesHtml += printSeccion(generalLabel, renderCategoriasHtml(agruparPorCategoriaYClasificar(generalFilas)));
+      }
+
+      etapas.forEach(etapa => {
+        const recorridoIdsEtapa = etapa.recorridos.map(r => r.id);
+        const entradasEtapa = entradas.filter(e => recorridoIdsEtapa.includes(e.recorrido_id));
+        const acumFilas = acumularEntradas(entradasEtapa);
+
+        let etapaBody = '';
+        if (acumFilas.length > 0) {
+          etapaBody += `<div style="margin-bottom:16px;"><div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#666; font-weight:700; margin-bottom:6px;">Acumulado de la Etapa</div>${renderCategoriasHtml(agruparPorCategoriaYClasificar(acumFilas))}</div>`;
+        }
+        etapa.recorridos.forEach(rec => {
+          const entradasPE = entradas.filter(e => e.recorrido_id === rec.id);
+          if (entradasPE.length === 0) return;
+          etapaBody += `<div style="margin-bottom:16px;"><div style="font-size:13px; font-weight:800; color:#111; margin-bottom:8px;">PE${rec.numero}: ${escPrintText(rec.nombre)}</div>${renderCategoriasHtml(agruparPorCategoriaYClasificar(entradasPE))}</div>`;
+        });
+
+        if (etapaBody) seccionesHtml += printSeccion('ETAPA: ' + etapa.nombre, etapaBody);
+      });
+
+      if (!seccionesHtml) {
+        seccionesHtml = '<p style="color:#666;">Sin tiempos registrados aún.</p>';
+      }
+
+      document.getElementById('print-tiempos-root').innerHTML = `
+        <div class="print-doc">
+          <div class="print-doc-header">
+            ${logoHtml}
+            <div>
+              <div class="print-doc-brand">AMADESU RALLYS</div>
+              <div class="print-doc-rally">${escPrintText(rallyNombre)}</div>
+            </div>
+            <div class="print-doc-meta">
+              <div>Resultados Oficiales</div>
+              <div>Generado: ${fecha}</div>
+            </div>
+          </div>
+          ${seccionesHtml}
+        </div>
+      `;
+
       window.print();
     };
 
@@ -2521,7 +2724,7 @@
     };
 
     window.openTiempos = async function (rallyId) {
-      document.getElementById('modal-tiempos').classList.add('active');
+      window.openModalWithHistory('modal-tiempos');
       const container = document.getElementById('tiempos-accordion');
       container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
       document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Categorías</option>';
@@ -2546,9 +2749,10 @@
       }
 
       const shakeFilas = await obtenerShakedownFilas(rallyId);
-      const esCircuito = allRallies.find(r => r.id === rallyId)?.tipo_evento === 'circuito';
+      const rallyInfo = allRallies.find(r => r.id === rallyId);
+      const esCircuito = rallyInfo?.tipo_evento === 'circuito';
 
-      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito };
+      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito, rallyNombre: rallyInfo?.nombre || '' };
 
       const hayDatos = tiemposRally.length > 0 || (shakeFilas && shakeFilas.length > 0);
       if (hayDatos) {
@@ -2706,7 +2910,7 @@
     }
 
     window.openStats = async function (rallyId) {
-      document.getElementById('modal-stats').classList.add('active');
+      window.openModalWithHistory('modal-stats');
       document.getElementById('stats-content').style.display = 'none';
       document.getElementById('btn-stats-pdf').style.display = 'none';
       document.getElementById('stats-clasif-section').style.display = 'none';
