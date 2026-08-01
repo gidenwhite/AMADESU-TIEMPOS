@@ -5634,34 +5634,19 @@
           window.tiempoCurrentTiempoId = existingTime.id;
           if (existingTime.hora_salida) {
             loadedFromDB = true;
-            const timePart = existingTime.hora_salida.split('T')[1].replace('Z',''); // "10:00:00.00"
-            const parts = timePart.split(':');
-            document.getElementById('sal-hh').value = parts[0] || '';
-            document.getElementById('sal-mm').value = parts[1] || '';
-            if (parts[2]) {
-              const secParts = parts[2].split('.');
-              document.getElementById('sal-ss').value = secParts[0] || '';
-              document.getElementById('sal-cc').value = secParts[1] ? secParts[1].substring(0, 2).padEnd(2, '0') : '00';
-            } else {
-              document.getElementById('sal-ss').value = '00';
-              document.getElementById('sal-cc').value = '00';
-            }
+            const hs = horaUTCDesdeISO(existingTime.hora_salida);
+            document.getElementById('sal-hh').value = hs ? hs.hh : '';
+            document.getElementById('sal-mm').value = hs ? hs.mm : '';
+            document.getElementById('sal-ss').value = hs ? hs.ss : '00';
+            document.getElementById('sal-cc').value = hs ? hs.cc : '00';
           }
           if (existingTime.hora_llegada) {
             loadedFromDB = true;
-            const timePart = existingTime.hora_llegada.split('T')[1].replace('Z',''); // "10:05:30.99"
-            const parts = timePart.split(':');
-            document.getElementById('lle-hh').value = parts[0] || '';
-            document.getElementById('lle-mm').value = parts[1] || '';
-            if (parts[2]) {
-              const secParts = parts[2].split('.');
-              document.getElementById('lle-ss').value = secParts[0] || '';
-              if (secParts[1]) {
-                document.getElementById('lle-cc').value = secParts[1].substring(0, 2).padEnd(2, '0');
-              } else {
-                document.getElementById('lle-cc').value = '00';
-              }
-            }
+            const hl = horaUTCDesdeISO(existingTime.hora_llegada);
+            document.getElementById('lle-hh').value = hl ? hl.hh : '';
+            document.getElementById('lle-mm').value = hl ? hl.mm : '';
+            document.getElementById('lle-ss').value = hl ? hl.ss : '';
+            document.getElementById('lle-cc').value = hl ? hl.cc : '00';
           }
           if (existingTime.estado === 'no_presentado' || existingTime.estado === 'abandono' || existingTime.estado === 'doblado') {
             loadedFromDB = true;
@@ -5681,19 +5666,14 @@
       if (!salidaYaCargada && vueltaActual > 1 && window.tiemposCurrentVueltaRaw) {
         const tiempoVueltaPrevia = window.tiemposCurrentVueltaRaw.find(t => t.inscripcion_id === insId && t.vuelta === vueltaActual - 1 && t.hora_llegada);
         if (tiempoVueltaPrevia) {
-          const timePart = tiempoVueltaPrevia.hora_llegada.split('T')[1].replace('Z', '');
-          const parts = timePart.split(':');
-          document.getElementById('sal-hh').value = parts[0] || '';
-          document.getElementById('sal-mm').value = parts[1] || '';
-          if (parts[2]) {
-            const secParts = parts[2].split('.');
-            document.getElementById('sal-ss').value = secParts[0] || '';
-            document.getElementById('sal-cc').value = secParts[1] ? secParts[1].substring(0, 2).padEnd(2, '0') : '00';
-          } else {
-            document.getElementById('sal-ss').value = '00';
-            document.getElementById('sal-cc').value = '00';
+          const hp = horaUTCDesdeISO(tiempoVueltaPrevia.hora_llegada);
+          if (hp) {
+            document.getElementById('sal-hh').value = hp.hh;
+            document.getElementById('sal-mm').value = hp.mm;
+            document.getElementById('sal-ss').value = hp.ss;
+            document.getElementById('sal-cc').value = hp.cc;
+            entradaDeVueltaAnterior = true;
           }
-          entradaDeVueltaAnterior = true;
         }
       }
 
@@ -5740,6 +5720,26 @@
       else if(msStr.length === 2) ms *= 10;
       
       return (h * 3600000) + (m * 60000) + (s * 1000) + ms;
+    }
+
+    // Extrae hora/minuto/segundo/centésima (en UTC, que es como se guardan
+    // acá -- ver horaSalidaISO/horaLlegadaISO en guardarTiempo) de un
+    // timestamp ISO devuelto por Supabase. Usa el objeto Date en vez de
+    // cortar el string a mano: PostgREST no siempre devuelve el mismo
+    // formato de milisegundos/offset ("Z" vs "+00:00", 2 vs 6 decimales), y
+    // cortar mal ahí es lo que redondeaba los segundos de la Entrada
+    // heredada de la vuelta anterior a "00".
+    function horaUTCDesdeISO(iso) {
+      if (!iso) return null;
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return null;
+      const pad = n => String(n).padStart(2, '0');
+      return {
+        hh: pad(d.getUTCHours()),
+        mm: pad(d.getUTCMinutes()),
+        ss: pad(d.getUTCSeconds()),
+        cc: pad(Math.floor(d.getUTCMilliseconds() / 10))
+      };
     }
 
     function formatTimeMs(totalMs) {
