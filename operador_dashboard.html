@@ -852,27 +852,42 @@
             </div>
           <div id="tiempo-piloto-info" style="font-size: 14px; margin-top: 16px; font-weight: bold; color: var(--accent-primary); text-align: right;"></div>
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 16px;">
             <div class="form-group">
-              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Hora Salida (HH:MM)</label>
+              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Entrada (HH:MM)</label>
               <div class="time-display-container">
-                <input type="text" id="sal-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'sal-mm', 23); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, null)">
+                <input type="text" id="sal-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'sal-mm', 23); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, null)">
                 <span class="colon">:</span>
-                <input type="text" id="sal-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'lle-hh', 59); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
+                <input type="text" id="sal-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'emp-hh', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
                 <span class="colon">:</span>
                 <input type="text" class="readonly" value="00" readonly tabindex="-1">
               </div>
             </div>
+            <!-- Se completa UNO de los dos: Tiempo Empleado (duración) o Tiempo
+                 Llegada (hora de reloj). El que se escribe calcula y bloquea al
+                 otro -- así nunca quedan desincronizados entre sí. -->
             <div class="form-group">
-              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Hora Llegada (HH:MM:SS.cc)</label>
-              <div class="time-display-container" style="border-color: rgba(0, 245, 160, 0.3);">
-                <input type="text" id="lle-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'lle-mm', 23); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')" style="color: #00F5A0;">
+              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Tiempo Empleado (HH:MM:SS.cc)</label>
+              <div class="time-display-container" id="emp-container" style="border-color: rgba(255, 176, 32, 0.3); transition: opacity 0.15s;">
+                <input type="text" id="emp-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'emp-mm', 23); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')" style="color: #ffb020;">
                 <span class="colon">:</span>
-                <input type="text" id="lle-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'lle-ss', 59); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-hh')" style="color: #00F5A0;">
+                <input type="text" id="emp-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'emp-ss', 59); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'emp-hh')" style="color: #ffb020;">
                 <span class="colon">:</span>
-                <input type="text" id="lle-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, 'lle-cc', 59); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-mm')" style="color: #00F5A0;">
+                <input type="text" id="emp-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, 'emp-cc', 59); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'emp-mm')" style="color: #ffb020;">
                 <span class="dot">.</span>
-                <input type="text" id="lle-cc" maxlength="2" placeholder="cc" oninput="window.autoTabTime(this, null, 99); window.actualizarPreviewTiempo();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'lle-ss')" style="color: #00F5A0;">
+                <input type="text" id="emp-cc" maxlength="2" placeholder="cc" oninput="window.autoTabTime(this, 'lle-hh', 99); window.onEmpleadoInput();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'emp-ss')" style="color: #ffb020;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Tiempo Llegada (HH:MM:SS.cc)</label>
+              <div class="time-display-container" id="lle-container" style="border-color: rgba(0, 245, 160, 0.3); transition: opacity 0.15s;">
+                <input type="text" id="lle-hh" maxlength="2" placeholder="HH" oninput="window.autoTabTime(this, 'lle-mm', 23); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'emp-cc')" style="color: #00F5A0;">
+                <span class="colon">:</span>
+                <input type="text" id="lle-mm" maxlength="2" placeholder="MM" oninput="window.autoTabTime(this, 'lle-ss', 59); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-hh')" style="color: #00F5A0;">
+                <span class="colon">:</span>
+                <input type="text" id="lle-ss" maxlength="2" placeholder="SS" oninput="window.autoTabTime(this, 'lle-cc', 59); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-mm')" style="color: #00F5A0;">
+                <span class="dot">.</span>
+                <input type="text" id="lle-cc" maxlength="2" placeholder="cc" oninput="window.autoTabTime(this, null, 99); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'lle-ss')" style="color: #00F5A0;">
               </div>
               <div style="display:flex; gap:8px; margin-top:8px;">
                 <button type="button" id="btn-no-largo" class="btn-secondary" onclick="window.toggleEstadoEspecialLlegada('no_presentado')" style="flex:1; padding:6px; font-size:11px;">No Largó</button>
@@ -1417,8 +1432,9 @@
     };
 
     // Estado especial de la llegada: null (normal) | 'no_presentado' (No Largó) | 'abandono'.
-    // Mientras esté activo, los 4 campos de Hora Llegada se deshabilitan y no se
-    // guarda tiempo_bruto/tiempo_neto -- el piloto queda marcado sin tiempo.
+    // Mientras esté activo, los campos de Tiempo Empleado y Tiempo Llegada se
+    // deshabilitan y no se guarda tiempo_bruto/tiempo_neto -- el piloto queda
+    // marcado sin tiempo.
     window.tiempoEstadoEspecial = null;
 
     window.toggleEstadoEspecialLlegada = function(estado) {
@@ -1429,12 +1445,13 @@
 
     window.actualizarBotonesEstadoEspecial = function() {
       const activo = !!window.tiempoEstadoEspecial;
-      ['lle-hh', 'lle-mm', 'lle-ss', 'lle-cc'].forEach(id => {
+      ['lle-hh', 'lle-mm', 'lle-ss', 'lle-cc', 'emp-hh', 'emp-mm', 'emp-ss', 'emp-cc'].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.disabled = activo;
         if (activo) el.value = '';
       });
+      if (activo) window.tiempoModoIngreso = null;
       const btnNL = document.getElementById('btn-no-largo');
       const btnAB = document.getElementById('btn-abandono');
       if (btnNL) {
@@ -1448,7 +1465,10 @@
     };
 
     window.limpiarFormTiemposParcial = function() {
-      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc'].forEach(id => document.getElementById(id).value = '');
+      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
+      window.tiempoModoIngreso = null;
+      window.setGrupoLocked('lle', false);
+      window.setGrupoLocked('emp', false);
       tiempoCurrentInscripcion = null;
       window.tiempoCurrentTiempoId = null;
       window.tiempoEstadoEspecial = null;
@@ -1461,7 +1481,10 @@
     window.limpiarFormTiempos = function() {
       const inputNum = document.getElementById('tiempo-numero-input');
       if(inputNum) inputNum.value = '';
-      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc'].forEach(id => document.getElementById(id).value = '');
+      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
+      window.tiempoModoIngreso = null;
+      window.setGrupoLocked('lle', false);
+      window.setGrupoLocked('emp', false);
       document.getElementById('tiempo-piloto-info').innerText = '';
       tiempoCurrentInscripcion = null;
       window.tiempoCurrentTiempoId = null;
@@ -1546,9 +1569,111 @@
       }
     };
 
+    // ==========================================
+    // TIEMPO EMPLEADO <-> TIEMPO LLEGADA
+    // ==========================================
+    // Solo uno de los dos se completa a mano; el otro se calcula solo y
+    // queda bloqueado para que no se puedan escribir valores que no
+    // concuerden entre sí. tiempoModoIngreso recuerda cuál de los dos
+    // "manda" ahora mismo (null = ninguno todavía, ambos editables).
+    window.tiempoModoIngreso = null;
+
+    function getEntradaMs() {
+      const sH = document.getElementById('sal-hh').value;
+      const sM = document.getElementById('sal-mm').value;
+      if (!sH && !sM) return null;
+      return parseTimeStr(`${(sH || '0').padStart(2, '0')}:${(sM || '0').padStart(2, '0')}:00.00`);
+    }
+
+    function getGrupoMs(prefix) {
+      const h = document.getElementById(`${prefix}-hh`).value;
+      const m = document.getElementById(`${prefix}-mm`).value;
+      const s = document.getElementById(`${prefix}-ss`).value;
+      const c = document.getElementById(`${prefix}-cc`).value;
+      if (!h && !m && !s && !c) return null;
+      return parseTimeStr(`${(h || '0').padStart(2, '0')}:${(m || '0').padStart(2, '0')}:${(s || '0').padStart(2, '0')}.${(c || '0').padStart(2, '0')}`);
+    }
+
+    function setGrupoFromMs(prefix, ms) {
+      const validos = ms !== null && ms >= 0 && !isNaN(ms);
+      const pad = n => String(n).padStart(2, '0');
+      const h = validos ? Math.floor(ms / 3600000) : '';
+      const m = validos ? Math.floor(ms / 60000) % 60 : '';
+      const s = validos ? Math.floor(ms / 1000) % 60 : '';
+      const c = validos ? Math.floor((ms % 1000) / 10) : '';
+      document.getElementById(`${prefix}-hh`).value = validos ? pad(h) : '';
+      document.getElementById(`${prefix}-mm`).value = validos ? pad(m) : '';
+      document.getElementById(`${prefix}-ss`).value = validos ? pad(s) : '';
+      document.getElementById(`${prefix}-cc`).value = validos ? pad(c) : '';
+    }
+
+    window.setGrupoLocked = function(prefix, locked) {
+      ['hh', 'mm', 'ss', 'cc'].forEach(suf => {
+        const el = document.getElementById(`${prefix}-${suf}`);
+        if (el) el.disabled = locked;
+      });
+      const cont = document.getElementById(`${prefix}-container`);
+      if (cont) cont.style.opacity = locked ? '0.55' : '1';
+    };
+
+    // Cambiar la Entrada recalcula el lado que esté en modo automático
+    // (el otro sigue siendo el que escribió el operador).
+    window.onEntradaChange = function() {
+      if (!window.tiempoEstadoEspecial) {
+        const entradaMs = getEntradaMs();
+        if (window.tiempoModoIngreso === 'empleado') {
+          const empMs = getGrupoMs('emp');
+          setGrupoFromMs('lle', (empMs !== null && entradaMs !== null) ? entradaMs + empMs : null);
+        } else if (window.tiempoModoIngreso === 'llegada') {
+          const lleMs = getGrupoMs('lle');
+          setGrupoFromMs('emp', (lleMs !== null && entradaMs !== null) ? lleMs - entradaMs : null);
+        }
+      }
+      window.actualizarPreviewTiempo();
+    };
+
+    window.onEmpleadoInput = function() {
+      if (window.tiempoEstadoEspecial) return;
+      const empMs = getGrupoMs('emp');
+      if (empMs === null) {
+        if (window.tiempoModoIngreso === 'empleado') {
+          window.tiempoModoIngreso = null;
+          window.setGrupoLocked('lle', false);
+        }
+        window.actualizarPreviewTiempo();
+        return;
+      }
+      window.tiempoModoIngreso = 'empleado';
+      window.setGrupoLocked('lle', true);
+      const entradaMs = getEntradaMs();
+      setGrupoFromMs('lle', entradaMs !== null ? entradaMs + empMs : null);
+      window.actualizarPreviewTiempo();
+    };
+
+    window.onLlegadaInput = function() {
+      if (window.tiempoEstadoEspecial) return;
+      const lleMs = getGrupoMs('lle');
+      if (lleMs === null) {
+        if (window.tiempoModoIngreso === 'llegada') {
+          window.tiempoModoIngreso = null;
+          window.setGrupoLocked('emp', false);
+        }
+        window.actualizarPreviewTiempo();
+        return;
+      }
+      window.tiempoModoIngreso = 'llegada';
+      window.setGrupoLocked('emp', true);
+      const entradaMs = getEntradaMs();
+      setGrupoFromMs('emp', entradaMs !== null ? lleMs - entradaMs : null);
+      window.actualizarPreviewTiempo();
+    };
+
     window.seleccionarInscrito = function(insId) {
       document.getElementById('tiempo-piloto-info').innerText = '';
-      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc'].forEach(id => document.getElementById(id).value = '');
+      ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
+      window.tiempoModoIngreso = null;
+      window.setGrupoLocked('lle', false);
+      window.setGrupoLocked('emp', false);
       tiempoCurrentInscripcion = null;
       window.tiempoEstadoEspecial = null;
       window.actualizarBotonesEstadoEspecial();
@@ -1625,7 +1750,10 @@
         window.cargarPenalizaciones(ins.id, recId);
         window.cargarPasosControl(ins.id, recId, vueltaActual);
       }
-      window.actualizarPreviewTiempo();
+      // Si ya había una Llegada guardada en la BD, tratarla como el dato que
+      // "manda" -- calcula y bloquea el Tiempo Empleado a partir de ella
+      // (si no hay estado especial activo, que ya se encarga de bloquear todo).
+      window.onLlegadaInput();
       window.actualizarEstadoPenalizacion();
       window.actualizarEstadoPasoControl();
     };
@@ -2035,7 +2163,10 @@
           inputNum.value = '';
           inputNum.focus();
         }
-        ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc'].forEach(id => document.getElementById(id).value = '');
+        ['sal-hh','sal-mm','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
+        window.tiempoModoIngreso = null;
+        window.setGrupoLocked('lle', false);
+        window.setGrupoLocked('emp', false);
         window.tiempoEstadoEspecial = null;
         window.actualizarBotonesEstadoEspecial();
         window.actualizarPreviewTiempo();
