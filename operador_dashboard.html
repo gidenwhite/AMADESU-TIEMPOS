@@ -1254,9 +1254,11 @@
       if (!etapa) return;
 
       window.shakedownEtapaId = etapa.id;
-      const { data: recorrido } = await supabase.schema('rally').from('recorridos')
-        .select('*').eq('etapa_id', etapa.id).is('deleted_at', null).maybeSingle();
-      if (recorrido) window.shakedownRecorridoData = recorrido;
+      // .maybeSingle() fallaba en silencio si hay más de un recorrido activo para esta
+      // etapa; se toma el más antiguo como canónico (ver crearOActualizarShakedown en admin).
+      const { data: recorridos } = await supabase.schema('rally').from('recorridos')
+        .select('*').eq('etapa_id', etapa.id).is('deleted_at', null).order('created_at', { ascending: true }).limit(1);
+      if (recorridos && recorridos[0]) window.shakedownRecorridoData = recorridos[0];
     };
 
     window.abrirShakedown = function() {

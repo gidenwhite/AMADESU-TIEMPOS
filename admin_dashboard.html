@@ -789,10 +789,20 @@
         Carga Masiva (Excel)
       </a>
 
+      <a href="#" class="nav-item" data-target="section-info-rally">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        Información (Web)
+      </a>
+
       <div class="nav-label">Configuración</div>
       <a href="#" class="nav-item">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
         Categorías
+      </a>
+
+      <a href="#" class="nav-item" data-target="section-sitio-web">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        Sitio Web
       </a>
     </div>
   </aside>
@@ -1896,6 +1906,241 @@
         </div>
       </section>
 
+      <!-- ========================================================= -->
+      <!-- INFORMACIÓN (WEB): boletines, comunicados, RPP, recorrido  -->
+      <!-- GPX/KMZ y carrusel de anuncios por rally                  -->
+      <!-- ========================================================= -->
+      <section id="section-info-rally" class="admin-section">
+        <h2 style="font-family: var(--font-display); font-size: 32px; color: var(--text-main); margin-bottom: 8px;">Información (Página Web)</h2>
+        <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 24px;">Administra los boletines, comunicados, el Reglamento Particular de la Prueba, el recorrido y los anuncios que verán los pilotos en la página de información pública de cada rally.</p>
+
+        <div class="card-panel" style="margin-bottom: 24px; border-left: 3px solid var(--status-upcoming, #00E5FF); background: rgba(0,229,255,0.05);">
+          <h3 style="color: var(--status-upcoming, #00E5FF); margin-bottom: 10px;">¿Cómo obtener un enlace público de Google Drive?</h3>
+          <ol style="color: var(--text-muted); font-size: 13px; line-height: 1.9; padding-left: 20px;">
+            <li>Sube la imagen o el PDF a tu Google Drive (drive.google.com).</li>
+            <li>Clic derecho sobre el archivo → <b>Compartir</b>.</li>
+            <li>En "Acceso general" cambia a <b>"Cualquier persona con el enlace"</b>, rol <b>Lector</b>.</li>
+            <li>Solo para PDF (RPP): abre el ícono ⚙️ dentro del cuadro de compartir y <b>desmarca</b> "Los lectores pueden descargar, imprimir y copiar" — así queda protegido contra descarga.</li>
+            <li>Clic en <b>"Copiar enlace"</b> y pégalo en el formulario correspondiente aquí abajo.</li>
+          </ol>
+        </div>
+
+        <div class="card-panel" style="margin-bottom: 24px;">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Rally / Circuito</label>
+              <select id="info-rally-select" class="form-control" onchange="window.infoOnRallyChange()">
+                <option value="">Selecciona...</option>
+              </select>
+            </div>
+          </div>
+          <a id="info-ver-publica-link" href="#" target="_blank" rel="noopener" class="btn-secondary" style="display:none; margin-top:12px; width: fit-content;">Ver página pública ↗</a>
+        </div>
+
+        <div id="info-content-wrap" style="display:none;">
+
+          <div style="display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; flex-wrap: wrap;">
+            <button class="btn-secondary" id="info-tab-btn-boletines" onclick="window.infoSwitchTab('boletines')">Boletines</button>
+            <button class="btn-secondary" id="info-tab-btn-comunicados" onclick="window.infoSwitchTab('comunicados')">Comunicados</button>
+            <button class="btn-secondary" id="info-tab-btn-rpp" onclick="window.infoSwitchTab('rpp')">RPP</button>
+            <button class="btn-secondary" id="info-tab-btn-recorrido" onclick="window.infoSwitchTab('recorrido')">Recorrido (GPX/KMZ)</button>
+            <button class="btn-secondary" id="info-tab-btn-carrusel" onclick="window.infoSwitchTab('carrusel')">Carrusel de Anuncios</button>
+          </div>
+
+          <!-- BOLETINES -->
+          <div id="info-tab-boletines">
+            <div class="card-panel" style="margin-bottom: 24px;">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Agregar Boletín</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Título *</label>
+                  <input type="text" id="info-bol-titulo" class="form-control" placeholder="Ej: Boletín Nº 1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Descripción (opcional)</label>
+                  <input type="text" id="info-bol-desc" class="form-control" placeholder="Detalle breve">
+                </div>
+                <div class="form-group full-width">
+                  <label class="form-label">Enlace de Google Drive (imagen) *</label>
+                  <input type="text" id="info-bol-url" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
+                </div>
+              </div>
+              <button type="button" class="btn-primary" style="margin-top: 12px;" onclick="window.infoAgregarPublicacion('boletin')">Agregar Boletín</button>
+            </div>
+            <div class="card-panel">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Boletines publicados</h3>
+              <div id="info-boletines-lista"><p style="color: var(--text-muted);">Selecciona un rally.</p></div>
+            </div>
+          </div>
+
+          <!-- COMUNICADOS -->
+          <div id="info-tab-comunicados" style="display:none;">
+            <div class="card-panel" style="margin-bottom: 24px;">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Agregar Comunicado</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Título *</label>
+                  <input type="text" id="info-com-titulo" class="form-control" placeholder="Ej: Comunicado Nº 1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Descripción (opcional)</label>
+                  <input type="text" id="info-com-desc" class="form-control" placeholder="Detalle breve">
+                </div>
+                <div class="form-group full-width">
+                  <label class="form-label">Enlace de Google Drive (imagen) *</label>
+                  <input type="text" id="info-com-url" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
+                </div>
+              </div>
+              <button type="button" class="btn-primary" style="margin-top: 12px;" onclick="window.infoAgregarPublicacion('comunicado')">Agregar Comunicado</button>
+            </div>
+            <div class="card-panel">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Comunicados publicados</h3>
+              <div id="info-comunicados-lista"><p style="color: var(--text-muted);">Selecciona un rally.</p></div>
+            </div>
+          </div>
+
+          <!-- RPP -->
+          <div id="info-tab-rpp" style="display:none;">
+            <div class="card-panel" style="margin-bottom: 24px;">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Agregar Reglamento (PDF)</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Nombre</label>
+                  <input type="text" id="info-rpp-nombre" class="form-control" placeholder="Reglamento Particular de la Prueba">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Enlace de Google Drive (PDF) *</label>
+                  <input type="text" id="info-rpp-url" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
+                </div>
+              </div>
+              <button type="button" class="btn-primary" style="margin-top: 12px;" onclick="window.infoAgregarRpp()">Agregar Reglamento</button>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">En la web pública, el PDF se muestra solo para lectura (no se puede descargar), siempre que hayas desmarcado la opción de descarga en el paso 4 de arriba.</p>
+            </div>
+            <div class="card-panel">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Reglamentos publicados</h3>
+              <div id="info-rpp-lista"><p style="color: var(--text-muted);">Selecciona un rally.</p></div>
+            </div>
+          </div>
+
+          <!-- RECORRIDO GPX/KMZ -->
+          <div id="info-tab-recorrido" style="display:none;">
+            <div class="card-panel" style="margin-bottom: 24px;">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Subir Recorrido (GPX o KMZ)</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Nombre *</label>
+                  <input type="text" id="info-gpx-nombre" class="form-control" placeholder="Ej: PE1, Recorrido General...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Archivo (.gpx o .kmz) *</label>
+                  <input type="file" id="info-gpx-file" class="form-control" accept=".gpx,.kmz">
+                </div>
+              </div>
+              <button type="button" class="btn-primary" style="margin-top: 12px;" onclick="window.infoSubirRecorrido()">Subir Recorrido</button>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">El archivo se guarda en el servidor (Supabase) y se dibuja como un mapa interactivo en la página pública. Puedes subir varios (uno por Prueba Especial) y en la web se podrá elegir cuál ver.</p>
+            </div>
+            <div class="card-panel">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Recorridos subidos</h3>
+              <div id="info-gpx-lista"><p style="color: var(--text-muted);">Selecciona un rally.</p></div>
+            </div>
+          </div>
+
+          <!-- CARRUSEL DE ANUNCIOS -->
+          <div id="info-tab-carrusel" style="display:none;">
+            <div class="card-panel" style="margin-bottom: 24px;">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Imágenes del Carrusel (rotan cada 3 segundos)</h3>
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label class="form-label">Enlace de Google Drive (imagen) *</label>
+                  <input type="text" id="info-anuncio-img-url" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Orden</label>
+                  <input type="number" id="info-anuncio-img-orden" class="form-control" value="0">
+                </div>
+              </div>
+              <button type="button" class="btn-primary" style="margin-top: 12px;" onclick="window.infoAgregarAnuncioImagen()">Agregar Imagen</button>
+            </div>
+            <div class="card-panel" style="margin-bottom: 24px;">
+              <div id="info-anuncios-img-lista"><p style="color: var(--text-muted);">Selecciona un rally.</p></div>
+            </div>
+
+            <div class="card-panel" style="margin-bottom: 24px;">
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Texto tipo Anuncio (ticker al pie del carrusel)</h3>
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label class="form-label">Texto *</label>
+                  <input type="text" id="info-ticker-texto" class="form-control" placeholder="Ej: Reunión de pilotos a las 18:00 en Parque Cerrado">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Orden</label>
+                  <input type="number" id="info-ticker-orden" class="form-control" value="0">
+                </div>
+              </div>
+              <button type="button" class="btn-primary" style="margin-top: 12px;" onclick="window.infoAgregarTicker()">Agregar Anuncio</button>
+            </div>
+            <div class="card-panel">
+              <div id="info-anuncios-ticker-lista"><p style="color: var(--text-muted);">Selecciona un rally.</p></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- SITIO WEB: logo y bloque "Inicio" de la portada pública    -->
+      <!-- ========================================================= -->
+      <section id="section-sitio-web" class="admin-section">
+        <h2 style="font-family: var(--font-display); font-size: 32px; color: var(--text-main); margin-bottom: 8px;">Sitio Web</h2>
+        <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 24px;">Configura el logo del sitio y el bloque de bienvenida ("Inicio") que se muestra arriba de la lista de rallies en la portada pública.</p>
+
+        <div class="card-panel" style="margin-bottom: 24px; border-left: 3px solid var(--status-upcoming, #00E5FF); background: rgba(0,229,255,0.05);">
+          <h3 style="color: var(--status-upcoming, #00E5FF); margin-bottom: 10px;">¿Cómo obtener un enlace público de Google Drive?</h3>
+          <ol style="color: var(--text-muted); font-size: 13px; line-height: 1.9; padding-left: 20px;">
+            <li>Sube la imagen a tu Google Drive (drive.google.com).</li>
+            <li>Clic derecho sobre el archivo → <b>Compartir</b>.</li>
+            <li>En "Acceso general" cambia a <b>"Cualquier persona con el enlace"</b>, rol <b>Lector</b>.</li>
+            <li>Clic en <b>"Copiar enlace"</b> y pégalo abajo. También puedes pegar directamente la URL de cualquier imagen ya pública (no tiene que ser de Drive).</li>
+          </ol>
+        </div>
+
+        <div class="card-panel" style="margin-bottom: 24px;">
+          <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Logo del Sitio</h3>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label">Enlace de la imagen del logo</label>
+              <input type="text" id="sw-logo-url" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
+            </div>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Reemplaza el ícono por defecto en la barra superior de la página pública, del panel admin y de la página de Información. Déjalo vacío para usar el ícono por defecto.</p>
+        </div>
+
+        <div class="card-panel" style="margin-bottom: 24px;">
+          <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Bloque "Inicio" (portada pública)</h3>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label">Título</label>
+              <input type="text" id="sw-inicio-titulo" class="form-control" placeholder="Ej: Bienvenidos a AMADESU RALLYS">
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Subtítulo</label>
+              <input type="text" id="sw-inicio-subtitulo" class="form-control" placeholder="Ej: Federación de Rally y Circuito">
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Descripción</label>
+              <textarea id="sw-inicio-texto" class="form-control" rows="5" placeholder="Cuéntale a los visitantes quiénes son, qué organizan, contacto, etc."></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Enlace de imagen (opcional)</label>
+              <input type="text" id="sw-inicio-imagen" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
+            </div>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Este bloque solo aparece en la portada pública si escribes al menos un título o una descripción. Déjalo todo vacío para ocultarlo.</p>
+        </div>
+
+        <button type="button" class="btn-primary" onclick="window.guardarSitioWeb()">Guardar Cambios</button>
+      </section>
+
     </div>
   </main>
 
@@ -1961,6 +2206,21 @@
     checkAuth();
     cargarCategoriasGlobales();
 
+    // Logo del sitio (si el admin lo configuró en "Sitio Web"), reemplaza
+    // el ícono por defecto de la bandera en el topbar de este panel.
+    (async function aplicarLogoSitio() {
+      const { data } = await supabase.schema('rally').from('sitio_config').select('valor').eq('clave', 'logo_url').maybeSingle();
+      const logoUrl = data?.valor;
+      if (!logoUrl) return;
+      const idDrive = (logoUrl.match(/\/d\/([a-zA-Z0-9_-]{15,})/) || logoUrl.match(/[?&]id=([a-zA-Z0-9_-]{15,})/) || [])[1];
+      const src = idDrive ? `https://drive.google.com/thumbnail?id=${idDrive}&sz=w200` : logoUrl;
+      document.querySelectorAll('.brand-icon').forEach(el => {
+        el.style.background = 'transparent';
+        el.style.boxShadow = 'none';
+        el.innerHTML = `<img src="${src}" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:inherit;">`;
+      });
+    })();
+
     document.getElementById('btn-logout').addEventListener('click', async () => {
       await supabase.auth.signOut();
       window.location.href = 'index.html';
@@ -1998,6 +2258,12 @@
           }
           if (targetId === 'section-carga-masiva') {
             window.initCargaMasivaSection();
+          }
+          if (targetId === 'section-info-rally') {
+            window.initInfoRallySection();
+          }
+          if (targetId === 'section-sitio-web') {
+            window.initSitioWebSection();
           }
         }
         closeSidebar();
@@ -3196,9 +3462,12 @@
         .select('id').eq('rally_id', id).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
       let shakedownVueltasActuales = '';
       if (shakedownEtapaExistente) {
-        const { data: shakedownRecExistente } = await supabase.schema('rally').from('recorridos')
-          .select('numero_vueltas').eq('etapa_id', shakedownEtapaExistente.id).is('deleted_at', null).maybeSingle();
-        if (shakedownRecExistente) shakedownVueltasActuales = shakedownRecExistente.numero_vueltas || '';
+        // .maybeSingle() fallaba en silencio si por algún motivo quedó más de un
+        // recorrido activo para esta etapa (ver window.crearOActualizarShakedown,
+        // que ahora limpia duplicados) -- se toma el más antiguo como canónico.
+        const { data: shakedownRecsExistentes } = await supabase.schema('rally').from('recorridos')
+          .select('numero_vueltas').eq('etapa_id', shakedownEtapaExistente.id).is('deleted_at', null).order('created_at', { ascending: true }).limit(1);
+        if (shakedownRecsExistentes && shakedownRecsExistentes[0]) shakedownVueltasActuales = shakedownRecsExistentes[0].numero_vueltas || '';
       }
       document.getElementById('edit-shakedown-vueltas').value = shakedownVueltasActuales;
 
@@ -4388,9 +4657,11 @@
       if (!etapa) return;
 
       window.shakedownEtapaId = etapa.id;
-      const { data: recorrido } = await supabase.schema('rally').from('recorridos')
-        .select('*').eq('etapa_id', etapa.id).is('deleted_at', null).maybeSingle();
-      if (recorrido) window.shakedownRecorridoData = recorrido;
+      // .maybeSingle() fallaba en silencio si hay más de un recorrido activo para esta
+      // etapa; se toma el más antiguo como canónico (ver window.crearOActualizarShakedown).
+      const { data: recorridos } = await supabase.schema('rally').from('recorridos')
+        .select('*').eq('etapa_id', etapa.id).is('deleted_at', null).order('created_at', { ascending: true }).limit(1);
+      if (recorridos && recorridos[0]) window.shakedownRecorridoData = recorridos[0];
     };
 
     // Crea (o actualiza el número de vueltas de) el Shakedown/Clasificación de un
@@ -4405,10 +4676,27 @@
         .select('id').eq('rally_id', rallyId).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
 
       if (etapaExistente) {
-        const { data: recorridoExistente } = await supabase.schema('rally').from('recorridos')
-          .select('id').eq('etapa_id', etapaExistente.id).is('deleted_at', null).maybeSingle();
-        if (recorridoExistente) {
-          await supabase.schema('rally').from('recorridos').update({ numero_vueltas: vueltas }).eq('id', recorridoExistente.id);
+        // .maybeSingle() fallaba en silencio (sin actualizar nada) si por algún motivo
+        // quedó más de un recorrido activo para esta etapa. Al limpiar duplicados NUNCA
+        // hay que quedarse con el más antiguo a ciegas: si alguno ya tiene tiempos
+        // cargados, ESE es el bueno (así se haya creado después) y hay que conservarlo.
+        const { data: recorridosExistentes } = await supabase.schema('rally').from('recorridos')
+          .select('id').eq('etapa_id', etapaExistente.id).is('deleted_at', null).order('created_at', { ascending: true });
+
+        if (recorridosExistentes && recorridosExistentes.length > 0) {
+          let canonico = recorridosExistentes[0];
+          if (recorridosExistentes.length > 1) {
+            for (const cand of recorridosExistentes) {
+              const { count } = await supabase.schema('rally').from('tiempos')
+                .select('id', { count: 'exact', head: true }).eq('recorrido_id', cand.id).is('deleted_at', null);
+              if (count && count > 0) { canonico = cand; break; }
+            }
+          }
+          const duplicados = recorridosExistentes.filter(r => r.id !== canonico.id);
+          await supabase.schema('rally').from('recorridos').update({ numero_vueltas: vueltas }).eq('id', canonico.id);
+          if (duplicados.length > 0) {
+            await supabase.schema('rally').from('recorridos').update({ deleted_at: new Date().toISOString() }).in('id', duplicados.map(d => d.id));
+          }
         }
         return;
       }
@@ -5970,8 +6258,10 @@
 
       const { data: etapaShakedown } = await supabase.schema('rally').from('etapas').select('id').eq('rally_id', rallyId).eq('es_shakedown', true).is('deleted_at', null).maybeSingle();
       if (etapaShakedown) {
-        const { data: recShakedown } = await supabase.schema('rally').from('recorridos').select('*').eq('etapa_id', etapaShakedown.id).is('deleted_at', null).maybeSingle();
-        window.cmShakedownRecorrido = recShakedown || null;
+        // .maybeSingle() fallaba en silencio si hay más de un recorrido activo para esta
+        // etapa; se toma el más antiguo como canónico (ver window.crearOActualizarShakedown).
+        const { data: recsShakedown } = await supabase.schema('rally').from('recorridos').select('*').eq('etapa_id', etapaShakedown.id).is('deleted_at', null).order('created_at', { ascending: true }).limit(1);
+        window.cmShakedownRecorrido = (recsShakedown && recsShakedown[0]) || null;
       }
 
       destinoSelect.innerHTML = '<option value="">Selecciona...</option>';
@@ -6556,6 +6846,269 @@
         btn.disabled = false;
         btn.textContent = 'Confirmar e Importar';
       }
+    };
+
+    // ==========================================
+    // INFORMACIÓN (WEB): boletines, comunicados, RPP,
+    // recorrido GPX/KMZ y carrusel de anuncios, por rally.
+    // ==========================================
+    function infoDriveFileId(url) {
+      if (!url) return null;
+      const s = url.trim();
+      let m = s.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
+      if (m) return m[1];
+      m = s.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
+      if (m) return m[1];
+      if (/^[a-zA-Z0-9_-]{15,}$/.test(s)) return s;
+      return null;
+    }
+    function infoDriveImageUrl(url) {
+      const id = infoDriveFileId(url);
+      return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w300` : url;
+    }
+    function infoDriveImageUrlFallback(url) {
+      const id = infoDriveFileId(url);
+      return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
+    }
+
+    window.infoCurrentRallyId = null;
+
+    window.initInfoRallySection = async function () {
+      const select = document.getElementById('info-rally-select');
+      if (select.options.length <= 1) {
+        select.innerHTML = '<option value="">Selecciona...</option>';
+        const { data } = await supabase.schema('rally').from('rallies').select('id, nombre').is('deleted_at', null).order('created_at', { ascending: false });
+        (data || []).forEach(r => { select.innerHTML += `<option value="${r.id}">${escapeHtml(r.nombre)}</option>`; });
+      }
+      window.infoSwitchTab('boletines');
+    };
+
+    window.infoOnRallyChange = function () {
+      window.infoCurrentRallyId = document.getElementById('info-rally-select').value;
+      const wrap = document.getElementById('info-content-wrap');
+      const verLink = document.getElementById('info-ver-publica-link');
+      if (!window.infoCurrentRallyId) {
+        wrap.style.display = 'none';
+        verLink.style.display = 'none';
+        return;
+      }
+      wrap.style.display = '';
+      verLink.style.display = '';
+      verLink.href = `info.html?id=${window.infoCurrentRallyId}`;
+      window.infoCargarBoletines();
+      window.infoCargarComunicados();
+      window.infoCargarRpp();
+      window.infoCargarRecorridos();
+      window.infoCargarAnunciosImagenes();
+      window.infoCargarAnunciosTicker();
+    };
+
+    const INFO_TABS = ['boletines', 'comunicados', 'rpp', 'recorrido', 'carrusel'];
+    window.infoSwitchTab = function (tab) {
+      INFO_TABS.forEach(t => {
+        document.getElementById('info-tab-' + t).style.display = t === tab ? '' : 'none';
+        const btn = document.getElementById('info-tab-btn-' + t);
+        btn.style.background = t === tab ? 'var(--bg-surface-elevated)' : 'transparent';
+        btn.style.color = t === tab ? 'white' : 'var(--text-muted)';
+        btn.style.borderColor = t === tab ? 'var(--accent-primary)' : '';
+      });
+    };
+
+    window.infoEliminarFila = async function (tabla, id, reloadFnName) {
+      if (!confirm('¿Eliminar este elemento?')) return;
+      const { error } = await supabase.schema('rally').from(tabla).update({ deleted_at: new Date().toISOString() }).eq('id', id);
+      if (error) { window.toast('Error al eliminar: ' + error.message, 'error'); return; }
+      window.toast('Eliminado.', 'ok');
+      if (window[reloadFnName]) window[reloadFnName]();
+    };
+
+    // --- Boletines / Comunicados ---
+    window.infoAgregarPublicacion = async function (tipo) {
+      const prefix = tipo === 'boletin' ? 'bol' : 'com';
+      const titulo = document.getElementById(`info-${prefix}-titulo`).value.trim();
+      const descripcion = document.getElementById(`info-${prefix}-desc`).value.trim();
+      const urlImagen = document.getElementById(`info-${prefix}-url`).value.trim();
+      if (!window.infoCurrentRallyId) { window.toast('Selecciona un rally primero.', 'warn'); return; }
+      if (!titulo || !urlImagen) { window.toast('Completa el título y el enlace.', 'warn'); return; }
+      const { error } = await supabase.schema('rally').from('publicaciones').insert({
+        rally_id: window.infoCurrentRallyId, tipo, titulo, descripcion: descripcion || null, url_imagen: urlImagen
+      });
+      if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
+      document.getElementById(`info-${prefix}-titulo`).value = '';
+      document.getElementById(`info-${prefix}-desc`).value = '';
+      document.getElementById(`info-${prefix}-url`).value = '';
+      window.toast(tipo === 'boletin' ? 'Boletín agregado.' : 'Comunicado agregado.', 'ok');
+      if (tipo === 'boletin') window.infoCargarBoletines(); else window.infoCargarComunicados();
+    };
+
+    function infoPublicacionCardHtml(p, reloadFnName) {
+      return `<div style="display:flex; gap:12px; align-items:center; padding:12px; border:1px solid var(--border-subtle); border-radius:10px; margin-bottom:10px;">
+        <img src="${infoDriveImageUrl(p.url_imagen)}" onerror="this.onerror=null; this.src='${infoDriveImageUrlFallback(p.url_imagen)}';" style="width:56px; height:56px; object-fit:cover; border-radius:8px; background:var(--bg-surface-elevated); flex-shrink:0;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:700;">${escapeHtml(p.titulo)}</div>
+          ${p.descripcion ? `<div style="font-size:12px; color:var(--text-muted);">${escapeHtml(p.descripcion)}</div>` : ''}
+          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${new Date(p.created_at).toLocaleString('es-BO')}</div>
+        </div>
+        <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3); flex-shrink:0;" onclick="window.infoEliminarFila('publicaciones', '${p.id}', '${reloadFnName}')">Eliminar</button>
+      </div>`;
+    }
+
+    window.infoCargarBoletines = async function () {
+      const container = document.getElementById('info-boletines-lista');
+      container.innerHTML = '<p style="color: var(--text-muted);">Cargando...</p>';
+      const { data } = await supabase.schema('rally').from('publicaciones').select('*').eq('rally_id', window.infoCurrentRallyId).eq('tipo', 'boletin').is('deleted_at', null).order('created_at', { ascending: false });
+      if (!data || data.length === 0) { container.innerHTML = '<p style="color: var(--text-muted);">Todavía no hay boletines.</p>'; return; }
+      container.innerHTML = data.map(p => infoPublicacionCardHtml(p, 'infoCargarBoletines')).join('');
+    };
+
+    window.infoCargarComunicados = async function () {
+      const container = document.getElementById('info-comunicados-lista');
+      container.innerHTML = '<p style="color: var(--text-muted);">Cargando...</p>';
+      const { data } = await supabase.schema('rally').from('publicaciones').select('*').eq('rally_id', window.infoCurrentRallyId).eq('tipo', 'comunicado').is('deleted_at', null).order('created_at', { ascending: false });
+      if (!data || data.length === 0) { container.innerHTML = '<p style="color: var(--text-muted);">Todavía no hay comunicados.</p>'; return; }
+      container.innerHTML = data.map(p => infoPublicacionCardHtml(p, 'infoCargarComunicados')).join('');
+    };
+
+    // --- RPP ---
+    window.infoAgregarRpp = async function () {
+      const nombre = document.getElementById('info-rpp-nombre').value.trim() || 'Reglamento Particular de la Prueba';
+      const urlPdf = document.getElementById('info-rpp-url').value.trim();
+      if (!window.infoCurrentRallyId) { window.toast('Selecciona un rally primero.', 'warn'); return; }
+      if (!urlPdf) { window.toast('Pega el enlace del PDF.', 'warn'); return; }
+      const { error } = await supabase.schema('rally').from('documentos_rpp').insert({ rally_id: window.infoCurrentRallyId, nombre, url_pdf: urlPdf });
+      if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
+      document.getElementById('info-rpp-nombre').value = '';
+      document.getElementById('info-rpp-url').value = '';
+      window.toast('Reglamento agregado.', 'ok');
+      window.infoCargarRpp();
+    };
+
+    window.infoCargarRpp = async function () {
+      const container = document.getElementById('info-rpp-lista');
+      container.innerHTML = '<p style="color: var(--text-muted);">Cargando...</p>';
+      const { data } = await supabase.schema('rally').from('documentos_rpp').select('*').eq('rally_id', window.infoCurrentRallyId).is('deleted_at', null).order('created_at', { ascending: false });
+      if (!data || data.length === 0) { container.innerHTML = '<p style="color: var(--text-muted);">Todavía no hay reglamento cargado.</p>'; return; }
+      container.innerHTML = data.map(r => `
+        <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--border-subtle); border-radius:10px; margin-bottom:10px; flex-wrap:wrap;">
+          <div><div style="font-weight:700;">${escapeHtml(r.nombre)}</div><div style="font-size:11px; color:var(--text-dim);">${new Date(r.created_at).toLocaleString('es-BO')}</div></div>
+          <div style="display:flex; gap:8px;">
+            <a href="${escapeHtml(r.url_pdf)}" target="_blank" rel="noopener" class="btn-secondary">Abrir enlace</a>
+            <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.infoEliminarFila('documentos_rpp','${r.id}','infoCargarRpp')">Eliminar</button>
+          </div>
+        </div>`).join('');
+    };
+
+    // --- Recorrido GPX/KMZ ---
+    window.infoSubirRecorrido = async function () {
+      const nombre = document.getElementById('info-gpx-nombre').value.trim();
+      const fileInput = document.getElementById('info-gpx-file');
+      const file = fileInput.files[0];
+      if (!window.infoCurrentRallyId) { window.toast('Selecciona un rally primero.', 'warn'); return; }
+      if (!nombre || !file) { window.toast('Completa el nombre y elige un archivo.', 'warn'); return; }
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext !== 'gpx' && ext !== 'kmz') { window.toast('Solo se aceptan archivos .gpx o .kmz.', 'warn'); return; }
+
+      const path = `${window.infoCurrentRallyId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const { error: upErr } = await supabase.storage.from('recorridos-gpx').upload(path, file);
+      if (upErr) { window.toast('Error al subir el archivo: ' + upErr.message, 'error'); return; }
+
+      const { error } = await supabase.schema('rally').from('recorridos_gpx').insert({ rally_id: window.infoCurrentRallyId, nombre, formato: ext, storage_path: path });
+      if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
+      document.getElementById('info-gpx-nombre').value = '';
+      fileInput.value = '';
+      window.toast('Recorrido subido.', 'ok');
+      window.infoCargarRecorridos();
+    };
+
+    window.infoCargarRecorridos = async function () {
+      const container = document.getElementById('info-gpx-lista');
+      container.innerHTML = '<p style="color: var(--text-muted);">Cargando...</p>';
+      const { data } = await supabase.schema('rally').from('recorridos_gpx').select('*').eq('rally_id', window.infoCurrentRallyId).is('deleted_at', null).order('orden');
+      if (!data || data.length === 0) { container.innerHTML = '<p style="color: var(--text-muted);">Todavía no hay recorrido cargado.</p>'; return; }
+      container.innerHTML = data.map(r => `
+        <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--border-subtle); border-radius:10px; margin-bottom:10px;">
+          <div style="font-weight:700;">${escapeHtml(r.nombre)} <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(${r.formato.toUpperCase()})</span></div>
+          <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.infoEliminarFila('recorridos_gpx','${r.id}','infoCargarRecorridos')">Eliminar</button>
+        </div>`).join('');
+    };
+
+    // --- Carrusel de anuncios (imágenes + ticker de texto) ---
+    window.infoAgregarAnuncioImagen = async function () {
+      const url = document.getElementById('info-anuncio-img-url').value.trim();
+      const orden = parseInt(document.getElementById('info-anuncio-img-orden').value) || 0;
+      if (!window.infoCurrentRallyId) { window.toast('Selecciona un rally primero.', 'warn'); return; }
+      if (!url) { window.toast('Pega el enlace de la imagen.', 'warn'); return; }
+      const { error } = await supabase.schema('rally').from('anuncios_imagenes').insert({ rally_id: window.infoCurrentRallyId, url_imagen: url, orden });
+      if (error) { window.toast('Error: ' + error.message, 'error'); return; }
+      document.getElementById('info-anuncio-img-url').value = '';
+      window.toast('Imagen agregada al carrusel.', 'ok');
+      window.infoCargarAnunciosImagenes();
+    };
+
+    window.infoCargarAnunciosImagenes = async function () {
+      const container = document.getElementById('info-anuncios-img-lista');
+      container.innerHTML = '<p style="color: var(--text-muted);">Cargando...</p>';
+      const { data } = await supabase.schema('rally').from('anuncios_imagenes').select('*').eq('rally_id', window.infoCurrentRallyId).is('deleted_at', null).order('orden');
+      if (!data || data.length === 0) { container.innerHTML = '<p style="color: var(--text-muted);">Sin imágenes en el carrusel.</p>'; return; }
+      container.innerHTML = data.map(a => `
+        <div style="display:flex; gap:12px; align-items:center; padding:10px; border:1px solid var(--border-subtle); border-radius:10px; margin-bottom:8px;">
+          <img src="${infoDriveImageUrl(a.url_imagen)}" onerror="this.onerror=null; this.src='${infoDriveImageUrlFallback(a.url_imagen)}';" style="width:56px; height:56px; object-fit:cover; border-radius:6px; flex-shrink:0;">
+          <div style="flex:1; font-size:12px; color:var(--text-muted);">Orden: ${a.orden}</div>
+          <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.infoEliminarFila('anuncios_imagenes','${a.id}','infoCargarAnunciosImagenes')">Eliminar</button>
+        </div>`).join('');
+    };
+
+    window.infoAgregarTicker = async function () {
+      const texto = document.getElementById('info-ticker-texto').value.trim();
+      const orden = parseInt(document.getElementById('info-ticker-orden').value) || 0;
+      if (!window.infoCurrentRallyId) { window.toast('Selecciona un rally primero.', 'warn'); return; }
+      if (!texto) { window.toast('Escribe el texto del anuncio.', 'warn'); return; }
+      const { error } = await supabase.schema('rally').from('anuncios_ticker').insert({ rally_id: window.infoCurrentRallyId, texto, orden });
+      if (error) { window.toast('Error: ' + error.message, 'error'); return; }
+      document.getElementById('info-ticker-texto').value = '';
+      window.toast('Anuncio agregado.', 'ok');
+      window.infoCargarAnunciosTicker();
+    };
+
+    window.infoCargarAnunciosTicker = async function () {
+      const container = document.getElementById('info-anuncios-ticker-lista');
+      container.innerHTML = '<p style="color: var(--text-muted);">Cargando...</p>';
+      const { data } = await supabase.schema('rally').from('anuncios_ticker').select('*').eq('rally_id', window.infoCurrentRallyId).is('deleted_at', null).order('orden');
+      if (!data || data.length === 0) { container.innerHTML = '<p style="color: var(--text-muted);">Sin anuncios de texto.</p>'; return; }
+      container.innerHTML = data.map(t => `
+        <div style="display:flex; gap:12px; align-items:center; padding:10px; border:1px solid var(--border-subtle); border-radius:10px; margin-bottom:8px;">
+          <div style="flex:1; font-size:13px;">${escapeHtml(t.texto)}</div>
+          <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.infoEliminarFila('anuncios_ticker','${t.id}','infoCargarAnunciosTicker')">Eliminar</button>
+        </div>`).join('');
+    };
+
+    // ==========================================
+    // SITIO WEB: logo y bloque "Inicio" de la portada pública
+    // ==========================================
+    window.initSitioWebSection = async function () {
+      const { data, error } = await supabase.schema('rally').from('sitio_config').select('clave, valor');
+      if (error) { window.toast('Error al cargar la configuración: ' + error.message, 'error'); return; }
+      const cfg = {};
+      (data || []).forEach(r => { cfg[r.clave] = r.valor; });
+      document.getElementById('sw-logo-url').value = cfg.logo_url || '';
+      document.getElementById('sw-inicio-titulo').value = cfg.inicio_titulo || '';
+      document.getElementById('sw-inicio-subtitulo').value = cfg.inicio_subtitulo || '';
+      document.getElementById('sw-inicio-texto').value = cfg.inicio_texto || '';
+      document.getElementById('sw-inicio-imagen').value = cfg.inicio_imagen_url || '';
+    };
+
+    window.guardarSitioWeb = async function () {
+      const valores = {
+        logo_url: document.getElementById('sw-logo-url').value.trim() || null,
+        inicio_titulo: document.getElementById('sw-inicio-titulo').value.trim() || null,
+        inicio_subtitulo: document.getElementById('sw-inicio-subtitulo').value.trim() || null,
+        inicio_texto: document.getElementById('sw-inicio-texto').value.trim() || null,
+        inicio_imagen_url: document.getElementById('sw-inicio-imagen').value.trim() || null,
+      };
+      const filas = Object.entries(valores).map(([clave, valor]) => ({ clave, valor }));
+      const { error } = await supabase.schema('rally').from('sitio_config').upsert(filas, { onConflict: 'clave' });
+      if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
+      window.toast('Configuración del sitio guardada.', 'ok');
     };
   </script>
 </body>

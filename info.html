@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Información — AMADESU RALLYS</title>
+  <meta name="description" content="Boletines, comunicados, reglamento y recorrido del evento." />
+  <meta name="robots" content="index, follow" />
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23E63946'/%3E%3Cpath d='M6 16s1-1 3.5-1 4 1.5 6.5 1.5 3-1 3-1V6s-.8.8-3 .8-4-1.5-6.5-1.5-3.5 1-3.5 1z' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='6' y1='19' x2='6' y2='6' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+
+  <style>
+    :root {
+      --bg-void: #030303;
+      --bg-base: #0a0a0a;
+      --bg-surface: #131313;
+      --bg-surface-elevated: #1c1c1c;
+
+      --accent-primary: #E63946;
+      --accent-hover: #ff4d5a;
+      --accent-glow: rgba(230, 57, 70, 0.4);
+
+      --live-green: #00F5A0;
+      --live-glow: rgba(0, 245, 160, 0.3);
+
+      --status-finished: #FFD166;
+      --status-upcoming: #00E5FF;
+      --danger: #ff4d5a;
+
+      --text-main: #F8F9FA;
+      --text-muted: #8E9BAE;
+      --text-dim: #546071;
+
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-strong: rgba(255, 255, 255, 0.15);
+
+      --font-body: 'Barlow', sans-serif;
+      --font-display: 'Barlow Condensed', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+      --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-16: 64px;
+      --z-modal: 1000;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-void);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-void); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-surface-elevated); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+    .bg-glow {
+      position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(230, 57, 70, 0.15) 0%, transparent 60%);
+      filter: blur(100px); z-index: 0; pointer-events: none;
+    }
+
+    .bg-grain {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    a { color: inherit; }
+
+    /* TOPBAR */
+    .topbar {
+      height: 80px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; border-bottom: 1px solid var(--border-subtle);
+      background: rgba(6, 6, 6, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      position: sticky; top: 0; z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: 16px; text-decoration: none; }
+    .brand-icon {
+      width: 44px; height: 44px; background: var(--accent-primary); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; color: white;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+    .brand-text {
+      font-family: var(--font-display); font-size: 26px; font-weight: 900; line-height: 1;
+      text-transform: uppercase; letter-spacing: -0.02em; color: var(--text-main);
+    }
+    .brand-text span {
+      display: block; color: var(--text-muted); font-family: var(--font-body);
+      font-size: 12px; letter-spacing: 0.15em; font-weight: 700; margin-top: 4px;
+    }
+    .btn-volver {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle);
+      color: var(--text-main); padding: 10px 18px; border-radius: 8px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 600;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .btn-volver:hover { border-color: var(--border-strong); background: rgba(255, 255, 255, 0.08); }
+
+    a:focus-visible, button:focus-visible, .btn-volver:focus-visible {
+      outline: 2px solid var(--accent-primary); outline-offset: 2px; border-radius: 6px;
+    }
+
+    main { position: relative; z-index: 2; flex: 1; }
+
+    /* HERO */
+    .info-hero {
+      position: relative; height: 320px; overflow: hidden;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .info-hero img { width: 100%; height: 100%; object-fit: cover; }
+    .info-hero::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to top, var(--bg-void) 5%, rgba(3,3,3,0.35) 60%, rgba(3,3,3,0.55) 100%);
+    }
+    .info-hero-content {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+      max-width: 1200px; margin: 0 auto; padding: 0 40px 28px;
+    }
+    .info-hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .badge {
+      padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: var(--font-mono);
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+      border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.6); color: white;
+    }
+    .info-hero-title {
+      font-family: var(--font-display); font-size: 44px; line-height: 1.05;
+      color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.8); margin-bottom: 6px;
+    }
+    .info-hero-sub { color: var(--text-muted); font-size: 15px; }
+
+    .info-wrap { max-width: 1200px; margin: 0 auto; padding: var(--sp-8) 40px var(--sp-16); }
+
+    .info-section { margin-bottom: var(--sp-12); }
+    .info-section-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: var(--sp-4); gap: 12px; flex-wrap: wrap;
+    }
+    .info-section-title {
+      font-family: var(--font-display); font-size: 26px; text-transform: uppercase;
+      letter-spacing: 0.02em; color: var(--text-main); display: flex; align-items: center; gap: 10px;
+    }
+    .info-section-title svg { color: var(--accent-primary); }
+    .info-section-note { font-size: 13px; color: var(--text-dim); }
+    .info-empty {
+      background: var(--bg-surface); border: 1px dashed var(--border-strong); border-radius: 12px;
+      padding: 28px; text-align: center; color: var(--text-muted); font-size: 14px;
+    }
+
+    /* CARRUSEL */
+    .carrusel-section { margin-bottom: var(--sp-12); }
+    .carrusel-viewport {
+      position: relative; width: 100%; height: 420px; border-radius: 16px; overflow: hidden;
+      background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    }
+    .carrusel-slide {
+      position: absolute; inset: 0; opacity: 0; transition: opacity 0.7s ease; z-index: 1;
+    }
+    .carrusel-slide.active { opacity: 1; z-index: 2; }
+    .carrusel-slide img { width: 100%; height: 100%; object-fit: cover; }
+    .carrusel-dots {
+      position: absolute; left: 0; right: 0; bottom: 14px; z-index: 3;
+      display: flex; justify-content: center; gap: 8px;
+    }
+    .carrusel-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.35);
+      border: none; cursor: pointer; transition: all 0.2s; padding: 0;
+    }
+    .carrusel-dot.active { background: var(--accent-primary); width: 22px; border-radius: 4px; }
+    .ticker-bar {
+      margin-top: 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle);
+      border-radius: 8px; overflow: hidden; display: flex; align-items: center; height: 40px;
+    }
+    .ticker-tag {
+      flex-shrink: 0; background: var(--accent-primary); color: white; font-family: var(--font-display);
+      font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+      height: 100%; display: flex; align-items: center; padding: 0 16px;
+    }
+    .ticker-viewport { flex: 1; overflow: hidden; height: 100%; position: relative; }
+    .ticker-track {
+      position: absolute; white-space: nowrap; display: flex; align-items: center; height: 100%;
+      font-family: var(--font-mono); font-size: 13px; color: var(--text-main);
+      animation: ticker-scroll linear infinite;
+    }
+    .ticker-track span { padding: 0 40px; }
+    @keyframes ticker-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    /* GRIDS: boletines / comunicados */
+    .pub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+    .pub-card {
+      background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 14px;
+      overflow: hidden; cursor: pointer; transition: transform 0.25s ease, border-color 0.25s ease;
+      display: flex; flex-direction: column;
+    }
+    .pub-card:hover { transform: translateY(-4px); border-color: var(--border-strong); }
+    .pub-card-img { height: 170px; background: var(--bg-surface-elevated); overflow: hidden; position: relative; }
+    .pub-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .pub-card-body { padding: 14px 16px; }
+    .pub-card-title { font-family: var(--font-display); font-size: 18px; margin-bottom: 4px; color: var(--text-main); }
+    .pub-card-desc {
+      font-size: 13px; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .pub-card-date {
+      font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .pub-card-broken {
+      display: flex; align-items: center; justify-content: center; height: 100%;
+      flex-direction: column; gap: 8px; color: var(--text-dim); font-size: 12px;
+    }
+
+    /* RPP */
+    .rpp-list { display: flex; flex-direction: column; gap: 12px; }
+    .rpp-card {
+      background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px;
+      padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .rpp-card-name { font-family: var(--font-display); font-size: 19px; display: flex; align-items: center; gap: 10px; }
+    .btn-primary {
+      background: var(--accent-primary); color: white; border: none; padding: 10px 20px;
+      border-radius: 8px; font-family: var(--font-body); font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 16px var(--accent-glow); }
+
+    /* RECORRIDO */
+    .recorrido-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .recorrido-tab {
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); color: var(--text-muted);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: var(--font-body); transition: all 0.2s;
+    }
+    .recorrido-tab.active { background: var(--accent-primary); border-color: var(--accent-primary); color: white; }
+    #recorrido-map {
+      height: 460px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+    }
+    .recorrido-stats { display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap; }
+    .recorrido-stat { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); }
+    .recorrido-stat b { color: var(--text-main); font-size: 16px; }
+
+    /* LIGHTBOX */
+    .lightbox-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(6px);
+      z-index: var(--z-modal); display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s; padding: 40px;
+    }
+    .lightbox-overlay.active { opacity: 1; pointer-events: auto; }
+    .lightbox-content {
+      max-width: 1100px; width: 100%; max-height: 92vh; background: var(--bg-surface);
+      border: 1px solid var(--border-subtle); border-radius: 16px; overflow: hidden; position: relative;
+      display: flex; flex-direction: column;
+    }
+    .lightbox-header {
+      display: flex; align-items: center; justify-content: space-between; padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .lightbox-title { font-family: var(--font-display); font-size: 20px; color: var(--accent-primary); }
+    .lightbox-close {
+      background: transparent; border: 1px solid var(--border-strong); color: var(--text-muted);
+      padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .lightbox-close:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+    .lightbox-body { overflow: auto; padding: 20px; }
+    .lightbox-body img { width: 100%; height: auto; border-radius: 8px; display: block; }
+    .lightbox-body p { color: var(--text-muted); margin-top: 12px; font-size: 14px; line-height: 1.5; }
+    .lightbox-body iframe { width: 100%; height: 78vh; border: 0; border-radius: 8px; background: white; }
+    .lightbox-pdf-note {
+      display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: rgba(230,57,70,0.08);
+      border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-muted);
+    }
+
+    .info-loading, .info-error {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 120px 20px; color: var(--text-muted); text-align: center; gap: 16px;
+    }
+    .info-error h2 { font-family: var(--font-display); font-size: 28px; color: var(--text-main); }
+
+    @media (max-width: 720px) {
+      .topbar { padding: 0 16px; }
+      .info-wrap { padding: var(--sp-6) 16px var(--sp-12); }
+      .info-hero-content { padding: 0 16px 20px; }
+      .info-hero-title { font-size: 30px; }
+      .carrusel-viewport { height: 260px; }
+      #recorrido-map { height: 320px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-glow"></div>
+  <div class="bg-grain"></div>
+
+  <header class="topbar">
+    <a href="index.html" class="brand">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+          <line x1="4" y1="22" x2="4" y2="15"></line>
+        </svg>
+      </div>
+      <div class="brand-text">AMADESU<span>RALLY SYSTEM</span></div>
+    </a>
+    <a href="index.html" class="btn-volver">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Volver
+    </a>
+  </header>
+
+  <main id="main-content">
+    <div class="info-loading" id="info-loading">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+      Cargando información…
+    </div>
+  </main>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox-overlay" id="lightbox-overlay">
+    <div class="lightbox-content">
+      <div class="lightbox-header">
+        <div class="lightbox-title" id="lightbox-title">—</div>
+        <button class="lightbox-close" onclick="window.cerrarLightbox()">✕ Cerrar</button>
+      </div>
+      <div class="lightbox-body" id="lightbox-body"></div>
+      <div class="lightbox-pdf-note" id="lightbox-pdf-note" style="display:none;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        Documento de solo lectura — la descarga está deshabilitada desde el enlace compartido.
+      </div>
+    </div>
+  </div>
+
+  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
+  <script type="module">
+    import { supabase } from './supabase_config.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const rallyId = params.get('id');
+    const main = document.getElementById('main-content');
+
+    // -----------------------------------------------------------------
+    // Helpers: enlaces de Google Drive -> URLs directas embebibles.
+    // Acepta cualquier formato típico de enlace compartido de Drive, o el
+    // ID "en crudo" si el admin lo pega directamente.
+    // -----------------------------------------------------------------
+    function driveFileId(url) {
+      if (!url) return null;
+      const s = url.trim();
+      let m = s.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
+      if (m) return m[1];
+      m = s.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
+      if (m) return m[1];
+      if (/^[a-zA-Z0-9_-]{15,}$/.test(s)) return s;
+      return null;
+    }
+    function driveImageUrl(url) {
+      const id = driveFileId(url);
+      return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1200` : url;
+    }
+    function driveImageUrlFallback(url) {
+      const id = driveFileId(url);
+      return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
+    }
+    function drivePdfPreviewUrl(url) {
+      const id = driveFileId(url);
+      return id ? `https://drive.google.com/file/d/${id}/preview` : url;
+    }
+    function fmtFecha(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+    function renderStatusBadge(estado) {
+      if (estado === 'en_curso') return `<div class="badge" style="color:var(--live-green); border-color:rgba(0,245,160,0.3);">● VIVO</div>`;
+      if (estado === 'finalizado') return `<div class="badge" style="color:var(--status-finished); border-color:rgba(255,209,102,0.3);">FINALIZÓ</div>`;
+      return `<div class="badge" style="color:var(--status-upcoming); border-color:rgba(0,229,255,0.3);">PRÓXIMO</div>`;
+    }
+
+    window.cerrarLightbox = function () {
+      document.getElementById('lightbox-overlay').classList.remove('active');
+      document.getElementById('lightbox-body').innerHTML = '';
+      document.getElementById('lightbox-pdf-note').style.display = 'none';
+    };
+    document.getElementById('lightbox-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'lightbox-overlay') window.cerrarLightbox();
+    });
+
+    window.abrirImagenLightbox = function (imgUrl, imgUrlFallback, titulo, descripcion) {
+      document.getElementById('lightbox-title').textContent = titulo || 'Imagen';
+      document.getElementById('lightbox-pdf-note').style.display = 'none';
+      document.getElementById('lightbox-body').innerHTML =
+        `<img src="${imgUrl}" onerror="this.onerror=null; this.src='${imgUrlFallback}';" alt="${esc(titulo)}">` +
+        (descripcion ? `<p>${esc(descripcion)}</p>` : '');
+      document.getElementById('lightbox-overlay').classList.add('active');
+    };
+
+    window.abrirPdfLightbox = function (pdfUrl, titulo) {
+      document.getElementById('lightbox-title').textContent = titulo || 'Documento';
+      document.getElementById('lightbox-body').innerHTML = `<iframe src="${pdfUrl}"></iframe>`;
+      document.getElementById('lightbox-pdf-note').style.display = 'flex';
+      document.getElementById('lightbox-overlay').classList.add('active');
+    };
+
+    // -----------------------------------------------------------------
+    // Carga principal
+    // -----------------------------------------------------------------
+    (async function aplicarLogoSitio() {
+      const { data } = await supabase.schema('rally').from('sitio_config').select('valor').eq('clave', 'logo_url').maybeSingle();
+      const logoUrl = data?.valor;
+      if (!logoUrl) return;
+      const src = driveImageUrl(logoUrl);
+      const fallback = driveImageUrlFallback(logoUrl);
+      document.querySelectorAll('.brand-icon').forEach(el => {
+        el.style.background = 'transparent';
+        el.style.boxShadow = 'none';
+        el.innerHTML = `<img src="${src}" onerror="this.onerror=null; this.src='${fallback}';" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:inherit;">`;
+      });
+    })();
+
+    async function init() {
+      if (!rallyId) {
+        renderError('Falta indicar el rally', 'El enlace no incluye el identificador del evento.');
+        return;
+      }
+
+      const { data: rally, error } = await supabase.schema('rally').from('rallies')
+        .select('id, nombre, descripcion, ciudad, pais, fecha_inicio, imagen_url, tipo_evento, estado')
+        .eq('id', rallyId).is('deleted_at', null).maybeSingle();
+
+      if (error || !rally) {
+        renderError('Evento no encontrado', 'Puede que el enlace sea incorrecto o el evento haya sido eliminado.');
+        return;
+      }
+
+      document.title = `${rally.nombre} — Información`;
+
+      const [pubRes, rppRes, gpxRes, imgRes, tickerRes] = await Promise.all([
+        supabase.schema('rally').from('publicaciones').select('*').eq('rally_id', rallyId).is('deleted_at', null).order('orden').order('created_at', { ascending: false }),
+        supabase.schema('rally').from('documentos_rpp').select('*').eq('rally_id', rallyId).is('deleted_at', null).order('created_at', { ascending: false }),
+        supabase.schema('rally').from('recorridos_gpx').select('*').eq('rally_id', rallyId).is('deleted_at', null).order('orden'),
+        supabase.schema('rally').from('anuncios_imagenes').select('*').eq('rally_id', rallyId).is('deleted_at', null).order('orden'),
+        supabase.schema('rally').from('anuncios_ticker').select('*').eq('rally_id', rallyId).is('deleted_at', null).order('orden'),
+      ]);
+
+      const publicaciones = pubRes.data || [];
+      const boletines = publicaciones.filter(p => p.tipo === 'boletin');
+      const comunicados = publicaciones.filter(p => p.tipo === 'comunicado');
+      const rpps = rppRes.data || [];
+      const gpxTracks = gpxRes.data || [];
+      const anuncios = imgRes.data || [];
+      const tickers = tickerRes.data || [];
+
+      renderPage(rally, boletines, comunicados, rpps, gpxTracks, anuncios, tickers);
+    }
+
+    function renderError(titulo, sub) {
+      main.innerHTML = `<div class="info-error">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <h2>${esc(titulo)}</h2>
+        <p>${esc(sub)}</p>
+        <a href="index.html" class="btn-primary" style="margin-top:8px;">Volver al inicio</a>
+      </div>`;
+    }
+
+    function renderPage(rally, boletines, comunicados, rpps, gpxTracks, anuncios, tickers) {
+      const img = rally.imagen_url || 'https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=1600';
+
+      main.innerHTML = `
+        <section class="info-hero">
+          <img src="${img}" alt="${esc(rally.nombre)}" onerror="this.src='https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=1600';">
+          <div class="info-hero-content">
+            <div class="info-hero-badges">
+              <div class="badge">${rally.tipo_evento === 'circuito' ? 'CIRCUITO' : 'RALLY'}</div>
+              ${renderStatusBadge(rally.estado)}
+            </div>
+            <h1 class="info-hero-title">${esc(rally.nombre)}</h1>
+            <div class="info-hero-sub">${esc(rally.ciudad || '')}${rally.ciudad && rally.pais ? ', ' : ''}${esc(rally.pais || '')} · ${esc(rally.fecha_inicio || '')}</div>
+          </div>
+        </section>
+
+        <div class="info-wrap">
+          <section class="carrusel-section" id="carrusel-section" style="display:none;">
+            <div class="carrusel-viewport" id="carrusel-viewport"></div>
+            <div class="carrusel-dots" id="carrusel-dots"></div>
+            <div class="ticker-bar" id="ticker-bar" style="display:none;">
+              <div class="ticker-tag">ANUNCIOS</div>
+              <div class="ticker-viewport"><div class="ticker-track" id="ticker-track"></div></div>
+            </div>
+          </section>
+
+          <section class="info-section">
+            <div class="info-section-head">
+              <div class="info-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
+                Boletines
+              </div>
+            </div>
+            <div id="boletines-container"></div>
+          </section>
+
+          <section class="info-section">
+            <div class="info-section-head">
+              <div class="info-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                Comunicados
+              </div>
+            </div>
+            <div id="comunicados-container"></div>
+          </section>
+
+          <section class="info-section">
+            <div class="info-section-head">
+              <div class="info-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                Reglamento Particular de la Prueba (RPP)
+              </div>
+              <div class="info-section-note">Documento de solo lectura</div>
+            </div>
+            <div id="rpp-container"></div>
+          </section>
+
+          <section class="info-section">
+            <div class="info-section-head">
+              <div class="info-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                Recorrido
+              </div>
+            </div>
+            <div id="recorrido-container"></div>
+          </section>
+        </div>
+      `;
+
+      renderCarrusel(anuncios, tickers);
+      renderPublicaciones('boletines-container', boletines, 'boletín');
+      renderPublicaciones('comunicados-container', comunicados, 'comunicado');
+      renderRpp(rpps);
+      renderRecorrido(gpxTracks);
+    }
+
+    // -----------------------------------------------------------------
+    // Carrusel de anuncios (rota cada 3s) + ticker de texto
+    // -----------------------------------------------------------------
+    function renderCarrusel(anuncios, tickers) {
+      if (anuncios.length === 0 && tickers.length === 0) return;
+      document.getElementById('carrusel-section').style.display = 'block';
+
+      if (anuncios.length > 0) {
+        const viewport = document.getElementById('carrusel-viewport');
+        const dotsWrap = document.getElementById('carrusel-dots');
+        viewport.innerHTML = anuncios.map((a, i) => `
+          <div class="carrusel-slide ${i === 0 ? 'active' : ''}" data-i="${i}">
+            <img src="${driveImageUrl(a.url_imagen)}" onerror="this.onerror=null; this.src='${driveImageUrlFallback(a.url_imagen)}';" alt="Anuncio ${i + 1}">
+          </div>`).join('');
+        if (anuncios.length > 1) {
+          dotsWrap.innerHTML = anuncios.map((_, i) => `<button class="carrusel-dot ${i === 0 ? 'active' : ''}" data-i="${i}"></button>`).join('');
+          let current = 0;
+          const slides = [...viewport.querySelectorAll('.carrusel-slide')];
+          const dots = [...dotsWrap.querySelectorAll('.carrusel-dot')];
+          function goTo(i) {
+            slides[current].classList.remove('active');
+            dots[current].classList.remove('active');
+            current = i;
+            slides[current].classList.add('active');
+            dots[current].classList.add('active');
+          }
+          dots.forEach(d => d.addEventListener('click', () => goTo(parseInt(d.dataset.i))));
+          setInterval(() => goTo((current + 1) % slides.length), 3000);
+        }
+      }
+
+      if (tickers.length > 0) {
+        document.getElementById('ticker-bar').style.display = 'flex';
+        const track = document.getElementById('ticker-track');
+        const items = tickers.map(t => `<span>${esc(t.texto)}</span>`).join('');
+        track.innerHTML = items + items; // duplicado para el loop continuo
+        requestAnimationFrame(() => {
+          const width = track.scrollWidth / 2;
+          const duration = Math.max(15, width / 60); // ~60px/s
+          track.style.animationDuration = duration + 's';
+        });
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // Boletines / Comunicados
+    // -----------------------------------------------------------------
+    function renderPublicaciones(containerId, items, label) {
+      const container = document.getElementById(containerId);
+      if (items.length === 0) {
+        container.innerHTML = `<div class="info-empty">Todavía no hay ${label}es publicados.</div>`;
+        return;
+      }
+      container.innerHTML = `<div class="pub-grid">${items.map(p => {
+        const imgUrl = driveImageUrl(p.url_imagen);
+        const imgFallback = driveImageUrlFallback(p.url_imagen);
+        const payload = JSON.stringify({ url: imgUrl, fallback: imgFallback, titulo: p.titulo, desc: p.descripcion || '' }).replace(/'/g, '&#39;');
+        return `
+        <div class="pub-card" data-payload='${payload}'>
+          <div class="pub-card-img">
+            <img src="${imgUrl}" alt="${esc(p.titulo)}" loading="lazy"
+              onerror="this.onerror=null; this.src='${imgFallback}';">
+          </div>
+          <div class="pub-card-body">
+            <div class="pub-card-title">${esc(p.titulo)}</div>
+            ${p.descripcion ? `<div class="pub-card-desc">${esc(p.descripcion)}</div>` : ''}
+            <div class="pub-card-date">${fmtFecha(p.created_at)}</div>
+          </div>
+        </div>`;
+      }).join('')}</div>`;
+
+      container.querySelectorAll('.pub-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const d = JSON.parse(card.dataset.payload);
+          window.abrirImagenLightbox(d.url, d.fallback, d.titulo, d.desc);
+        });
+      });
+    }
+
+    // -----------------------------------------------------------------
+    // RPP
+    // -----------------------------------------------------------------
+    function renderRpp(rpps) {
+      const container = document.getElementById('rpp-container');
+      if (rpps.length === 0) {
+        container.innerHTML = `<div class="info-empty">El reglamento todavía no fue publicado.</div>`;
+        return;
+      }
+      container.innerHTML = `<div class="rpp-list">${rpps.map(r => `
+        <div class="rpp-card">
+          <div class="rpp-card-name">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            ${esc(r.nombre)}
+          </div>
+          <button class="btn-primary" data-url="${esc(drivePdfPreviewUrl(r.url_pdf))}" data-nombre="${esc(r.nombre)}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            Ver Reglamento
+          </button>
+        </div>`).join('')}</div>`;
+
+      container.querySelectorAll('.btn-primary').forEach(btn => {
+        btn.addEventListener('click', () => window.abrirPdfLightbox(btn.dataset.url, btn.dataset.nombre));
+      });
+    }
+
+    // -----------------------------------------------------------------
+    // Recorrido (GPX/KMZ) sobre mapa Leaflet
+    // -----------------------------------------------------------------
+    function parseGPX(xmlText) {
+      const dom = new DOMParser().parseFromString(xmlText, 'application/xml');
+      let pts = [...dom.getElementsByTagName('trkpt')].map(p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]);
+      if (pts.length === 0) pts = [...dom.getElementsByTagName('rtept')].map(p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]);
+      return pts.filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+    }
+    function parseKML(xmlText) {
+      const dom = new DOMParser().parseFromString(xmlText, 'application/xml');
+      const pts = [];
+      [...dom.getElementsByTagName('coordinates')].forEach(el => {
+        el.textContent.trim().split(/\s+/).forEach(tuple => {
+          const parts = tuple.split(',');
+          if (parts.length >= 2) {
+            const lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+            if (!isNaN(lat) && !isNaN(lon)) pts.push([lat, lon]);
+          }
+        });
+      });
+      return pts;
+    }
+    function trackDistanceKm(pts) {
+      const R = 6371;
+      let d = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const [lat1, lon1] = pts[i - 1], [lat2, lon2] = pts[i];
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        d += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+      return d;
+    }
+    async function loadTrackPoints(track) {
+      const { data } = supabase.storage.from('recorridos-gpx').getPublicUrl(track.storage_path);
+      const publicUrl = data.publicUrl;
+      if (track.formato === 'gpx') {
+        const resp = await fetch(publicUrl);
+        return parseGPX(await resp.text());
+      }
+      const resp = await fetch(publicUrl);
+      const blob = await resp.blob();
+      const zip = await JSZip.loadAsync(blob);
+      const kmlName = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
+      if (!kmlName) return [];
+      return parseKML(await zip.files[kmlName].async('text'));
+    }
+
+    let leafletMap = null;
+    let leafletLayer = null;
+
+    async function drawTrack(track, container) {
+      container.innerHTML = `<div class="info-empty">Cargando trazado…</div>`;
+      let pts;
+      try {
+        pts = await loadTrackPoints(track);
+      } catch (e) {
+        container.innerHTML = `<div class="info-empty">No se pudo leer el archivo ${track.formato.toUpperCase()}.</div>`;
+        return;
+      }
+      if (!pts || pts.length === 0) {
+        container.innerHTML = `<div class="info-empty">El archivo no contiene puntos de ruta válidos.</div>`;
+        return;
+      }
+
+      container.innerHTML = `<div id="recorrido-map"></div>
+        <div class="recorrido-stats">
+          <div class="recorrido-stat">Distancia aprox.: <b>${trackDistanceKm(pts).toFixed(2)} km</b></div>
+          <div class="recorrido-stat">Puntos: <b>${pts.length}</b></div>
+        </div>`;
+
+      if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+      leafletMap = L.map('recorrido-map', { scrollWheelZoom: false }).setView(pts[0], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+      }).addTo(leafletMap);
+      leafletLayer = L.polyline(pts, { color: '#E63946', weight: 4, opacity: 0.9 }).addTo(leafletMap);
+      L.circleMarker(pts[0], { radius: 7, color: '#00F5A0', fillColor: '#00F5A0', fillOpacity: 1, weight: 2 }).addTo(leafletMap).bindTooltip('Salida');
+      L.circleMarker(pts[pts.length - 1], { radius: 7, color: '#FFD166', fillColor: '#FFD166', fillOpacity: 1, weight: 2 }).addTo(leafletMap).bindTooltip('Llegada');
+      leafletMap.fitBounds(leafletLayer.getBounds(), { padding: [24, 24] });
+    }
+
+    function renderRecorrido(tracks) {
+      const container = document.getElementById('recorrido-container');
+      if (tracks.length === 0) {
+        container.innerHTML = `<div class="info-empty">El recorrido todavía no fue publicado.</div>`;
+        return;
+      }
+      const tabsHtml = tracks.length > 1
+        ? `<div class="recorrido-tabs">${tracks.map((t, i) => `<button class="recorrido-tab ${i === 0 ? 'active' : ''}" data-i="${i}">${esc(t.nombre)}</button>`).join('')}</div>`
+        : '';
+      container.innerHTML = `${tabsHtml}<div id="recorrido-map-wrap"></div>`;
+
+      const mapWrap = document.getElementById('recorrido-map-wrap');
+      drawTrack(tracks[0], mapWrap);
+
+      if (tracks.length > 1) {
+        container.querySelectorAll('.recorrido-tab').forEach(tab => {
+          tab.addEventListener('click', () => {
+            container.querySelectorAll('.recorrido-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            drawTrack(tracks[parseInt(tab.dataset.i)], mapWrap);
+          });
+        });
+      }
+    }
+
+    init();
+  </script>
+</body>
+
+</html>
