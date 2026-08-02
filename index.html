@@ -1161,6 +1161,14 @@
       .global-loader-title { font-size: 20px; }
     }
 
+    /* Ícono girando -- feedback de "actualizando" en el botón de refrescar
+       Tiempos (manual y automático), sin bloquear toda la pantalla como el
+       loader de arriba. */
+    .icon-spin {
+      animation: icon-spin-anim 0.8s linear infinite;
+    }
+    @keyframes icon-spin-anim { to { transform: rotate(360deg); } }
+
     /* ==========================================================
        MODALS
        ========================================================== */
@@ -2593,6 +2601,13 @@
             Buscar
           </button>
         </div>
+        <button type="button" id="btn-tiempos-refrescar"
+          style="display:inline-flex; align-items:center; gap:6px; background: rgba(0,245,160,0.08); color:var(--live-green); border: 1px solid rgba(0,245,160,0.35); border-radius:8px; padding:10px 14px; font-size:13px; font-weight:700; font-family: var(--font-body); cursor:pointer;"
+          onclick="window.refrescarTiempos()" title="Actualizar tiempos sin cerrar esta ventana">
+          <svg id="btn-tiempos-refrescar-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <span id="btn-tiempos-refrescar-label">Actualizar</span>
+        </button>
+        <span id="tiempos-ultima-actualizacion" style="font-size:11px; color:var(--text-dim); font-family: var(--font-mono);"></span>
         <button id="btn-tiempos-pdf"
           style="display:none; align-items:center; gap:8px; background: var(--accent-primary); color:#fff; border:none; border-radius:8px; padding:10px 18px; font-size:13px; font-weight:700; font-family: var(--font-body); cursor:pointer;"
           onclick="window.printTiempos()">
@@ -3197,6 +3212,7 @@
     };
 
     window.closeModal = function (id) {
+      if (id === 'modal-tiempos' && window.detenerAutoRefreshTiempos) window.detenerAutoRefreshTiempos();
       const el = document.getElementById(id);
       const wasActive = el && el.classList.contains('active');
       if (el) el.classList.remove('active');
@@ -3208,6 +3224,9 @@
     window.addEventListener('popstate', () => {
       // El navegador ya hizo el "atrás" (botón físico o gesto); solo queda
       // cerrar visualmente cualquier modal que haya quedado abierto.
+      if (document.getElementById('modal-tiempos')?.classList.contains('active') && window.detenerAutoRefreshTiempos) {
+        window.detenerAutoRefreshTiempos();
+      }
       document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
     });
 
@@ -4401,18 +4420,16 @@
       </div>`;
     };
 
-    window.openTiempos = async function (rallyId) {
-      window.openModalWithHistory('modal-tiempos');
-      const container = document.getElementById('tiempos-accordion');
-      container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
-      document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Categorías</option>';
-      document.getElementById('tiempos-num-resultado').innerHTML = '';
-      document.getElementById('tiempos-num-search').value = '';
-      document.getElementById('btn-tiempos-pdf').style.display = 'none';
-      window.tiemposVueltaMangaFilter = 'ALL';
-      window.showGlobalLoader();
+    // Trae los datos de Tiempos de un rally y reconstruye el acordeón --
+    // usada tanto para la apertura inicial del modal (openTiempos) como
+    // para refrescos posteriores sin cerrarlo (refrescarTiempos). Cuando
+    // preservarFiltroCategoria=true, no pisa la categoría que el usuario
+    // ya tenía elegida en el selector (si sigue existiendo entre las
+    // categorías con datos).
+    async function cargarDatosTiempos(rallyId, { preservarFiltroCategoria = false } = {}) {
+      const catSelect = document.getElementById('tiempos-cat-filter');
+      const filtroPrevio = preservarFiltroCategoria ? catSelect.value : 'ALL';
 
-      try {
       const rallyInfo = allRallies.find(r => r.id === rallyId);
       const esCircuito = rallyInfo?.tipo_evento === 'circuito';
 
@@ -4460,25 +4477,119 @@
 
       const mangas = mangasRes.data || [];
 
-      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito, mangas, penalMap, rallyNombre: rallyInfo?.nombre || '' };
+      window.tiemposAccordionData = { etapas, tiemposRally, shakeFilas, esCircuito, mangas, penalMap, rallyNombre: rallyInfo?.nombre || '', rallyId };
 
       const hayDatos = tiemposRally.length > 0 || (shakeFilas && shakeFilas.length > 0);
-      if (hayDatos) {
-        document.getElementById('btn-tiempos-pdf').style.display = 'inline-flex';
+      document.getElementById('btn-tiempos-pdf').style.display = hayDatos ? 'inline-flex' : 'none';
 
+      if (hayDatos) {
         const categorias = new Set();
         tiemposRally.forEach(t => categorias.add(t.inscripcion?.categoria?.nombre || 'Sin Categoría'));
         (shakeFilas || []).forEach(f => categorias.add(f.inscripcion?.categoria?.nombre || 'Sin Categoría'));
 
-        const catSelect = document.getElementById('tiempos-cat-filter');
         let catHtml = '<option value="ALL">Todas las Categorías</option>';
         [...categorias].sort().forEach(c => { catHtml += `<option value="${c}">${c}</option>`; });
         catSelect.innerHTML = catHtml;
+        if (preservarFiltroCategoria && categorias.has(filtroPrevio)) catSelect.value = filtroPrevio;
       }
 
       window.filtrarAccordionTiempos();
+    }
+
+    window.openTiempos = async function (rallyId) {
+      window.openModalWithHistory('modal-tiempos');
+      const container = document.getElementById('tiempos-accordion');
+      container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
+      document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Categorías</option>';
+      document.getElementById('tiempos-num-resultado').innerHTML = '';
+      document.getElementById('tiempos-num-search').value = '';
+      document.getElementById('btn-tiempos-pdf').style.display = 'none';
+      document.getElementById('tiempos-ultima-actualizacion').textContent = '';
+      window.tiemposVueltaMangaFilter = 'ALL';
+      window.showGlobalLoader();
+
+      try {
+        await cargarDatosTiempos(rallyId, { preservarFiltroCategoria: false });
+        window.marcarTiemposActualizados();
+        window.iniciarAutoRefreshTiempos();
       } finally {
         window.hideGlobalLoader();
+      }
+    };
+
+    window.marcarTiemposActualizados = function () {
+      const el = document.getElementById('tiempos-ultima-actualizacion');
+      if (el) el.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    };
+
+    // Refresca los datos del modal de Tiempos SIN cerrarlo -- ni volver a
+    // abrir el loader de pantalla completa -- para que quien lo esté
+    // mirando en vivo pueda seguir leyendo mientras se actualiza. Recuerda
+    // qué paneles del acordeón estaban abiertos y los vuelve a abrir
+    // después de reconstruir el HTML, así no se le cierra todo de golpe
+    // cada vez que llega un tiempo nuevo. opts.silencioso=true (usado por
+    // el auto-refresh) evita mover el foco/deshabilitar el botón y no hace
+    // nada si la pestaña está en segundo plano -- no tiene sentido gastar
+    // una consulta a Supabase actualizando algo que nadie está mirando,
+    // que con miles de pestañas abiertas suma rápido.
+    window.refrescarTiempos = async function (opts = {}) {
+      const data = window.tiemposAccordionData;
+      const modal = document.getElementById('modal-tiempos');
+      if (!data || !data.rallyId || !modal.classList.contains('active')) return;
+      if (opts.silencioso && document.visibilityState !== 'visible') return;
+
+      const btn = document.getElementById('btn-tiempos-refrescar');
+      const icon = document.getElementById('btn-tiempos-refrescar-icon');
+      const label = document.getElementById('btn-tiempos-refrescar-label');
+      if (!opts.silencioso) {
+        if (btn) btn.disabled = true;
+        if (icon) icon.classList.add('icon-spin');
+        if (label) label.textContent = 'Actualizando...';
+      }
+
+      const abiertos = Array.from(document.querySelectorAll('#tiempos-accordion .acc-header.open'))
+        .map(el => el.id.replace('acc-header-', ''));
+
+      try {
+        await cargarDatosTiempos(data.rallyId, { preservarFiltroCategoria: true });
+        abiertos.forEach(id => {
+          const header = document.getElementById('acc-header-' + id);
+          if (header && !header.classList.contains('open')) window.toggleAcordeon(id);
+        });
+        window.marcarTiemposActualizados();
+      } catch (err) {
+        if (!opts.silencioso) window.toast ? window.toast('No se pudo actualizar: ' + err.message, 'error') : console.error(err);
+      } finally {
+        if (!opts.silencioso) {
+          if (btn) btn.disabled = false;
+          if (icon) icon.classList.remove('icon-spin');
+          if (label) label.textContent = 'Actualizar';
+        }
+      }
+    };
+
+    // Auto-refresh en segundo plano mientras el modal de Tiempos está
+    // abierto -- pensado para miles de espectadores en vivo, así que usa
+    // consultas REST normales (no un canal de Supabase Realtime por
+    // usuario, que a esa escala agotaría el límite de conexiones
+    // concurrentes del proyecto y terminaría siendo MÁS lento, no menos) y
+    // un intervalo conservador. Se detiene apenas se cierra el modal (ver
+    // closeModal/popstate) y cada disparo se salta solo si la pestaña está
+    // oculta (ver refrescarTiempos), para no sumar carga de nadie que no
+    // esté mirando en ese momento.
+    const TIEMPOS_AUTO_REFRESH_MS = 25000;
+
+    window.iniciarAutoRefreshTiempos = function () {
+      window.detenerAutoRefreshTiempos();
+      window.tiemposAutoRefreshInterval = setInterval(() => {
+        window.refrescarTiempos({ silencioso: true });
+      }, TIEMPOS_AUTO_REFRESH_MS);
+    };
+
+    window.detenerAutoRefreshTiempos = function () {
+      if (window.tiemposAutoRefreshInterval) {
+        clearInterval(window.tiemposAutoRefreshInterval);
+        window.tiemposAutoRefreshInterval = null;
       }
     };
 
