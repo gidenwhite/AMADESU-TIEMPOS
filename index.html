@@ -998,7 +998,8 @@
          escritorio; en un celular angosto eso los hace desbordar. */
       #stats-pilot-search-wrap,
       #stats-pilot-search,
-      #tiempos-cat-filter {
+      #tiempos-cat-filter,
+      #tiempos-camp-filter {
         min-width: 0 !important;
         width: 100% !important;
       }
@@ -1667,6 +1668,28 @@
       letter-spacing: 0.08em;
       width: fit-content;
     }
+
+    /* Chips de Campeonato (NAL/DEP/MUN) en la tarjeta de piloto -- un
+       piloto puede estar en varios a la vez, así que van en fila, no como
+       badge único. */
+    .pilot-camp-badges {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .pilot-camp-chip {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .pilot-camp-chip.nal { background: rgba(0, 229, 255, 0.12); color: var(--status-upcoming); border: 1px solid rgba(0, 229, 255, 0.3); }
+    .pilot-camp-chip.dep { background: rgba(0, 245, 160, 0.12); color: var(--live-green); border: 1px solid rgba(0, 245, 160, 0.3); }
+    .pilot-camp-chip.mun { background: rgba(255, 209, 102, 0.12); color: var(--status-finished); border: 1px solid rgba(255, 209, 102, 0.3); }
 
     .pilot-card-content {
       position: relative;
@@ -2552,6 +2575,12 @@
         <select id="pilotos-filter" class="custom-select" style="width: 200px;">
           <option value="TODAS">TODAS LAS CLASES</option>
         </select>
+        <select id="pilotos-campeonato-filter" class="custom-select" style="width: 190px;">
+          <option value="TODOS">TODOS LOS CAMPEONATOS</option>
+          <option value="NAL">NACIONAL</option>
+          <option value="DEP">DEPARTAMENTAL</option>
+          <option value="MUN">MUNICIPAL</option>
+        </select>
         <select id="pilotos-sort" class="custom-select" style="width: 195px;">
           <option value="numero">Ordenar por Número</option>
           <option value="piloto">Ordenar por Piloto (A-Z)</option>
@@ -2585,6 +2614,13 @@
         <select id="tiempos-cat-filter" class="pilot-selector" style="width:auto; min-width:220px; margin-bottom:0;"
           onchange="window.filtrarAccordionTiempos()">
           <option value="ALL">Todas las Categorías</option>
+        </select>
+        <select id="tiempos-camp-filter" class="pilot-selector" style="width:auto; min-width:190px; margin-bottom:0;"
+          onchange="window.filtrarAccordionTiempos()">
+          <option value="ALL">Todos los Campeonatos</option>
+          <option value="NAL">Nacional</option>
+          <option value="DEP">Departamental</option>
+          <option value="MUN">Municipal</option>
         </select>
         <div style="display:flex; gap:6px; align-items:center;">
           <input type="text" id="tiempos-num-search" class="pilot-selector" style="width:160px; margin-bottom:0;"
@@ -3343,12 +3379,13 @@
 
       grid.innerHTML = Array(6).fill(pilotSkeletonCard()).join('');
       filter.innerHTML = '<option value="TODAS">TODAS LAS CLASES</option>';
+      document.getElementById('pilotos-campeonato-filter').value = 'TODOS';
       document.getElementById('pilotos-count').innerText = '';
       document.getElementById('pilotos-search').value = '';
       document.getElementById('pilotos-search-clear').style.display = 'none';
       document.getElementById('pilotos-sort').value = 'numero';
 
-      const { data, error } = await supabase.schema('rally').from('inscripciones').select('numero, piloto:pilotos(nombre, apellido, pais, celular), navegante:navegantes(nombre, apellido, pais, celular), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre), asociacion:asociaciones(nombre), manga:mangas(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
+      const { data, error } = await supabase.schema('rally').from('inscripciones').select('numero, campeonato_nacional, campeonato_departamental, campeonato_municipal, piloto:pilotos(nombre, apellido, pais, celular), navegante:navegantes(nombre, apellido, pais, celular), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre), asociacion:asociaciones(nombre), manga:mangas(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
 
       if (error) {
         grid.innerHTML = `<div class="no-results">
@@ -3382,6 +3419,10 @@
       renderPilotosCards(e.target.value);
     });
 
+    document.getElementById('pilotos-campeonato-filter').addEventListener('change', () => {
+      renderPilotosCards(document.getElementById('pilotos-filter').value);
+    });
+
     document.getElementById('pilotos-search').addEventListener('input', () => {
       renderPilotosCards(document.getElementById('pilotos-filter').value);
     });
@@ -3399,6 +3440,7 @@
     window.limpiarFiltrosPilotos = function () {
       document.getElementById('pilotos-search').value = '';
       document.getElementById('pilotos-filter').value = 'TODAS';
+      document.getElementById('pilotos-campeonato-filter').value = 'TODOS';
       renderPilotosCards('TODAS');
     };
 
@@ -3417,15 +3459,19 @@
     const iconWrenchSmall = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2z"></path></svg>`;
     const iconShieldSmall = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"></path></svg>`;
 
+    const PILOTOS_CAMPEONATO_CAMPO = { NAL: 'campeonato_nacional', DEP: 'campeonato_departamental', MUN: 'campeonato_municipal' };
+
     function renderPilotosCards(categoriaFiltro) {
       const grid = document.getElementById('pilotos-grid');
 
       const searchVal = (document.getElementById('pilotos-search')?.value || '').trim().toLowerCase();
       const sortVal = document.getElementById('pilotos-sort')?.value || 'numero';
+      const campeonatoFiltro = document.getElementById('pilotos-campeonato-filter')?.value || 'TODOS';
       document.getElementById('pilotos-search-clear').style.display = searchVal ? 'inline-flex' : 'none';
 
       let filtered = currentPilotosData.filter(ins => {
         if (categoriaFiltro !== 'TODAS' && ins.categoria?.nombre !== categoriaFiltro) return false;
+        if (campeonatoFiltro !== 'TODOS' && !ins[PILOTOS_CAMPEONATO_CAMPO[campeonatoFiltro]]) return false;
         if (searchVal) {
           const numMatch = String(ins.numero).toLowerCase().includes(searchVal);
           const catMatch = (ins.categoria?.nombre || '').toLowerCase().includes(searchVal);
@@ -3451,7 +3497,7 @@
       document.getElementById('pilotos-count').innerText = `(${filtered.length})`;
 
       if (filtered.length === 0) {
-        const hayFiltroActivo = !!searchVal || categoriaFiltro !== 'TODAS';
+        const hayFiltroActivo = !!searchVal || categoriaFiltro !== 'TODAS' || campeonatoFiltro !== 'TODOS';
         grid.innerHTML = `<div class="no-results">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <strong>${hayFiltroActivo ? 'Sin resultados' : 'No hay pilotos en esta clase'}</strong>
@@ -3480,6 +3526,11 @@
               <div>
                 <div class="pilot-number-plate"><span class="pilot-number-plate-hash">#</span>${ins.numero}</div>
                 ${ins.manga ? `<div class="pilot-manga-badge">${ins.manga.nombre}</div>` : ''}
+                ${(ins.campeonato_nacional || ins.campeonato_departamental || ins.campeonato_municipal) ? `<div class="pilot-camp-badges">
+                  ${ins.campeonato_nacional ? '<span class="pilot-camp-chip nal">NAL.</span>' : ''}
+                  ${ins.campeonato_departamental ? '<span class="pilot-camp-chip dep">DEP.</span>' : ''}
+                  ${ins.campeonato_municipal ? '<span class="pilot-camp-chip mun">MUN.</span>' : ''}
+                </div>` : ''}
               </div>
               <div class="pilot-cat-badge">${c}</div>
             </div>
@@ -3730,7 +3781,7 @@
       if (!recorrido) return null;
 
       const { data: tiemposRaw, error } = await supabase.schema('rally').from('tiempos')
-        .select('recorrido_id, inscripcion_id, vuelta, updated_at, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
+        .select('recorrido_id, inscripcion_id, vuelta, updated_at, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, campeonato_nacional, campeonato_departamental, campeonato_municipal, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
         .eq('recorrido_id', recorrido.id).is('deleted_at', null);
       if (error || !tiemposRaw || tiemposRaw.length === 0) return null;
 
@@ -4197,8 +4248,15 @@
 
     // mangaFilter solo se aplica dentro del panel "Vueltas" (ver más abajo) --
     // Clasificación/Shakedown y General siguen mostrando todas las mangas juntas.
-    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, mangaFilter, penalMap) {
-      const pasaFiltro = (ins) => !catFilter || catFilter === 'ALL' || (ins?.categoria?.nombre || 'Sin Categoría') === catFilter;
+    // NAL/DEP/MUN -> nombre real de la columna booleana en rally.inscripciones.
+    const TIEMPOS_CAMPEONATO_CAMPO = { NAL: 'campeonato_nacional', DEP: 'campeonato_departamental', MUN: 'campeonato_municipal' };
+
+    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, mangaFilter, penalMap, campFilter) {
+      const pasaFiltro = (ins) => {
+        if (catFilter && catFilter !== 'ALL' && (ins?.categoria?.nombre || 'Sin Categoría') !== catFilter) return false;
+        if (campFilter && campFilter !== 'ALL' && !ins?.[TIEMPOS_CAMPEONATO_CAMPO[campFilter]]) return false;
+        return true;
+      };
 
       const porRecorridoInscripcion = {};
       tiemposRally.forEach(t => {
@@ -4362,7 +4420,8 @@
       if (!window.tiemposAccordionData) return;
       const { etapas, tiemposRally, shakeFilas, esCircuito, mangas, penalMap } = window.tiemposAccordionData;
       const catFilter = document.getElementById('tiempos-cat-filter').value;
-      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, window.tiemposVueltaMangaFilter, penalMap);
+      const campFilter = document.getElementById('tiempos-camp-filter').value;
+      document.getElementById('tiempos-accordion').innerHTML = construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, window.tiemposVueltaMangaFilter, penalMap, campFilter);
     };
 
     // Busca por Nº de coche O por nombre de piloto/navegante entre todos los tiempos
@@ -4454,7 +4513,7 @@
       if (recorridoIds.length > 0) {
         const [tiemposRes, penalRes] = await Promise.all([
           supabase.schema('rally').from('tiempos')
-            .select('id, updated_at, recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
+            .select('id, updated_at, recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, campeonato_nacional, campeonato_departamental, campeonato_municipal, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
             .in('recorrido_id', recorridoIds).is('deleted_at', null),
           // Solo hace falta para circuitos: un PE de una sola vuelta usa tiempo_neto (ya
           // trae la penalización), pero uno de varias vueltas suma tiempo_bruto por vuelta
@@ -4501,6 +4560,7 @@
       const container = document.getElementById('tiempos-accordion');
       container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
       document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Categorías</option>';
+      document.getElementById('tiempos-camp-filter').value = 'ALL';
       document.getElementById('tiempos-num-resultado').innerHTML = '';
       document.getElementById('tiempos-num-search').value = '';
       document.getElementById('btn-tiempos-pdf').style.display = 'none';
