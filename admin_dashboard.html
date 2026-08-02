@@ -3536,6 +3536,23 @@
       window.globalAmbitosCampeonato = data || [];
     }
 
+    // "Todos" es una casilla más (sincronizada con las individuales, no un
+    // valor que se guarde aparte): marcarla tilda todas las de abajo, y si
+    // el admin las va tildando una por una, "Todos" se marca sola apenas
+    // quedan todas tildadas. Al guardar, esto termina siendo exactamente lo
+    // mismo que marcar cada campeonato a mano (misma lista de ids).
+    window.toggleAmbitosCampeonatoTodos = function(contexto, checked) {
+      const name = contexto === 'create' ? 'create-rally-ambito-campeonato' : 'rally-ambito-campeonato';
+      document.querySelectorAll(`input[name="${name}"]`).forEach(cb => { cb.checked = checked; });
+    };
+
+    window.syncAmbitosCampeonatoTodos = function(contexto) {
+      const name = contexto === 'create' ? 'create-rally-ambito-campeonato' : 'rally-ambito-campeonato';
+      const todosBox = document.getElementById(contexto === 'create' ? 'create-ambito-campeonato-todos' : 'edit-ambito-campeonato-todos');
+      const boxes = Array.from(document.querySelectorAll(`input[name="${name}"]`));
+      if (todosBox) todosBox.checked = boxes.length > 0 && boxes.every(cb => cb.checked);
+    };
+
     window.renderCreateAmbitosCampeonatoCheckboxes = function(checkedIds = null) {
       const container = document.getElementById('create-ambitos-campeonato-container');
       if (!container) return;
@@ -3543,14 +3560,21 @@
         container.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">No hay campeonatos globales en el sistema.</span>';
         return;
       }
-      container.innerHTML = window.globalAmbitosCampeonato.map(a => {
+      const todosMarcado = window.globalAmbitosCampeonato.every(a => checkedIds ? checkedIds.includes(a.id) : true);
+      let html = `
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px; font-weight: 700; background: rgba(230,57,70,0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(230,57,70,0.35);">
+          <input type="checkbox" id="create-ambito-campeonato-todos" ${todosMarcado ? 'checked' : ''} onchange="window.toggleAmbitosCampeonatoTodos('create', this.checked)"> <span>Todos</span>
+        </label>
+      `;
+      html += window.globalAmbitosCampeonato.map(a => {
         const isChecked = checkedIds ? checkedIds.includes(a.id) : true;
         return `
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
-            <input type="checkbox" name="create-rally-ambito-campeonato" value="${a.id}" ${isChecked ? 'checked' : ''}> <span>${a.codigo} — ${a.nombre}</span>
+            <input type="checkbox" name="create-rally-ambito-campeonato" value="${a.id}" ${isChecked ? 'checked' : ''} onchange="window.syncAmbitosCampeonatoTodos('create')"> <span>${a.codigo} — ${a.nombre}</span>
           </label>
         `;
       }).join('');
+      container.innerHTML = html;
     };
 
     window.renderEditAmbitosCampeonatoCheckboxes = function(checkedIds) {
@@ -3560,14 +3584,21 @@
         container.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">No hay campeonatos globales en el sistema.</span>';
         return;
       }
-      container.innerHTML = window.globalAmbitosCampeonato.map(a => {
+      const todosMarcado = window.globalAmbitosCampeonato.every(a => (checkedIds || []).includes(a.id));
+      let html = `
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px; font-weight: 700; background: rgba(230,57,70,0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(230,57,70,0.35);">
+          <input type="checkbox" id="edit-ambito-campeonato-todos" ${todosMarcado ? 'checked' : ''} onchange="window.toggleAmbitosCampeonatoTodos('edit', this.checked)"> <span>Todos</span>
+        </label>
+      `;
+      html += window.globalAmbitosCampeonato.map(a => {
         const isChecked = (checkedIds || []).includes(a.id);
         return `
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
-            <input type="checkbox" name="rally-ambito-campeonato" value="${a.id}" ${isChecked ? 'checked' : ''}> ${a.codigo} — ${a.nombre}
+            <input type="checkbox" name="rally-ambito-campeonato" value="${a.id}" ${isChecked ? 'checked' : ''} onchange="window.syncAmbitosCampeonatoTodos('edit')"> ${a.codigo} — ${a.nombre}
           </label>
         `;
       }).join('');
+      container.innerHTML = html;
     };
 
     async function cargarAmbitosCampeonatoGlobales() {
