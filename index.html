@@ -5,23 +5,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AMADESU RALLYS — Resultados y Cronometraje en Vivo</title>
-  <meta name="description" content="Sigue en vivo las carreras de rally: clasificaciones por prueba especial, tiempos de pilotos, velocidades promedio y resultados finales por categoría." />
+  <meta name="description"
+    content="Sigue en vivo las carreras de rally: clasificaciones por prueba especial, tiempos de pilotos, velocidades promedio y resultados finales por categoría." />
   <meta name="robots" content="index, follow" />
   <!-- Reemplaza [TU-DOMINIO] por el dominio real donde se publique el sitio -->
   <link rel="canonical" href="https://[TU-DOMINIO]/" />
 
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23E63946'/%3E%3Cpath d='M6 16s1-1 3.5-1 4 1.5 6.5 1.5 3-1 3-1V6s-.8.8-3 .8-4-1.5-6.5-1.5-3.5 1-3.5 1z' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='6' y1='19' x2='6' y2='6' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23E63946'/%3E%3Cpath d='M6 16s1-1 3.5-1 4 1.5 6.5 1.5 3-1 3-1V6s-.8.8-3 .8-4-1.5-6.5-1.5-3.5 1-3.5 1z' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='6' y1='19' x2='6' y2='6' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E" />
 
   <!-- Open Graph / redes sociales -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="AMADESU RALLYS" />
   <meta property="og:title" content="AMADESU RALLYS — Resultados y Cronometraje en Vivo" />
-  <meta property="og:description" content="Sigue en vivo las carreras de rally: clasificaciones por prueba especial, tiempos de pilotos, velocidades promedio y resultados finales por categoría." />
+  <meta property="og:description"
+    content="Sigue en vivo las carreras de rally: clasificaciones por prueba especial, tiempos de pilotos, velocidades promedio y resultados finales por categoría." />
   <meta property="og:locale" content="es_BO" />
   <meta property="og:url" content="https://[TU-DOMINIO]/" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="AMADESU RALLYS — Resultados y Cronometraje en Vivo" />
-  <meta name="twitter:description" content="Sigue en vivo las carreras de rally: clasificaciones, tiempos y resultados por categoría." />
+  <meta name="twitter:description"
+    content="Sigue en vivo las carreras de rally: clasificaciones, tiempos y resultados por categoría." />
 
   <script type="application/ld+json">
   {
@@ -36,14 +40,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Chakra+Petch:wght@400;500;600;700&family=Russo+One&display=swap"
     rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <!-- Generador de PDF real para "Descargar PDF" en Tiempos: arma el documento
        con texto/tablas vectoriales (no una foto de la pantalla) y lo descarga
        directo, sin pasar por el diálogo de impresión del navegador. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"
+    defer></script>
 
   <style>
     /* ==========================================================
@@ -62,11 +67,11 @@
       --accent-primary: #E63946;
       /* Rojo carrera — marca y accion primaria, nunca decorativo */
       --accent-hover: #ff4d5a;
-      --accent-glow: rgba(230, 57, 70, 0.4);
+      --accent-glow: rgba(230, 57, 70, 0.22);
 
       --live-green: #00F5A0;
       /* Bandera verde / en vivo */
-      --live-glow: rgba(0, 245, 160, 0.3);
+      --live-glow: rgba(0, 245, 160, 0.18);
 
       --status-finished: #FFD166;
       /* Oro — podio / finalizado */
@@ -86,18 +91,36 @@
       --border-subtle: rgba(255, 255, 255, 0.06);
       --border-strong: rgba(255, 255, 255, 0.15);
 
-      /* Tipografia: familia condensada para display/UI densa,
-         misma superfamilia para body (cohesion), mono solo para datos. */
-      --font-body: 'Barlow', sans-serif;
-      --font-display: 'Barlow Condensed', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      /* Tipografia: familia condensada para titulares grandes; Chakra
+         Petch (alternativa gratuita a TT Octosquares, fuente paga no
+         disponible en Google Fonts) para todo el resto -- texto de cuerpo,
+         labels, tablas, badges y números -- así el look "cuadrado/técnico
+         de carreras" queda consistente en toda la interfaz, no solo en
+         los números. */
+      --font-body: 'Chakra Petch', sans-serif;
+      /* "Race Sport" (Namara Creative Studio) es de uso personal, no
+         comercial -- AMADESU RALLYS es un sitio público, así que se usa
+         "Russo One" en su lugar: mismo espíritu techno/racing "con fuerza",
+         gratis para uso comercial (Google Fonts, licencia OFL). */
+      --font-display: 'Russo One', 'Barlow Condensed', sans-serif;
+      --font-mono: 'Chakra Petch', monospace;
 
       /* Espaciado 8pt */
-      --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
-      --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-16: 64px;
+      --sp-1: 4px;
+      --sp-2: 8px;
+      --sp-3: 12px;
+      --sp-4: 16px;
+      --sp-6: 24px;
+      --sp-8: 32px;
+      --sp-12: 48px;
+      --sp-16: 64px;
 
       /* Escala de z-index documentada */
-      --z-sticky: 10; --z-dropdown: 20; --z-modal: 100; --z-confirm: 5000; --z-toast: 9999;
+      --z-sticky: 10;
+      --z-dropdown: 20;
+      --z-modal: 100;
+      --z-confirm: 5000;
+      --z-toast: 9999;
     }
 
     * {
@@ -132,31 +155,6 @@
 
     ::-webkit-scrollbar-thumb:hover {
       background: var(--text-dim);
-    }
-
-    /* Ambient Glow Effect */
-    .bg-glow {
-      position: fixed;
-      top: -200px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 800px;
-      height: 800px;
-      background: radial-gradient(circle, rgba(230, 57, 70, 0.15) 0%, transparent 60%);
-      filter: blur(100px);
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    /* Film grain — breaks up flat dark surfaces, adds tactile texture */
-    .bg-grain {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      opacity: 0.05;
-      mix-blend-mode: overlay;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     }
 
     /* ==========================================================
@@ -277,6 +275,7 @@
       border-bottom: 1px solid var(--border-subtle);
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
     }
+
     .inicio-inner {
       max-width: 1600px;
       margin: 0 auto;
@@ -285,10 +284,12 @@
       gap: 32px;
       flex-wrap: wrap;
     }
+
     .inicio-text {
       flex: 1;
       min-width: 280px;
     }
+
     .inicio-subtitle {
       color: var(--accent-primary);
       font-family: var(--font-mono);
@@ -298,6 +299,7 @@
       letter-spacing: 0.08em;
       margin-bottom: 10px;
     }
+
     .inicio-title {
       font-family: var(--font-display);
       font-size: 32px;
@@ -306,6 +308,7 @@
       color: var(--text-main);
       margin-bottom: 10px;
     }
+
     .inicio-desc {
       color: var(--text-muted);
       font-size: 15px;
@@ -313,6 +316,7 @@
       max-width: 760px;
       white-space: pre-line;
     }
+
     .inicio-img {
       width: 280px;
       height: 170px;
@@ -321,9 +325,16 @@
       border: 1px solid var(--border-subtle);
       flex-shrink: 0;
     }
+
     @media (max-width: 720px) {
-      .inicio-section { padding: 24px 16px; }
-      .inicio-img { width: 100%; height: 180px; }
+      .inicio-section {
+        padding: 24px 16px;
+      }
+
+      .inicio-img {
+        width: 100%;
+        height: 180px;
+      }
     }
 
     /* ==========================================================
@@ -331,17 +342,13 @@
        ========================================================== */
     .status-strip {
       position: relative;
-      overflow: hidden;
-      padding: 28px 40px;
+      padding: 26px 40px;
       border-bottom: 1px solid var(--border-subtle);
-      background:
-        repeating-linear-gradient(-45deg, rgba(230, 57, 70, 0.05) 0 2px, transparent 2px 40px),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+      background: var(--bg-base);
     }
 
     .status-strip-inner {
       position: relative;
-      z-index: 1;
       max-width: 1600px;
       margin: 0 auto;
       display: flex;
@@ -349,18 +356,6 @@
       justify-content: space-between;
       gap: 24px;
       flex-wrap: wrap;
-    }
-
-    .status-strip::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: -10%;
-      width: 60%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(230, 57, 70, 0.06));
-      clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
-      pointer-events: none;
     }
 
     .status-headline {
@@ -382,6 +377,25 @@
       background-size: 6px 6px;
       border-radius: 3px;
       opacity: 0.6;
+      animation: checkerWave 2.6s ease-in-out infinite;
+      transform-origin: 50% 85%;
+    }
+
+    /* Bandera a cuadros "ondeando" -- un balanceo sutil de rotación/skew en
+       vez de quedarse estática, para reforzar la idea de "esto está
+       pasando ahora" en el encabezado del Centro de Resultados. */
+    @keyframes checkerWave {
+
+      0%,
+      100% {
+        transform: rotate(0deg) skewY(0deg);
+        opacity: 0.55;
+      }
+
+      50% {
+        transform: rotate(-6deg) skewY(-4deg);
+        opacity: 0.85;
+      }
     }
 
     .status-tagline {
@@ -413,7 +427,6 @@
 
     .status-stat.is-live .status-stat-value {
       color: var(--live-green);
-      text-shadow: 0 0 12px var(--live-glow);
     }
 
     .status-stat-label {
@@ -424,6 +437,49 @@
       color: var(--text-dim);
     }
 
+    /* Mini tacómetro: arco que llena con la proporción de rallys EN VIVO
+       sobre el total -- refuerza los 3 números de al lado con una lectura
+       gráfica instantánea (ver JS: updateStatusStrip -> statusGaugeSet). */
+    .status-gauge {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status-gauge svg:first-child {
+      transform: rotate(-90deg);
+    }
+
+    .status-gauge-track {
+      fill: none;
+      stroke: var(--border-strong);
+      stroke-width: 4;
+    }
+
+    .status-gauge-fill {
+      fill: none;
+      stroke: var(--live-green);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-dasharray: 113.1;
+      stroke-dashoffset: 113.1;
+      transition: stroke-dashoffset 0.9s cubic-bezier(0.22, 0.9, 0.32, 1);
+      filter: drop-shadow(0 0 4px var(--live-glow));
+    }
+
+    .status-gauge-icon {
+      position: absolute;
+      color: var(--text-dim);
+    }
+
+    .status-gauge.has-live .status-gauge-icon {
+      color: var(--live-green);
+    }
+
     @media (max-width: 768px) {
       .status-strip {
         padding: 20px;
@@ -431,6 +487,16 @@
 
       .status-stats {
         gap: 20px;
+      }
+
+      .status-gauge {
+        width: 36px;
+        height: 36px;
+      }
+
+      .status-gauge svg:first-child {
+        width: 36px;
+        height: 36px;
       }
     }
 
@@ -456,15 +522,23 @@
     /* ==========================================================
        RALLY CARD
        ========================================================== */
+    /* Entrada más "motorsport": arranque rápido con un leve overshoot de
+       escala (como una aguja de tacómetro que se pasa un poco antes de
+       asentar), en vez de un ease-out genérico sin rebote. */
     @keyframes cardReveal {
       from {
         opacity: 0;
-        transform: translateY(18px);
+        transform: translateY(22px) scale(0.96);
+      }
+
+      70% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.008);
       }
 
       to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
       }
     }
 
@@ -477,13 +551,13 @@
       flex-direction: column;
       transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
       position: relative;
-      animation: cardReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-      animation-delay: calc(var(--i, 0) * 70ms);
+      animation: cardReveal 0.45s cubic-bezier(0.22, 0.9, 0.32, 1) backwards;
+      animation-delay: calc(min(var(--i, 0), 10) * 65ms);
     }
 
     .rally-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
       border-color: var(--border-strong);
     }
 
@@ -502,23 +576,7 @@
     }
 
     .rally-card:hover .card-banner img {
-      transform: scale(1.05);
-    }
-
-    /* Diagonal shine sweep across the banner on hover — livery-style highlight */
-    .card-banner::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      z-index: 3;
-      background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%);
-      transform: translateX(-120%);
-      transition: transform 0.7s ease;
-      pointer-events: none;
-    }
-
-    .rally-card:hover .card-banner::before {
-      transform: translateX(120%);
+      transform: scale(1.03);
     }
 
     /* Gradient overlay for text readability */
@@ -529,26 +587,43 @@
       background: linear-gradient(to top, var(--bg-surface) 0%, transparent 60%);
     }
 
-    .card-flag-corner {
+    /* Barrido de "señal en vivo" sobre el banner de rallys en curso -- un
+       destello diagonal que cruza la imagen cada pocos segundos, como el
+       barrido de una transmisión en directo. Solo en tarjetas .is-live;
+       pinta por debajo del overlay de arriba (mismo elemento, ::before
+       pinta antes que ::after) así nunca compite con la legibilidad del
+       título. */
+    .rally-card.is-live .card-banner::before {
+      content: '';
       position: absolute;
-      top: 0;
-      right: 0;
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 14px 7px 20px;
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      clip-path: polygon(20px 0, 100% 0, 100% 100%, 0 100%);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      letter-spacing: 0.04em;
+      inset: 0;
+      background: linear-gradient(100deg, transparent 42%, rgba(0, 245, 160, 0.16) 50%, transparent 58%);
+      background-size: 260% 100%;
+      animation: liveScan 3.4s linear infinite;
+      pointer-events: none;
     }
 
-    .card-flag-corner img {
+    @keyframes liveScan {
+      0% {
+        background-position: 140% 0;
+      }
+
+      100% {
+        background-position: -40% 0;
+      }
+    }
+
+    /* Bandera de país: un chip más dentro de .card-badges (misma fila con
+       flex-wrap), no una pieza aparte con posición absoluta -- así nunca
+       compite por el mismo espacio que el resto de los badges ni los tapa
+       cuando el nombre del país es largo. */
+    .badge-flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-flag img {
       height: 12px;
       width: auto;
       border-radius: 2px;
@@ -585,64 +660,113 @@
     @media (prefers-reduced-motion: reduce) {
 
       .rally-card,
-      .skeleton-shimmer,
-      .card-banner::before {
+      .skeleton-shimmer {
         animation: none !important;
         transition: none !important;
       }
     }
 
+    /* Una sola barra plana con divisores finos en vez de "pills" de vidrio
+       sueltos -- misma información, menos ruido visual (look de lower-third
+       de transmisión en vivo, no de HUD de videojuego). */
     .card-badges {
       position: absolute;
-      top: 16px;
-      left: 16px;
-      right: 16px;
-      display: flex;
-      gap: 8px;
+      top: 14px;
+      left: 14px;
+      right: 14px;
       z-index: 2;
-      align-items: center;
+      display: flex;
+      align-items: stretch;
       flex-wrap: wrap;
+      width: fit-content;
+      max-width: calc(100% - 28px);
+      background: rgba(8, 8, 8, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 7px;
+      overflow: hidden;
     }
 
     .badge {
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 11px;
+      display: flex;
+      align-items: center;
+      padding: 7px 12px;
+      font-size: 10.5px;
       font-family: var(--font-mono);
-      font-weight: 800;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
+      letter-spacing: 0.08em;
+      color: var(--text-2);
+      white-space: nowrap;
+    }
+
+    .badge+.badge {
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .badge-rally {
-      border-color: rgba(255, 255, 255, 0.4);
+      color: var(--text-main);
     }
 
     .badge-status.vivo {
       color: var(--live-green);
-      border-color: rgba(0, 245, 160, 0.3);
-      box-shadow: 0 0 10px var(--live-glow);
-      display: flex;
-      align-items: center;
       gap: 6px;
     }
 
+    /* Mini ecualizador de "señal en vivo" junto al texto VIVO -- 3 barritas
+       que suben y bajan fuera de fase, como un medidor de transmisión. */
+    .live-eq {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 9px;
+      margin-left: 2px;
+    }
+
+    .live-eq i {
+      display: block;
+      width: 2px;
+      background: var(--live-green);
+      border-radius: 1px;
+      animation: liveEqBar 0.9s ease-in-out infinite;
+    }
+
+    .live-eq i:nth-child(1) {
+      animation-delay: -0.6s;
+    }
+
+    .live-eq i:nth-child(2) {
+      animation-delay: -0.3s;
+    }
+
+    .live-eq i:nth-child(3) {
+      animation-delay: 0s;
+    }
+
+    @keyframes liveEqBar {
+
+      0%,
+      100% {
+        height: 3px;
+      }
+
+      50% {
+        height: 9px;
+      }
+    }
+
     .pulse-dot {
+      position: relative;
       width: 6px;
       height: 6px;
       background: var(--live-green);
       border-radius: 50%;
       animation: pulse-anim 1.5s infinite;
+      flex-shrink: 0;
     }
 
     @keyframes pulse-anim {
       0% {
-        box-shadow: 0 0 0 0 rgba(0, 245, 160, 0.7);
+        box-shadow: 0 0 0 0 rgba(0, 245, 160, 0.5);
       }
 
       70% {
@@ -654,14 +778,38 @@
       }
     }
 
+    /* Halo tipo "radar" detrás del punto de pulso -- un segundo anillo,
+       más grande y más lento, que se expande y se desvanece. Se suma al
+       pulso corto ya existente (box-shadow de .pulse-dot) sin competir con
+       él: uno lee "latido", el otro lee "barrido de radar". */
+    .pulse-dot::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--live-green);
+      animation: radarPing 2.4s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+      pointer-events: none;
+    }
+
+    @keyframes radarPing {
+      0% {
+        transform: scale(1);
+        opacity: 0.55;
+      }
+
+      100% {
+        transform: scale(5.5);
+        opacity: 0;
+      }
+    }
+
     .badge-status.finalizo {
       color: var(--status-finished);
-      border-color: rgba(255, 209, 102, 0.3);
     }
 
     .badge-status.proximo {
       color: var(--status-upcoming);
-      border-color: rgba(0, 229, 255, 0.3);
     }
 
     .card-content {
@@ -843,17 +991,20 @@
       }
 
       .modal-header-sticky {
-        padding: 14px var(--modal-pad);
+        padding: 0 0 14px 0;
       }
 
       /* Estos selects tienen un min-width fijo en línea pensado para
          escritorio; en un celular angosto eso los hace desbordar. */
-      #stats-pilot-search-wrap, #stats-pilot-search, #tiempos-cat-filter {
+      #stats-pilot-search-wrap,
+      #stats-pilot-search,
+      #tiempos-cat-filter {
         min-width: 0 !important;
         width: 100% !important;
       }
 
-      .data-table th, .data-table td {
+      .data-table th,
+      .data-table td {
         padding: 10px 8px;
         font-size: 13px;
       }
@@ -879,6 +1030,135 @@
     .admin-trigger:hover {
       opacity: 0.8;
       color: var(--text-muted);
+    }
+
+    /* ==========================================================
+       LOADER DE PANTALLA COMPLETA -- "cronómetro" que tapa toda la vista
+       mientras cargan los tiempos (ver window.showGlobalLoader/hideGlobalLoader).
+       z-index 2000, por encima de .modal-overlay (1000), para que el
+       usuario nunca vea el acordeón a medio armar mientras llegan los
+       datos de Supabase.
+       ========================================================== */
+    .global-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: radial-gradient(ellipse at center, rgba(12, 12, 12, 0.94) 0%, rgba(2, 2, 2, 0.985) 75%);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .global-loader.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .global-loader-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .gl-watch {
+      filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 24px var(--accent-glow));
+      animation: glBreathe 3s ease-in-out infinite;
+    }
+    @keyframes glBreathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.015); }
+    }
+
+    /* Sombra de base, corona y pulsador -- detalles de caja de cronómetro
+       real en vez de un círculo pelado, para que se sienta "robusto". */
+    .gl-shadow { fill: rgba(0, 0, 0, 0.55); filter: blur(3px); }
+    .gl-crown { fill: url(#gl-bezel-grad); stroke: #050505; stroke-width: 0.6; }
+    .gl-crown-grip { fill: rgba(0, 0, 0, 0.45); }
+    .gl-pusher { fill: url(#gl-bezel-grad); stroke: #050505; stroke-width: 0.6; }
+
+    /* Anillo de actividad -- el que gira mientras carga */
+    .gl-track {
+      fill: none;
+      stroke: var(--border-strong);
+      stroke-width: 3;
+    }
+    .gl-arc {
+      fill: none;
+      stroke: var(--accent-primary);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 421;
+      stroke-dashoffset: 105;
+      transform-box: view-box;
+      transform-origin: 70px 70px;
+      animation: glArcSpin 1.3s linear infinite;
+    }
+
+    /* Bisel metálico grueso + esfera oscura + reflejo de vidrio */
+    .gl-bezel { fill: none; stroke: url(#gl-bezel-grad); stroke-width: 10; }
+    .gl-dial { fill: #0c0c0e; stroke: rgba(255, 255, 255, 0.06); stroke-width: 1; }
+    .gl-glass { fill: rgba(255, 255, 255, 0.055); pointer-events: none; }
+
+    .gl-ticks line {
+      stroke: var(--text-dim);
+      stroke-width: 2.2;
+      stroke-linecap: round;
+    }
+
+    /* Agujas -- transform-box:view-box + transform-origin en las mismas
+       coordenadas del pivote (70,70) del SVG, así giran prolijas sobre el
+       centro del reloj (ver comentario junto al <polygon> en el HTML). */
+    .gl-hand-min {
+      fill: var(--text-main);
+      transform-box: view-box;
+      transform-origin: 70px 70px;
+      animation: glHandSpin 3.4s linear infinite;
+    }
+    .gl-hand-sec {
+      fill: var(--live-green);
+      filter: drop-shadow(0 0 3px var(--live-glow));
+      transform-box: view-box;
+      transform-origin: 70px 70px;
+      animation: glHandSpin 1.6s steps(30) infinite;
+    }
+    .gl-hub-ring { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+    .gl-hub { fill: url(#gl-hub-grad); }
+
+    @keyframes glArcSpin { to { transform: rotate(360deg); } }
+    @keyframes glHandSpin { to { transform: rotate(360deg); } }
+    .global-loader-title {
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-main);
+      text-align: center;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+    }
+    .global-loader-title span { color: var(--accent-primary); }
+    .global-loader-status {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .gl-dots i {
+      font-style: normal;
+      display: inline-block;
+      opacity: 0.2;
+      animation: glDotBlink 1.2s infinite;
+    }
+    .gl-dots i:nth-child(1) { animation-delay: 0s; }
+    .gl-dots i:nth-child(2) { animation-delay: 0.2s; }
+    .gl-dots i:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes glDotBlink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+    @media (max-width: 480px) {
+      .gl-watch { width: 108px; height: 108px; }
+      .global-loader-title { font-size: 20px; }
     }
 
     /* ==========================================================
@@ -924,23 +1204,28 @@
     /* Encabezado de modal que se queda fijo arriba mientras se hace scroll
        del contenido (tablas largas, listas de pilotos, acordeones) -- así
        "Atrás"/"Cerrar" siempre están a mano, sobre todo en celular donde el
-       modal ocupa casi toda la pantalla. El margen negativo cancela el
-       padding del modal para que el encabezado llegue de borde a borde. */
+       modal ocupa casi toda la pantalla.
+       OJO: antes usaba márgenes negativos para que llegara borde a borde,
+       pero combinado con position:sticky eso hacía que el navegador
+       reservara el espacio en un lugar y pintara el encabezado 32px más
+       abajo -- el resultado era que tapaba (cortaba) la fila de filtros
+       de justo debajo. Sin márgenes negativos, sticky reserva y pinta en
+       el mismo lugar siempre, así que no hay corte posible. */
     .modal-header-sticky {
       position: sticky;
       top: 0;
       z-index: 15;
       background: var(--bg-surface);
-      margin: calc(var(--modal-pad) * -1) calc(var(--modal-pad) * -1) 16px calc(var(--modal-pad) * -1);
-      padding: 18px var(--modal-pad);
+      margin: 0 0 16px 0;
+      padding: 0 0 18px 0;
       border-bottom: 1px solid var(--border-subtle);
-      border-radius: 16px 16px 0 0;
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 16px;
       flex-wrap: wrap;
     }
+
     .modal-header-sticky .modal-title {
       margin: 0;
     }
@@ -963,6 +1248,7 @@
       flex-wrap: wrap;
       gap: 16px;
     }
+
     .stats-controls-bar {
       padding: 20px 32px;
       background: rgba(0, 0, 0, 0.2);
@@ -972,22 +1258,44 @@
       align-items: center;
       flex-wrap: wrap;
     }
+
     @media (max-width: 768px) {
-      .stats-header-sticky, .stats-controls-bar {
+
+      .stats-header-sticky,
+      .stats-controls-bar {
         padding: 16px !important;
       }
     }
 
     /* Botones para alternar entre la vista General y la de Clasificación/Shakedown en Stats */
     .stats-view-tab {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle);
-      color: var(--text-muted); padding: 10px 18px; border-radius: 8px;
-      font-family: var(--font-body); font-size: 13px; font-weight: 700; cursor: pointer;
-      text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      transition: all 0.2s;
     }
-    .stats-view-tab:hover { border-color: var(--border-strong); color: var(--text-main); }
-    .stats-view-tab.active { background: var(--accent-primary); border-color: var(--accent-primary); color: white; }
+
+    .stats-view-tab:hover {
+      border-color: var(--border-strong);
+      color: var(--text-main);
+    }
+
+    .stats-view-tab.active {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: white;
+    }
 
     .modal-overlay.active .modal-content {
       transform: translateY(0);
@@ -1068,7 +1376,9 @@
       background: rgba(255, 255, 255, 0.02);
     }
 
-    .stats-container { display: block; }
+    .stats-container {
+      display: block;
+    }
 
     .stat-kpi-card {
       background: var(--bg-surface-elevated);
@@ -1076,14 +1386,35 @@
       border-radius: 10px;
       padding: 14px 16px;
     }
+
     .stat-kpi-label {
-      font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--text-muted); margin-bottom: 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
     }
-    .stat-kpi-value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--text-main); }
-    .stat-kpi-value.positive { color: var(--live-green, #00F5A0); }
-    .stat-kpi-value.negative { color: var(--accent-primary); }
-    .stat-kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .stat-kpi-value {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .stat-kpi-value.positive {
+      color: var(--live-green, #00F5A0);
+    }
+
+    .stat-kpi-value.negative {
+      color: var(--accent-primary);
+    }
+
+    .stat-kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
 
     @media (max-width: 768px) {
       #stats-content div[style*="grid-template-columns: 1fr 1fr"] {
@@ -1177,20 +1508,48 @@
       gap: 16px;
     }
 
+    @keyframes pilotCardReveal {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.97);
+      }
+
+      70% {
+        opacity: 1;
+        transform: translateY(-1px) scale(1.005);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     .pilot-card {
-      background: linear-gradient(135deg, rgba(30, 30, 30, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      --cat-color: var(--accent-primary);
+      background: linear-gradient(160deg, var(--bg-surface-elevated) 0%, #0c0c0c 100%);
+      border: 1px solid var(--border-subtle);
       border-radius: 12px;
       padding: 24px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
       display: flex;
       flex-direction: column;
       gap: 16px;
+      animation: pilotCardReveal 0.4s cubic-bezier(0.22, 0.9, 0.32, 1) backwards;
+      animation-delay: calc(min(var(--i, 0), 12) * 30ms);
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      .pilot-card {
+        animation: none;
+      }
+    }
+
+    /* Barra de acento por CATEGORÍA (no siempre roja) -- sin glow, un borde
+       sólido y limpio -- así de un vistazo se puede escanear la grilla por
+       clase, sin que se vea como un aro de neón. */
     .pilot-card::before {
       content: '';
       position: absolute;
@@ -1198,14 +1557,13 @@
       left: 0;
       width: 4px;
       height: 100%;
-      background: var(--accent-primary);
-      box-shadow: 0 0 15px var(--accent-primary);
+      background: var(--cat-color);
     }
 
     .pilot-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 40px rgba(230, 57, 70, 0.15);
-      border-color: rgba(230, 57, 70, 0.3);
+      transform: translateY(-3px);
+      border-color: color-mix(in srgb, var(--cat-color) 45%, var(--border-strong));
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
     }
 
     .pilot-number-watermark {
@@ -1214,7 +1572,7 @@
       bottom: -20px;
       font-family: var(--font-display);
       font-size: 110px;
-      color: rgba(255, 255, 255, 0.02);
+      color: rgba(255, 255, 255, 0.025);
       line-height: 1;
       z-index: 0;
       pointer-events: none;
@@ -1228,27 +1586,60 @@
       z-index: 1;
     }
 
-    .pilot-number-large {
+    /* "Placa" del número de carrera -- dorada, en vez de texto plano rojo:
+       evoca el panel de número real de un auto de rally, se siente premium
+       y es lo primero que el ojo encuentra en la tarjeta. */
+    .pilot-number-plate {
+      display: inline-flex;
+      align-items: baseline;
+      position: relative;
+      overflow: hidden;
       font-family: var(--font-display);
-      font-size: 32px;
+      font-size: 26px;
       font-weight: 900;
-      color: var(--accent-primary);
       line-height: 1;
-      text-shadow: 0 2px 10px rgba(230, 57, 70, 0.3);
+      color: #1a1406;
+      background: linear-gradient(155deg, #fff6d8 0%, #eecd6b 45%, #b8892c 100%);
+      padding: 5px 13px;
+      border-radius: 7px;
+      border: 1px solid rgba(0, 0, 0, 0.25);
     }
 
+    /* Destello metálico que cruza la placa al pasar el mouse -- el
+       "movimiento" vive en la interacción, no como brillo fijo permanente
+       en las 232 tarjetas a la vez. */
+    .pilot-number-plate::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
+      transform: translateX(-130%);
+      transition: transform 0.6s ease;
+    }
+
+    .pilot-card:hover .pilot-number-plate::after {
+      transform: translateX(130%);
+    }
+
+    .pilot-number-plate-hash {
+      font-size: 15px;
+      opacity: 0.6;
+      margin-right: 1px;
+    }
+
+    /* Badge de categoría sólido y de alto contraste (no un chip translúcido
+       con glow) -- se lee de lejos y no se ve como un aro de neón. */
     .pilot-cat-badge {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-main);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: var(--cat-color, var(--accent-primary));
+      color: #0a0a0a;
+      border: 1px solid rgba(0, 0, 0, 0.25);
       font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      padding: 4px 12px;
+      font-size: 11.5px;
+      font-weight: 800;
+      padding: 5px 13px;
       border-radius: 20px;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-      backdrop-filter: blur(4px);
+      letter-spacing: 0.08em;
     }
 
     .pilot-manga-badge {
@@ -1284,11 +1675,14 @@
     }
 
     .pilot-card-label {
-      color: var(--text-muted);
+      color: #e0b463;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .pilot-card-value {
@@ -1321,11 +1715,14 @@
     }
 
     .pilot-footer-label {
-      color: var(--text-muted);
+      color: #e0b463;
       font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .pilot-footer-value {
@@ -1377,9 +1774,23 @@
       flex-shrink: 0;
     }
 
-    .rank-badge.gold { background: rgba(255, 209, 102, 0.15); color: var(--status-finished); border: 1px solid rgba(255, 209, 102, 0.4); }
-    .rank-badge.silver { background: rgba(199, 205, 214, 0.12); color: #C7CDD6; border: 1px solid rgba(199, 205, 214, 0.35); }
-    .rank-badge.bronze { background: rgba(205, 127, 50, 0.15); color: #CD7F32; border: 1px solid rgba(205, 127, 50, 0.4); }
+    .rank-badge.gold {
+      background: rgba(255, 209, 102, 0.15);
+      color: var(--status-finished);
+      border: 1px solid rgba(255, 209, 102, 0.4);
+    }
+
+    .rank-badge.silver {
+      background: rgba(199, 205, 214, 0.12);
+      color: #C7CDD6;
+      border: 1px solid rgba(199, 205, 214, 0.35);
+    }
+
+    .rank-badge.bronze {
+      background: rgba(205, 127, 50, 0.15);
+      color: #CD7F32;
+      border: 1px solid rgba(205, 127, 50, 0.4);
+    }
 
     /* ==========================================================
        PDF DE STATS: sigue usando window.print() sobre el modal en vivo.
@@ -1387,75 +1798,274 @@
        window.printTiempos -- y se descarga directo, sin pasar por acá.)
        ========================================================== */
     @media print {
-      @page { size: landscape; }
-      body * { visibility: hidden; }
+      @page {
+        size: landscape;
+      }
 
-      #modal-stats.active, #modal-stats.active * { visibility: visible; }
+      body * {
+        visibility: hidden;
+      }
+
+      #modal-stats.active,
+      #modal-stats.active * {
+        visibility: visible;
+      }
+
       #modal-stats.active {
-        position: absolute; left: 0; top: 0; width: 100%; height: auto;
-        display: block !important; background: #fff !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto;
+        display: block !important;
+        background: #fff !important;
       }
+
       #modal-stats.active .modal-content {
-        width: 100%; max-width: 100%; max-height: none; box-shadow: none; background: #fff !important;
+        width: 100%;
+        max-width: 100%;
+        max-height: none;
+        box-shadow: none;
+        background: #fff !important;
       }
+
       #modal-stats .modal-close,
       #stats-pilot-search-wrap,
       #btn-stats-pdf {
         display: none !important;
       }
+
       #modal-stats .modal-title,
       #modal-stats p,
-      #modal-stats h3 { color: #000 !important; }
-      #modal-stats .stat-kpi-card { border: 1px solid #ccc !important; background: #fff !important; }
+      #modal-stats h3 {
+        color: #000 !important;
+      }
+
+      #modal-stats .stat-kpi-card {
+        border: 1px solid #ccc !important;
+        background: #fff !important;
+      }
+
       #modal-stats .stat-kpi-label,
-      #modal-stats .stat-kpi-sub { color: #555 !important; }
-      #modal-stats .stat-kpi-value { color: #000 !important; }
+      #modal-stats .stat-kpi-sub {
+        color: #555 !important;
+      }
+
+      #modal-stats .stat-kpi-value {
+        color: #000 !important;
+      }
+
       #modal-stats .data-table th,
-      #modal-stats .data-table td { color: #000 !important; border: 1px solid #999 !important; }
+      #modal-stats .data-table td {
+        color: #000 !important;
+        border: 1px solid #999 !important;
+      }
     }
 
     /* ==========================================================
        ACORDEÓN DE TIEMPOS (Shakedown / General / Etapas > PEs)
        ========================================================== */
-    .acc-item { border-radius: 10px; overflow: hidden; border: 1px solid var(--border-subtle); margin-bottom: 10px; background: var(--bg-surface-elevated); }
+    .acc-item {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 10px;
+      background: var(--bg-surface-elevated);
+    }
+
     .acc-header {
-      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 14px 18px; background: transparent; border: none; cursor: pointer; text-align: left;
-      font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: 0.03em;
-      text-transform: uppercase; color: var(--text-main); border-left: 4px solid transparent;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-main);
+      border-left: 4px solid transparent;
       transition: background 0.2s;
     }
-    .acc-header:hover { background: rgba(255, 255, 255, 0.05); }
-    .acc-chevron { flex-shrink: 0; transition: transform 0.25s ease; }
-    .acc-header.open .acc-chevron { transform: rotate(180deg); }
-    .acc-header-shakedown { border-left-color: var(--live-green, #00F5A0); }
-    .acc-header-general { border-left-color: #FFD166; }
-    .acc-header-etapa { border-left-color: var(--accent-primary); }
-    .acc-header-pe {
-      font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: normal;
-      padding: 12px 18px 12px 34px; border-left-color: var(--status-upcoming, #00E5FF); background: rgba(0, 0, 0, 0.15);
+
+    .acc-header:hover {
+      background: rgba(255, 255, 255, 0.05);
     }
-    .acc-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
-    .acc-wrap.open { grid-template-rows: 1fr; }
-    .acc-wrap > .acc-clip { overflow: hidden; }
-    .acc-body { padding: 4px 18px 18px; }
-    .acc-etapa-children { padding: 0 0 4px; }
-    .acc-etapa-summary { padding: 0 18px 12px; }
-    .acc-empty { color: var(--text-muted); text-align: center; padding: 20px; font-size: 13px; }
+
+    .acc-chevron {
+      flex-shrink: 0;
+      transition: transform 0.25s ease;
+    }
+
+    .acc-header.open .acc-chevron {
+      transform: rotate(180deg);
+    }
+
+    .acc-header-shakedown {
+      border-left-color: var(--live-green, #00F5A0);
+    }
+
+    .acc-header-general {
+      border-left-color: #FFD166;
+    }
+
+    .acc-header-etapa {
+      border-left-color: var(--accent-primary);
+    }
+
+    .acc-header-pe {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: normal;
+      padding: 12px 18px 12px 34px;
+      border-left-color: var(--status-upcoming, #00E5FF);
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .acc-wrap {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.3s ease;
+    }
+
+    .acc-wrap.open {
+      grid-template-rows: 1fr;
+    }
+
+    .acc-wrap>.acc-clip {
+      overflow: hidden;
+    }
+
+    .acc-body {
+      padding: 4px 18px 18px;
+    }
+
+    .acc-etapa-children {
+      padding: 0 0 4px;
+    }
+
+    .acc-etapa-summary {
+      padding: 0 18px 12px;
+    }
+
+    .acc-empty {
+      color: var(--text-muted);
+      text-align: center;
+      padding: 20px;
+      font-size: 13px;
+    }
+
+    /* Mini gráfico de brechas por categoría (ver buildGapBarChart) -- qué
+       tan apretada está la clase, de un vistazo, antes de leer la tabla
+       completa de tiempos. */
+    .gap-bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 0 0 12px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+    }
+
+    .gap-bar-row {
+      display: grid;
+      grid-template-columns: 40px 1fr 74px;
+      align-items: center;
+      gap: 10px;
+      animation: rowReveal 0.4s ease-out backwards;
+      animation-delay: calc(min(var(--i, 0), 8) * 45ms);
+    }
+
+    .gap-bar-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .gap-bar-track {
+      height: 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .gap-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      animation: gapBarGrow 0.6s cubic-bezier(0.22, 0.9, 0.32, 1) backwards;
+      animation-delay: calc(min(var(--i, 0), 8) * 45ms + 100ms);
+    }
+
+    @keyframes gapBarGrow {
+      from {
+        width: 0;
+      }
+    }
+
+    .gap-bar-time {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 480px) {
+      .gap-bar-row {
+        grid-template-columns: 34px 1fr 62px;
+        gap: 6px;
+      }
+
+      .gap-bar-num,
+      .gap-bar-time {
+        font-size: 10px;
+      }
+    }
 
     /* Pestañas "General"/"Manga X" dentro de cada vuelta de circuito. Van
        dentro de .acc-body, que ya trae padding horizontal propio. */
     .manga-tabs {
-      display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-bottom: 14px;
     }
+
     .manga-tab {
-      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle);
-      color: var(--text-muted); padding: 7px 16px; border-radius: 20px;
-      font-family: var(--font-body); font-size: 12px; font-weight: 700; cursor: pointer;
-      text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.2s;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      transition: all 0.2s;
     }
-    .manga-tab:hover { border-color: var(--border-strong); color: var(--text-main); }
-    .manga-tab.active { background: var(--accent-primary); border-color: var(--accent-primary); color: white; }
+
+    .manga-tab:hover {
+      border-color: var(--border-strong);
+      color: var(--text-main);
+    }
+
+    .manga-tab.active {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: white;
+    }
 
     .t-tab:hover {
       color: var(--text-main);
@@ -1465,13 +2075,268 @@
       color: var(--text-main);
       border-bottom-color: var(--accent-primary);
     }
+
+    /* ==========================================================
+       ENDURECIMIENTO UX/RESPONSIVE
+       Evita que textos y tarjetas se corten o se superpongan en
+       pantallas angostas, mejora el manejo de tablas largas y le
+       da feedback táctil a los botones (celular no tiene :hover).
+       ========================================================== */
+
+    /* Ningún texto se desborda de su caja ni deja una palabra sola
+       colgando en la última línea. */
+    .card-title,
+    .card-subtitle,
+    .pilot-card-value,
+    .pilot-footer-value,
+    .status-headline,
+    .inicio-title,
+    .inicio-desc,
+    .modal-title,
+    #stats-banner-name,
+    .brand-text {
+      overflow-wrap: break-word;
+    }
+
+    .card-title,
+    .inicio-title,
+    h1,
+    h2,
+    h3 {
+      text-wrap: balance;
+    }
+
+    .inicio-desc,
+    .card-subtitle {
+      text-wrap: pretty;
+    }
+
+    /* Bug clásico de flexbox: un hijo con texto largo no se achica y
+       termina empujando/desbordando a sus hermanos aunque tenga
+       flex:1. min-width:0 lo deja encogerse y truncar en vez de
+       desbordar el contenedor (tarjetas de piloto, banner de stats,
+       bloque de Inicio, etc.). */
+    .card-content,
+    .pilot-card-content,
+    .pilot-person-group,
+    .pilot-footer-item,
+    .inicio-text,
+    .status-stat,
+    #stats-pilot-banner>div[style*="flex: 1"] {
+      min-width: 0;
+    }
+
+    /* Banner del piloto en Stats: número + nombre + meta-datos no entran
+       en una sola fila en celular -- se apilan en columna y la fila de
+       meta-datos (navegante/vehículo/equipo) hace wrap en vez de
+       recortarse contra el borde del modal. */
+    @media (max-width: 640px) {
+      #stats-pilot-banner {
+        flex-direction: column;
+        align-items: flex-start !important;
+        padding: 20px !important;
+      }
+
+      #stats-banner-number {
+        min-width: 0 !important;
+        font-size: 44px !important;
+      }
+
+      #stats-pilot-banner div[style*="gap: 24px"] {
+        flex-wrap: wrap;
+        row-gap: 8px;
+      }
+    }
+
+    /* ---------- Tablas: más fáciles de leer y de manejar ---------- */
+    .data-table {
+      --table-bg: var(--bg-surface);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .acc-body .data-table {
+      --table-bg: var(--bg-surface-elevated);
+    }
+
+    /* Encabezado pegajoso: en tablas largas (Desglose Tramo a Tramo,
+       clasificaciones) las columnas quedan visibles al hacer scroll. */
+    .data-table thead th {
+      position: sticky;
+      top: 0;
+      background: var(--table-bg);
+      z-index: 2;
+      box-shadow: 0 1px 0 var(--border-subtle);
+    }
+
+    /* Cebra sutil: ayuda a seguir una fila en tablas de 6-10 columnas
+       sin perder la posición al desplazarse horizontalmente. */
+    .data-table tbody tr:nth-child(even) td {
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .data-table tbody tr:hover td {
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    /* Entrada + "flash" de telemetría: cada vez que una tabla de resultados
+       se (re)dibuja -- cambio de filtro, categoría o apertura del modal --
+       las filas entran escalonadas y sus celdas destellan brevemente en el
+       color de marca, como si el dato "acabara de llegar" del cronometraje.
+       --i lo fija cada fila al generarse (mismo patrón que .rally-card);
+       min(...,24) evita animar cientos de filas a la vez en listas largas. */
+    .data-table tbody tr {
+      animation: rowReveal 0.4s ease-out backwards;
+      animation-delay: calc(min(var(--i, 0), 24) * 20ms);
+    }
+
+    .data-table tbody tr td {
+      animation: cellFlash 0.9s ease-out backwards;
+      animation-delay: calc(min(var(--i, 0), 24) * 20ms);
+    }
+
+    @keyframes rowReveal {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes cellFlash {
+      0% {
+        background-color: rgba(230, 57, 70, 0.16);
+      }
+
+      100% {
+        background-color: transparent;
+      }
+    }
+
+    /* Insignia de tendencia de posición (Stats): entra con un "pop" para
+       que el cambio de puesto se sienta, no solo se lea en la flecha. */
+    @keyframes trendPop {
+      0% {
+        transform: scale(0.3);
+        opacity: 0;
+      }
+
+      65% {
+        transform: scale(1.3);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .trend-pop {
+      animation: trendPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    }
+
+    /* Filas de ancho consistente (sin wrap irregular) -- el contenedor
+       ya tiene overflow-x:auto, así que en vez de romper el layout con
+       texto envuelto, se desliza horizontalmente como una tabla de
+       cronometraje real. */
+    .data-table th,
+    .data-table td {
+      white-space: nowrap;
+    }
+
+    /* Scroll horizontal con inercia en iOS y scrollbar más discreta,
+       reutilizando los mismos contenedores "overflow-x:auto" que ya
+       envuelven cada tabla. */
+    div[style*="overflow-x:auto"],
+    div[style*="overflow-x: auto"] {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+
+    @media (max-width: 640px) {
+
+      .data-table th,
+      .data-table td {
+        padding: 9px 10px;
+        font-size: 12.5px;
+      }
+    }
+
+    /* ---------- Feedback táctil: todo elemento clickeable responde al
+       toque, no solo al :hover (que en celular no existe). ---------- */
+    .action-btn,
+    .modal-close,
+    .modal-back,
+    .stats-view-tab,
+    .manga-tab,
+    .t-tab,
+    .acc-header,
+    .custom-select,
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .modal-close,
+    .modal-back,
+    .stats-view-tab,
+    .manga-tab,
+    .pilots-search-clear,
+    .acc-header {
+      transition: all 0.2s ease, transform 0.15s ease;
+    }
+
+    .modal-close:active,
+    .modal-back:active,
+    .stats-view-tab:active,
+    .manga-tab:active,
+    .t-tab:active,
+    .pilots-search-clear:active,
+    .acc-header:active {
+      transform: scale(0.96);
+    }
+
+    .action-btn:active {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    /* ---------- Ajustes finos para celulares muy angostos (<380px) ---------- */
+    @media (max-width: 380px) {
+      .modal-content {
+        --modal-pad: 12px;
+      }
+
+      .card-title {
+        font-size: 26px;
+      }
+
+      .status-stat-value {
+        font-size: 21px;
+      }
+
+      .brand-text {
+        font-size: 21px;
+      }
+    }
   </style>
 </head>
 
 <body>
-  <div class="bg-glow"></div>
-  <div class="bg-grain"></div>
-
   <!-- TOPBAR -->
   <header class="topbar">
     <a href="#" class="brand">
@@ -1519,6 +2384,20 @@
         <div class="status-tagline">Cronometraje y clasificaciones en tiempo real</div>
       </div>
       <div class="status-stats">
+        <div class="status-gauge" id="status-gauge" aria-hidden="true" title="Proporción de rallys en vivo">
+          <svg viewBox="0 0 44 44" width="44" height="44">
+            <circle class="status-gauge-track" cx="22" cy="22" r="18"></circle>
+            <circle class="status-gauge-fill" id="status-gauge-fill" cx="22" cy="22" r="18"></circle>
+          </svg>
+          <svg class="status-gauge-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v2"></path>
+            <path d="m4.9 4.9 1.4 1.4"></path>
+            <path d="M2 12h2"></path>
+            <path d="m17.7 6.3 1.4-1.4"></path>
+            <path d="M12 8a4 4 0 0 0-3 6.6L12 20l3-5.4A4 4 0 0 0 12 8z"></path>
+          </svg>
+        </div>
         <div class="status-stat is-live">
           <div class="status-stat-value" id="status-live">–</div>
           <div class="status-stat-label">En vivo</div>
@@ -1549,6 +2428,78 @@
     </div>
   </footer>
 
+  <!-- LOADER DE PANTALLA COMPLETA -- cronómetro animado que tapa toda la
+       vista mientras se cargan los tiempos (ver window.showGlobalLoader /
+       window.hideGlobalLoader, usado por openTiempos). -->
+  <div class="global-loader" id="global-loader" aria-hidden="true">
+    <div class="global-loader-inner">
+      <svg class="gl-watch" width="150" height="150" viewBox="0 0 140 140">
+        <defs>
+          <linearGradient id="gl-bezel-grad" x1="15%" y1="10%" x2="85%" y2="90%">
+            <stop offset="0%" stop-color="#57606b"></stop>
+            <stop offset="42%" stop-color="#15181c"></stop>
+            <stop offset="58%" stop-color="#15181c"></stop>
+            <stop offset="100%" stop-color="#57606b"></stop>
+          </linearGradient>
+          <radialGradient id="gl-hub-grad" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#ffffff"></stop>
+            <stop offset="35%" stop-color="#ff4d5a"></stop>
+            <stop offset="100%" stop-color="#c22633"></stop>
+          </radialGradient>
+        </defs>
+
+        <!-- Sombra de base -- le da peso/presencia al reloj -->
+        <ellipse class="gl-shadow" cx="70" cy="134" rx="40" ry="6"></ellipse>
+
+        <!-- Corona y pulsador -- detalle de cronómetro real, no un círculo genérico -->
+        <rect class="gl-crown" x="58" y="1" width="24" height="12" rx="3"></rect>
+        <rect class="gl-crown-grip" x="62" y="3" width="16" height="2.4" rx="1.2"></rect>
+        <rect class="gl-crown-grip" x="62" y="7" width="16" height="2.4" rx="1.2"></rect>
+        <rect class="gl-pusher" x="127" y="53" width="11" height="18" rx="3"></rect>
+
+        <!-- Anillo de actividad -- gira mientras carga -->
+        <circle class="gl-track" cx="70" cy="70" r="67"></circle>
+        <circle class="gl-arc" cx="70" cy="70" r="67"></circle>
+
+        <!-- Bisel metálico grueso -->
+        <circle class="gl-bezel" cx="70" cy="70" r="59"></circle>
+
+        <!-- Esfera -->
+        <circle class="gl-dial" cx="70" cy="70" r="52"></circle>
+        <ellipse class="gl-glass" cx="54" cy="47" rx="28" ry="15" transform="rotate(-18 54 47)"></ellipse>
+
+        <!-- Marcas horarias -->
+        <g class="gl-ticks">
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(0 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(30 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(60 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(90 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(120 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(150 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(180 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(210 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(240 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(270 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(300 70 70)"></line>
+          <line x1="70" y1="24" x2="70" y2="31" transform="rotate(330 70 70)"></line>
+        </g>
+
+        <!-- Agujas -- rotan sobre el pivote real (70,70) en coordenadas del
+             viewBox: sin esto (o con transform-box:fill-box) el navegador
+             gira cada aguja sobre el centro de SU PROPIO bounding box, que
+             para una línea/polígono no está en el pivote -- eso hacía que
+             "volaran" en vez de girar prolijas sobre el centro del reloj. -->
+        <polygon class="gl-hand-min" points="70,79 66.5,70 70,33 73.5,70"></polygon>
+        <polygon class="gl-hand-sec" points="70,88 68.5,70 70,20 71.5,70"></polygon>
+
+        <circle class="gl-hub-ring" cx="70" cy="70" r="8.5"></circle>
+        <circle class="gl-hub" cx="70" cy="70" r="5"></circle>
+      </svg>
+      <div class="global-loader-title">TIEMPOS <span>—</span> AMADESU</div>
+      <div class="global-loader-status">Cargando<span class="gl-dots"><i>.</i><i>.</i><i>.</i></span></div>
+    </div>
+  </div>
+
   <!-- SECRET ADMIN TRIGGER -->
   <div class="admin-trigger" id="admin-trigger" title="Panel de Control">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1567,7 +2518,11 @@
             style="color:var(--text-muted); font-size: 16px;"></span></h2>
         <div style="display:flex; gap:10px; flex-shrink:0;">
           <button class="modal-back" onclick="closeModal('modal-pilotos')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
             Atrás
           </button>
           <button class="modal-close" style="position: static;" onclick="closeModal('modal-pilotos')">Cerrar</button>
@@ -1576,9 +2531,15 @@
 
       <div class="pilots-toolbar">
         <div class="pilots-search-wrap">
-          <svg class="pilots-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="pilotos-search" class="custom-select pilots-search-input" placeholder="Buscar por número o categoría...">
-          <button type="button" class="pilots-search-clear" id="pilotos-search-clear" style="display:none;" onclick="window.limpiarBusquedaPilotos()" aria-label="Limpiar búsqueda">✕</button>
+          <svg class="pilots-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="pilotos-search" class="custom-select pilots-search-input"
+            placeholder="Buscar por número o categoría...">
+          <button type="button" class="pilots-search-clear" id="pilotos-search-clear" style="display:none;"
+            onclick="window.limpiarBusquedaPilotos()" aria-label="Limpiar búsqueda">✕</button>
         </div>
         <select id="pilotos-filter" class="custom-select" style="width: 200px;">
           <option value="TODAS">TODAS LAS CLASES</option>
@@ -1601,7 +2562,11 @@
         <h2 class="modal-title" id="tiempos-title">Tiempos & Clasificación</h2>
         <div style="display:flex; gap:10px; flex-shrink:0;">
           <button class="modal-back" onclick="closeModal('modal-tiempos')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
             Atrás
           </button>
           <button class="modal-close" style="position: static;" onclick="closeModal('modal-tiempos')">Cerrar</button>
@@ -1609,18 +2574,34 @@
       </div>
 
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px; flex-wrap: wrap;">
-        <select id="tiempos-cat-filter" class="pilot-selector" style="width:auto; min-width:220px; margin-bottom:0;" onchange="window.filtrarAccordionTiempos()">
+        <select id="tiempos-cat-filter" class="pilot-selector" style="width:auto; min-width:220px; margin-bottom:0;"
+          onchange="window.filtrarAccordionTiempos()">
           <option value="ALL">Todas las Categorías</option>
         </select>
         <div style="display:flex; gap:6px; align-items:center;">
-          <input type="text" id="tiempos-num-search" class="pilot-selector" style="width:160px; margin-bottom:0;" placeholder="Buscar Nº o nombre..." onkeydown="if(event.key==='Enter'){event.preventDefault(); window.buscarPorNumeroTiempos();}">
-          <button type="button" style="display:inline-flex; align-items:center; gap:6px; background: rgba(255,255,255,0.05); color:var(--text-main); border: 1px solid var(--border-strong); border-radius:8px; padding:10px 14px; font-size:13px; font-weight:600; font-family: var(--font-body); cursor:pointer;" onclick="window.buscarPorNumeroTiempos()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="tiempos-num-search" class="pilot-selector" style="width:160px; margin-bottom:0;"
+            placeholder="Buscar Nº o nombre..."
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); window.buscarPorNumeroTiempos();}">
+          <button type="button"
+            style="display:inline-flex; align-items:center; gap:6px; background: rgba(255,255,255,0.05); color:var(--text-main); border: 1px solid var(--border-strong); border-radius:8px; padding:10px 14px; font-size:13px; font-weight:600; font-family: var(--font-body); cursor:pointer;"
+            onclick="window.buscarPorNumeroTiempos()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
             Buscar
           </button>
         </div>
-        <button id="btn-tiempos-pdf" style="display:none; align-items:center; gap:8px; background: var(--accent-primary); color:#fff; border:none; border-radius:8px; padding:10px 18px; font-size:13px; font-weight:700; font-family: var(--font-body); cursor:pointer;" onclick="window.printTiempos()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        <button id="btn-tiempos-pdf"
+          style="display:none; align-items:center; gap:8px; background: var(--accent-primary); color:#fff; border:none; border-radius:8px; padding:10px 18px; font-size:13px; font-weight:700; font-family: var(--font-body); cursor:pointer;"
+          onclick="window.printTiempos()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9V2h12v7"></path>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
           Descargar PDF (horizontal)
         </button>
       </div>
@@ -1635,17 +2616,23 @@
 
   <!-- MODAL STATS -->
   <div id="modal-stats" class="modal-overlay">
-    <div class="modal-content" style="width: 1200px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
-      
+    <div class="modal-content"
+      style="width: 1200px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+
       <!-- HEADER FIJO DEL MODAL -->
       <div class="stats-header-sticky">
         <div style="min-width:0;">
           <h2 class="modal-title" id="stats-title" style="margin-bottom: 8px;">Telemetría & Estadísticas</h2>
-          <p style="color:var(--text-muted); font-size:13px; margin:0; max-width: 600px;">Análisis de rendimiento tramo a tramo. Compara tiempos, velocidades y evolución de posiciones contra el líder de clase.</p>
+          <p style="color:var(--text-muted); font-size:13px; margin:0; max-width: 600px;">Análisis de rendimiento tramo
+            a tramo. Compara tiempos, velocidades y evolución de posiciones contra el líder de clase.</p>
         </div>
         <div style="display:flex; gap:10px; flex-shrink:0;">
           <button class="modal-back" onclick="closeModal('modal-stats')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
             Atrás
           </button>
           <button class="modal-close" style="position: static;" onclick="closeModal('modal-stats')">Cerrar</button>
@@ -1655,47 +2642,79 @@
       <!-- CONTROLES -->
       <div class="stats-controls-bar">
         <div id="stats-pilot-search-wrap" style="position:relative; width:auto; min-width:320px;">
-          <input type="text" id="stats-pilot-search" class="pilot-selector" style="width:100%; margin-bottom:0; font-size:15px;" placeholder="Buscar piloto por nombre o número..." autocomplete="off"
-            oninput="window.statsRenderPilotDropdown(this.value)"
+          <input type="text" id="stats-pilot-search" class="pilot-selector"
+            style="width:100%; margin-bottom:0; font-size:15px;" placeholder="Buscar piloto por nombre o número..."
+            autocomplete="off" oninput="window.statsRenderPilotDropdown(this.value)"
             onfocus="window.statsRenderPilotDropdown(this.value)"
             onblur="setTimeout(() => { document.getElementById('stats-pilot-dropdown').style.display = 'none'; }, 150)">
-          <div id="stats-pilot-dropdown" style="display:none; max-height:280px; overflow-y:auto; background:var(--bg-surface); border:1px solid var(--border-strong); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
+          <div id="stats-pilot-dropdown"
+            style="display:none; max-height:280px; overflow-y:auto; background:var(--bg-surface); border:1px solid var(--border-strong); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+          </div>
         </div>
         <select id="stats-pilot-selector" style="display:none;">
           <option value="">Selecciona un Piloto...</option>
         </select>
-        <button id="btn-stats-pdf" style="display:none; align-items:center; gap:8px; background: rgba(255,255,255,0.05); color:var(--text-main); border: 1px solid var(--border-strong); border-radius:8px; padding:10px 18px; font-size:13px; font-weight:600; font-family: var(--font-body); cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" onclick="window.printStats()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        <button id="btn-stats-pdf"
+          style="display:none; align-items:center; gap:8px; background: rgba(255,255,255,0.05); color:var(--text-main); border: 1px solid var(--border-strong); border-radius:8px; padding:10px 18px; font-size:13px; font-weight:600; font-family: var(--font-body); cursor:pointer; transition: all 0.2s;"
+          onmouseover="this.style.background='rgba(255,255,255,0.1)'"
+          onmouseout="this.style.background='rgba(255,255,255,0.05)'" onclick="window.printStats()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9V2h12v7"></path>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
           Exportar PDF
         </button>
       </div>
 
       <!-- ÁREA SCROLLEABLE -->
-      <div class="stats-container" id="stats-content" style="display: none; overflow-y: auto; flex: 1; padding: 32px; background: var(--bg-base);">
-        
+      <div class="stats-container" id="stats-content"
+        style="display: none; overflow-y: auto; flex: 1; padding: 32px; background: var(--bg-base);">
+
         <!-- BANNER DEL PILOTO -->
-        <div id="stats-pilot-banner" style="display: flex; gap: 24px; align-items: center; background: linear-gradient(135deg, rgba(30, 30, 30, 0.6) 0%, rgba(10, 10, 10, 0.8) 100%); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px; margin-bottom: 32px; position: relative; overflow: hidden;">
-          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent-primary); box-shadow: 0 0 15px var(--accent-primary);"></div>
-          
-          <div id="stats-banner-number" style="font-family: var(--font-display); font-size: 64px; font-weight: 900; color: var(--accent-primary); line-height: 1; text-shadow: 0 2px 10px rgba(230, 57, 70, 0.3); min-width: 90px; text-align: center;"></div>
-          
+        <div id="stats-pilot-banner"
+          style="display: flex; gap: 24px; align-items: center; background: linear-gradient(135deg, rgba(30, 30, 30, 0.6) 0%, rgba(10, 10, 10, 0.8) 100%); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px; margin-bottom: 32px; position: relative; overflow: hidden;">
+          <div
+            style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent-primary); box-shadow: 0 0 15px var(--accent-primary);">
+          </div>
+
+          <div id="stats-banner-number"
+            style="font-family: var(--font-display); font-size: 64px; font-weight: 900; color: var(--accent-primary); line-height: 1; text-shadow: 0 2px 10px rgba(230, 57, 70, 0.3); min-width: 90px; text-align: center;">
+          </div>
+
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-              <h3 id="stats-banner-name" style="font-size: 28px; font-family: var(--font-display); text-transform: uppercase; margin: 0; letter-spacing: 0.02em;"></h3>
+              <h3 id="stats-banner-name"
+                style="font-size: 28px; font-family: var(--font-display); text-transform: uppercase; margin: 0; letter-spacing: 0.02em;">
+              </h3>
               <div id="stats-banner-cat" class="pilot-cat-badge"></div>
             </div>
-            
+
             <div style="display: flex; gap: 24px; color: var(--text-muted); font-size: 13px;">
               <div style="display: flex; align-items: center; gap: 6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
                 <span id="stats-banner-nav"></span>
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                  <circle cx="12" cy="5" r="2"></circle>
+                  <path d="M12 7v4"></path>
+                  <line x1="8" y1="16" x2="8" y2="16"></line>
+                  <line x1="16" y1="16" x2="16" y2="16"></line>
+                </svg>
                 <span id="stats-banner-car"></span>
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
                 <span id="stats-banner-team"></span>
               </div>
             </div>
@@ -1705,12 +2724,20 @@
         <!-- ALTERNAR VISTA: General (Circuito/Rally) vs Clasificación/Shakedown --
              el botón de Clasificación solo se muestra si ese piloto tiene datos ahí. -->
         <div id="stats-view-toggle" style="display:none; gap:8px; margin-bottom: 28px;">
-          <button type="button" class="stats-view-tab active" id="stats-view-btn-general" onclick="window.statsSwitchView('general')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+          <button type="button" class="stats-view-tab active" id="stats-view-btn-general"
+            onclick="window.statsSwitchView('general')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+              <line x1="4" y1="22" x2="4" y2="15"></line>
+            </svg>
             <span id="stats-view-btn-general-label">Circuito General</span>
           </button>
-          <button type="button" class="stats-view-tab" id="stats-view-btn-clasif" onclick="window.statsSwitchView('clasif')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <button type="button" class="stats-view-tab" id="stats-view-btn-clasif"
+            onclick="window.statsSwitchView('clasif')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
             <span id="stats-view-btn-clasif-label">Clasificación</span>
           </button>
         </div>
@@ -1718,71 +2745,96 @@
         <!-- VISTA: GENERAL (Circuito/Rally) -->
         <div id="stats-general-section">
 
-        <!-- KPIs GRID -->
-        <div id="stats-kpi-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:32px;"></div>
-
-        <!-- CHARTS Y TABLA -->
-        <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
-
-          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-              <h3 style="font-size: 16px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                Diferencia al Líder de Categoría (segundos)
-              </h3>
-            </div>
-            <div style="position: relative; height: 250px; width: 100%;">
-              <canvas id="gapChart"></canvas>
-            </div>
+          <!-- KPIs GRID -->
+          <div id="stats-kpi-grid"
+            style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:32px;">
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
-              <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                Velocidad Promedio (km/h)
-              </h3>
-              <div style="position: relative; height: 220px; width: 100%;">
-                <canvas id="speedChart"></canvas>
+          <!-- CHARTS Y TABLA -->
+          <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
+
+            <div
+              style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3
+                  style="font-size: 16px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)"
+                    stroke-width="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  Diferencia al Líder de Categoría (segundos)
+                </h3>
+              </div>
+              <div style="position: relative; height: 250px; width: 100%;">
+                <canvas id="gapChart"></canvas>
               </div>
             </div>
 
-            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
-              <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD166" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                Evolución de Posición en Clase
-              </h3>
-              <div style="position: relative; height: 220px; width: 100%;">
-                <canvas id="positionChart"></canvas>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div
+                style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+                <h3
+                  style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)"
+                    stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  Velocidad Promedio (km/h)
+                </h3>
+                <div style="position: relative; height: 220px; width: 100%;">
+                  <canvas id="speedChart"></canvas>
+                </div>
+              </div>
+
+              <div
+                style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+                <h3
+                  style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD166" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                  Evolución de Posición en Clase
+                </h3>
+                <div style="position: relative; height: 220px; width: 100%;">
+                  <canvas id="positionChart"></canvas>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; overflow-x: auto;">
-            <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-              Desglose Tramo a Tramo
-            </h3>
-            <table class="data-table" id="stats-detail-table">
-              <thead>
-                <tr>
-                  <th>Prueba Especial</th>
-                  <th>Distancia</th>
-                  <th>Tiempo Tramo</th>
-                  <th>Acumulado</th>
-                  <th>Ritmo (Gap)</th>
-                  <th>Velocidad</th>
-                  <th>Pos. General</th>
-                  <th>Pos. Clase</th>
-                  <th>Gap Tramo (Cat)</th>
-                  <th>Gap Acum. (Cat)</th>
-                </tr>
-              </thead>
-              <tbody id="stats-table-tbody"></tbody>
-            </table>
-          </div>
+            <div
+              style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; overflow-x: auto;">
+              <h3
+                style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6"></line>
+                  <line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line>
+                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+                Desglose Tramo a Tramo
+              </h3>
+              <table class="data-table" id="stats-detail-table">
+                <thead>
+                  <tr>
+                    <th>Prueba Especial</th>
+                    <th>Distancia</th>
+                    <th>Tiempo Tramo</th>
+                    <th>Acumulado</th>
+                    <th>Ritmo (Gap)</th>
+                    <th>Velocidad</th>
+                    <th>Pos. General</th>
+                    <th>Pos. Clase</th>
+                    <th>Gap Tramo (Cat)</th>
+                    <th>Gap Acum. (Cat)</th>
+                  </tr>
+                </thead>
+                <tbody id="stats-table-tbody"></tbody>
+              </table>
+            </div>
 
-        </div>
+          </div>
         </div>
         <!-- FIN VISTA GENERAL -->
 
@@ -1790,74 +2842,100 @@
              configurado): mismo piloto seleccionado arriba, sus estadísticas de
              esa sesión de práctica (no oficial), con el mismo formato que arriba. -->
         <div id="stats-clasif-section" style="display: none;">
-            <p style="color:var(--text-muted); font-size:12px; margin: 0 0 20px; text-align:center;">Sesión de práctica no oficial (no afecta el tiempo oficial de la carrera).</p>
+          <p style="color:var(--text-muted); font-size:12px; margin: 0 0 20px; text-align:center;">Sesión de práctica no
+            oficial (no afecta el tiempo oficial de la carrera).</p>
 
-            <div id="clasif-kpi-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:32px;"></div>
-
-            <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
-
-              <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
-                <h3 style="font-size: 16px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                  Diferencia al Líder de Categoría (segundos)
-                </h3>
-                <div style="position: relative; height: 250px; width: 100%;">
-                  <canvas id="clasifGapChart"></canvas>
-                </div>
-              </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
-                  <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                    Velocidad Promedio (km/h)
-                  </h3>
-                  <div style="position: relative; height: 220px; width: 100%;">
-                    <canvas id="clasifSpeedChart"></canvas>
-                  </div>
-                </div>
-
-                <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
-                  <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD166" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                    Evolución de Posición en Clase
-                  </h3>
-                  <div style="position: relative; height: 220px; width: 100%;">
-                    <canvas id="clasifPositionChart"></canvas>
-                  </div>
-                </div>
-              </div>
-
-              <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; overflow-x: auto;">
-                <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                  Desglose Vuelta a Vuelta
-                </h3>
-                <table class="data-table" id="clasif-detail-table">
-                  <thead>
-                    <tr>
-                      <th>Vuelta</th>
-                      <th>Distancia</th>
-                      <th>Tiempo Vuelta</th>
-                      <th>Acumulado</th>
-                      <th>Ritmo (Gap)</th>
-                      <th>Velocidad</th>
-                      <th>Pos. General</th>
-                      <th>Pos. Clase</th>
-                      <th>Gap Vuelta (Cat)</th>
-                      <th>Gap Acum. (Cat)</th>
-                    </tr>
-                  </thead>
-                  <tbody id="clasif-table-tbody"></tbody>
-                </table>
-              </div>
-
-            </div>
+          <div id="clasif-kpi-grid"
+            style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:32px;">
           </div>
 
+          <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
+
+            <div
+              style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+              <h3
+                style="font-size: 16px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)"
+                  stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                Diferencia al Líder de Categoría (segundos)
+              </h3>
+              <div style="position: relative; height: 250px; width: 100%;">
+                <canvas id="clasifGapChart"></canvas>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div
+                style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+                <h3
+                  style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)"
+                    stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  Velocidad Promedio (km/h)
+                </h3>
+                <div style="position: relative; height: 220px; width: 100%;">
+                  <canvas id="clasifSpeedChart"></canvas>
+                </div>
+              </div>
+
+              <div
+                style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px;">
+                <h3
+                  style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD166" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                  Evolución de Posición en Clase
+                </h3>
+                <div style="position: relative; height: 220px; width: 100%;">
+                  <canvas id="clasifPositionChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px; overflow-x: auto;">
+              <h3
+                style="font-size: 16px; margin-bottom: 20px; color: var(--text-main); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6"></line>
+                  <line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line>
+                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+                Desglose Vuelta a Vuelta
+              </h3>
+              <table class="data-table" id="clasif-detail-table">
+                <thead>
+                  <tr>
+                    <th>Vuelta</th>
+                    <th>Distancia</th>
+                    <th>Tiempo Vuelta</th>
+                    <th>Acumulado</th>
+                    <th>Ritmo (Gap)</th>
+                    <th>Velocidad</th>
+                    <th>Pos. General</th>
+                    <th>Pos. Clase</th>
+                    <th>Gap Vuelta (Cat)</th>
+                    <th>Gap Acum. (Cat)</th>
+                  </tr>
+                </thead>
+                <tbody id="clasif-table-tbody"></tbody>
+              </table>
+            </div>
+
+          </div>
         </div>
+
       </div>
     </div>
+  </div>
 
   <script type="module">
     import { supabase } from './supabase_config.js';
@@ -1866,10 +2944,16 @@
     const filtroSelect = document.getElementById('filtro-estado');
 
     // SVGs para los botones
-    const iconInfo = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
-    const iconPilotos = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-    const iconTiempos = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
-    const iconStats = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
+    const iconInfo = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="11"></line><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"></circle></svg>`;
+    // Casco de piloto de carreras en vez del ícono genérico de "persona" --
+    // más específico para una tarjeta de rally.
+    const iconPilotos = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="2.3"></circle><path d="M12 9.7V3"></path><path d="M10.1 13.6 5.3 17.3"></path><path d="M13.9 13.6 18.7 17.3"></path></svg>`;
+    // Cronómetro con líneas de movimiento (en vez de un reloj estático) --
+    // comunica "cronometraje en vivo", no solo "hora".
+    const iconTiempos = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"></path><circle cx="12" cy="14" r="8"></circle><path d="M12 14 15 11"></path><path d="M1.5 10.5h2.5"></path><path d="M1 14.5h3"></path></svg>`;
+    // Curva de rendimiento con lupa (en vez de un simple pulso) -- sugiere
+    // "análisis", que es lo que ofrece el modal de Stats.
+    const iconStats = `<svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17 8 10.5l3.5 3.5L16 8"></path><circle cx="18.5" cy="5.5" r="3"></circle><path d="m20.8 7.8 2.2 2.2"></path></svg>`;
     const iconCategory = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px; height:14px; vertical-align:-2px; margin-right:6px;"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41l9.58 9.59a2 2 0 0 0 2.82 0l4.6-4.6a2 2 0 0 0 0-2.82Z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg>`;
 
     let allRallies = [];
@@ -1901,12 +2985,55 @@
     }
     renderSkeletons();
 
+    // Anima un texto que contiene un número (ej. "58°", "12.40 km", "+2.1s")
+    // desde su valor previo (o 0) hasta el valor final -- efecto "contador
+    // de telemetría" en vez de un salto seco. Preserva cualquier prefijo o
+    // sufijo no numérico tal cual, y respeta prefers-reduced-motion. Si el
+    // texto no trae ningún número (ej. "LÍDER"), se muestra directo.
+    const prefersReducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function animateValueText(el, finalText, duration = 700) {
+      if (!el) return;
+      const text = String(finalText);
+      const match = text.match(/-?\d+(?:\.\d+)?/);
+      if (!match || prefersReducedMotion()) { el.textContent = text; return; }
+
+      const numStr = match[0];
+      const prefix = text.slice(0, match.index);
+      const suffix = text.slice(match.index + numStr.length);
+      const decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
+      const toValue = parseFloat(numStr);
+
+      const prevText = el.textContent || '';
+      const prevMatch = prevText.match(/-?\d+(?:\.\d+)?/);
+      const fromValue = (prevMatch && prevText.slice(0, prevMatch.index) === prefix) ? parseFloat(prevMatch[0]) : 0;
+
+      const start = performance.now();
+      function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const current = fromValue + (toValue - fromValue) * eased;
+        el.textContent = prefix + current.toFixed(decimals) + suffix;
+        if (t < 1) requestAnimationFrame(tick);
+        else el.textContent = text;
+      }
+      requestAnimationFrame(tick);
+    }
+
     function updateStatusStrip() {
       const live = allRallies.filter(r => r.estado === 'en_curso').length;
       const upcoming = allRallies.filter(r => r.estado === 'planificado' || r.estado === 'confirmado').length;
-      document.getElementById('status-live').textContent = live;
-      document.getElementById('status-upcoming').textContent = upcoming;
-      document.getElementById('status-total').textContent = allRallies.length;
+      const total = allRallies.length;
+      animateValueText(document.getElementById('status-live'), String(live));
+      animateValueText(document.getElementById('status-upcoming'), String(upcoming));
+      animateValueText(document.getElementById('status-total'), String(total));
+
+      const CIRCUNFERENCIA_GAUGE = 113.1;
+      const ratio = total > 0 ? live / total : 0;
+      const gaugeFill = document.getElementById('status-gauge-fill');
+      if (gaugeFill) gaugeFill.style.strokeDashoffset = String(CIRCUNFERENCIA_GAUGE * (1 - ratio));
+      const gauge = document.getElementById('status-gauge');
+      if (gauge) gauge.classList.toggle('has-live', live > 0);
     }
 
     // 1. Fetch Rallies
@@ -1923,7 +3050,7 @@
     }
 
     function renderStatusBadge(estado) {
-      if (estado === 'en_curso') return `<div class="badge badge-status vivo"><div class="pulse-dot"></div> VIVO</div>`;
+      if (estado === 'en_curso') return `<div class="badge badge-status vivo"><div class="pulse-dot"></div> VIVO <span class="live-eq"><i></i><i></i><i></i></span></div>`;
       if (estado === 'finalizado') return `<div class="badge badge-status finalizo">FINALIZÓ</div>`;
       if (estado === 'planificado' || estado === 'confirmado') return `<div class="badge badge-status proximo">PRÓXIMO</div>`;
       return `<div class="badge badge-status proximo">${estado.toUpperCase()}</div>`;
@@ -1961,8 +3088,8 @@
                 <div class="badge badge-rally">${rally.tipo_evento === 'circuito' ? 'CIRCUITO' : 'RALLY'}</div>
                 ${renderStatusBadge(rally.estado)}
                 <div class="badge badge-date">${rally.fecha_inicio}</div>
+                ${flagHtml ? `<div class="badge badge-flag">${flagHtml} ${rally.pais}</div>` : ''}
               </div>
-              ${flagHtml ? `<div class="card-flag-corner">${flagHtml} ${rally.pais}</div>` : ''}
               <img src="${img}" alt="${rally.nombre}" onerror="this.src='https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=800';">
             </div>
 
@@ -2075,6 +3202,19 @@
       document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
     });
 
+    // Loader de pantalla completa ("cronómetro" TIEMPOS — AMADESU) -- ver
+    // openTiempos, que lo muestra mientras llegan los datos de Supabase y
+    // lo oculta (en un finally, para no quedar trabado ante un error) justo
+    // antes de dibujar el acordeón.
+    window.showGlobalLoader = function () {
+      const el = document.getElementById('global-loader');
+      if (el) el.classList.add('active');
+    };
+    window.hideGlobalLoader = function () {
+      const el = document.getElementById('global-loader');
+      if (el) el.classList.remove('active');
+    };
+
     // --- PILOTOS ---
     let currentPilotosData = [];
 
@@ -2101,17 +3241,71 @@
       </div>`;
     }
 
-    // Colorea la insignia de categoría de forma estable (hash del nombre),
-    // para poder distinguir clases de un vistazo en listas largas.
-    const PILOT_CAT_PALETTE = [
-      '#E63946', '#00F5A0', '#FFD166', '#00E5FF',
-      '#B794F6', '#FF8C42', '#4DD8B8', '#FF6B9D'
+    // ==========================================================
+    // COLOR POR CATEGORÍA — sistema "familias + respaldo"
+    // Las categorías (R1B, R2C, N4, RC2, etc.) llegan como texto libre desde
+    // la base de datos, así que no se pueden fijar de antemano. En vez de un
+    // hash plano sobre una paleta corta (como antes), se intenta reconocer
+    // el prefijo de clase contra los patrones estándar de rally (grupos
+    // R/RC, N, A, Históricos, Cross-country/Raid, Eléctricos, Súper/RGT) y
+    // se le asigna un TONO fijo por familia -- así, de un vistazo, "R1B" y
+    // "R1C" se leen como parientes (mismo tono) aunque no sean idénticos
+    // (varía la luminosidad, elegida por hash del nombre completo). Nunca
+    // se usan los tonos ya reservados para semántica de estado (rojo de
+    // marca, verde "en vivo", oro "finalizó", cian "próximo").
+    // Si el nombre no calza en ningún patrón conocido, cae a una paleta de
+    // respaldo de 12 colores curados (antes eran solo 8), elegida también
+    // por hash estable -- mismo nombre, mismo color, siempre.
+    // ==========================================================
+    const CAT_FAMILY_HUES = [
+      { test: /^RC\s*1\b|^RALLY\s*1\b|^R\s*5\b|^R\s*4\b/i, hue: 274 }, // Top class (Rally1/R4-R5) — violeta
+      { test: /^RC\s*2\b|^R\s*3\b/i, hue: 254 }, // Pro (Rally2/R3) — azul-violeta
+      { test: /^RC\s*3\b|^R\s*2\b/i, hue: 234 }, // Cup (Rally3/R2) — azul
+      { test: /^RC\s*4\b|^RC\s*5\b|^R\s*1\b/i, hue: 214 }, // Entry (Rally4-5/R1) — azul-cian
+      { test: /^N\d*\b|PRODUCCI[OÓ]N/i, hue: 98 },  // Grupo N / Producción — verde
+      { test: /^A\d*\b|GRUPO\s*A/i, hue: 80 },  // Grupo A — verde-lima
+      { test: /^H\b|HIST[OÓ]RIC/i, hue: 62 },  // Histórico/Clásico — ámbar suave
+      { test: /^T\d\b|CROSS|RAID|DAKAR/i, hue: 116 }, // Cross-country/Raid — verde-oliva
+      { test: /^E\b|^EV\b|EL[EÉ]CTRIC/i, hue: 294 }, // Eléctrico — violeta-magenta
+      { test: /^S\d\b|SUPER|RGT/i, hue: 314 }, // Súper/Especial/RGT — magenta
     ];
-    function categoriaColorFor(nombre) {
-      if (!nombre) return '#8E9BAE';
+    const CAT_FALLBACK_PALETTE = [
+      '#7C83FD', '#4DD8B8', '#FF8C42', '#C77DFF', '#6FCF97',
+      '#FF6B9D', '#63C6E0', '#E0B463', '#8FD14F', '#B794F6',
+      '#FF9F6B', '#5B9BFF'
+    ];
+    function hashNombreCategoria(nombre) {
       let hash = 0;
       for (let i = 0; i < nombre.length; i++) hash = (hash * 31 + nombre.charCodeAt(i)) >>> 0;
-      return PILOT_CAT_PALETTE[hash % PILOT_CAT_PALETTE.length];
+      return hash;
+    }
+    function hslToHexCategoria(h, s, l) {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
+      return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    }
+    function categoriaColorFor(nombre) {
+      if (!nombre) return '#8E9BAE';
+      const limpio = nombre.trim().toUpperCase();
+      const hash = hashNombreCategoria(limpio);
+
+      const familia = CAT_FAMILY_HUES.find(f => f.test.test(limpio));
+      if (familia) {
+        // Mismo tono para toda la familia; 3 variantes de luminosidad
+        // (regular/clara/más clara) elegidas por hash para distinguir
+        // sub-clases (ej. R2B vs R2C) sin salirse del tono familiar.
+        // Todas se mantienen >=50% de luminosidad: el badge de categoría
+        // pinta texto casi negro encima (ver .pilot-cat-badge), y una
+        // variante muy oscura perdería el contraste necesario.
+        const variantesLum = [58, 70, 50];
+        const lum = variantesLum[hash % variantesLum.length];
+        return hslToHexCategoria(familia.hue, 72, lum);
+      }
+
+      return CAT_FALLBACK_PALETTE[hash % CAT_FALLBACK_PALETTE.length];
     }
 
     window.openPilotos = async function (rallyId) {
@@ -2187,8 +3381,13 @@
       if (match) {
         return `<img src="https://flagcdn.com/${match.code}.svg" style="height: 16px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);" alt="${match.name}" title="${match.name}">`;
       }
-      return `<span style="font-size:12px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">${countryName}</span>`;
+      return '';
     }
+
+    const iconWheelSmall = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="2.3"></circle><path d="M12 9.7V3"></path><path d="M10.1 13.6 5.3 17.3"></path><path d="M13.9 13.6 18.7 17.3"></path></svg>`;
+    const iconNavSmall = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 11a9 9 0 0 1 18 0v5a3 3 0 0 1-3 3h-1v-6h4"></path><path d="M3 16v-5a3 3 0 0 1 3-3"></path><rect x="3" y="16" width="4" height="4" rx="1"></rect></svg>`;
+    const iconWrenchSmall = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2z"></path></svg>`;
+    const iconShieldSmall = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"></path></svg>`;
 
     function renderPilotosCards(categoriaFiltro) {
       const grid = document.getElementById('pilotos-grid');
@@ -2234,48 +3433,48 @@
         return;
       }
 
-      grid.innerHTML = filtered.map(ins => {
+      grid.innerHTML = filtered.map((ins, i) => {
         const p = ins.piloto ? `${ins.piloto.nombre} ${ins.piloto.apellido}` : 'Desconocido';
         const pFlag = getFlagHtml(ins.piloto?.pais || 'Bolivia');
-        const n = ins.navegante ? `${ins.navegante.nombre} ${ins.navegante.apellido}` : '-';
+        const n = ins.navegante ? `${ins.navegante.nombre} ${ins.navegante.apellido}` : '—';
         const nFlag = ins.navegante ? getFlagHtml(ins.navegante?.pais || 'Bolivia') : '';
-        const v = ins.vehiculo ? `${ins.vehiculo.marca} ${ins.vehiculo.modelo}` : 'N/A';
-        const c = ins.categoria ? ins.categoria.nombre : 'N/A';
+        const v = ins.vehiculo ? `${ins.vehiculo.marca} ${ins.vehiculo.modelo}` : '—';
+        const c = ins.categoria ? ins.categoria.nombre : 'Sin Clase';
         const catColor = categoriaColorFor(ins.categoria?.nombre);
         const team = ins.equipo ? ins.equipo.nombre : 'Sin Equipo';
         const asoc = ins.asociacion ? ins.asociacion.nombre : 'Independiente';
 
         return `
-          <div class="pilot-card">
+          <div class="pilot-card" style="--cat-color:${catColor}; --i:${i};">
             <div class="pilot-number-watermark">#${ins.numero}</div>
 
             <div class="pilot-card-top">
               <div>
-                <div class="pilot-number-large">#${ins.numero}</div>
+                <div class="pilot-number-plate"><span class="pilot-number-plate-hash">#</span>${ins.numero}</div>
                 ${ins.manga ? `<div class="pilot-manga-badge">${ins.manga.nombre}</div>` : ''}
               </div>
-              <div class="pilot-cat-badge" style="color:${catColor}; border-color:${catColor}66; background:${catColor}22;">${c}</div>
+              <div class="pilot-cat-badge">${c}</div>
             </div>
 
             <div class="pilot-card-content">
               <div class="pilot-person-group">
-                <div class="pilot-card-label">Piloto</div>
+                <div class="pilot-card-label">${iconWheelSmall} Piloto</div>
                 <div class="pilot-card-value">${p} ${pFlag}</div>
               </div>
 
               <div class="pilot-person-group">
-                <div class="pilot-card-label">Navegante</div>
+                <div class="pilot-card-label">${iconNavSmall} Navegante</div>
                 <div class="pilot-card-value" style="color: var(--text-muted);">${n} ${nFlag}</div>
               </div>
             </div>
 
             <div class="pilot-footer-grid">
               <div class="pilot-footer-item">
-                <div class="pilot-footer-label">Team / Marca</div>
+                <div class="pilot-footer-label">${iconWrenchSmall} Team / Marca</div>
                 <div class="pilot-footer-value">${team}<br><span style="color:var(--text-dim);">${v}</span></div>
               </div>
               <div class="pilot-footer-item">
-                <div class="pilot-footer-label">Asociación</div>
+                <div class="pilot-footer-label">${iconShieldSmall} Asociación</div>
                 <div class="pilot-footer-value">${asoc}</div>
               </div>
             </div>
@@ -2354,7 +3553,10 @@
       if (parts.length === 3) {
         const h = parseInt(parts[0], 10);
         const m = parts[1].padStart(2, '0');
-        const s = parseFloat(parts[2]).toFixed(2).replace('.', ',');
+        // padStart a 5 ("0.00" -> "00.00") -- toFixed(2) por sí solo NO agrega
+        // el cero de la izquierda cuando los segundos son de un solo dígito
+        // (ej. 4.89 -> "4.89"), lo que mostraba "21:4,89" en vez de "21:04,89".
+        const s = parseFloat(parts[2]).toFixed(2).padStart(5, '0').replace('.', ',');
         return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
       }
       return str;
@@ -2391,7 +3593,7 @@
           <tbody>${rows.map((r, i) => {
         if (r.estadoEspecial) {
           const { label, color } = labelEstadoEspecial(r);
-          return `<tr>
+          return `<tr style="--i:${i};">
               <td><span style="font-family:var(--font-mono); font-size:15px; color:var(--text-dim); padding-left:6px;">—</span></td>
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
               <td style="font-weight:600;">${r.name}</td>
@@ -2405,7 +3607,7 @@
         const posCell = rankClass
           ? `<span class="rank-badge ${rankClass}">${pos}</span>`
           : `<span style="font-family:var(--font-mono); font-size:15px; color:var(--text-muted); padding-left:6px;">${pos}</span>`;
-        return `<tr style="${rowStyle}">
+        return `<tr style="${rowStyle}--i:${i};">
               <td>${posCell}</td>
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
               <td style="font-weight:600;">${r.name}</td>
@@ -2415,6 +3617,33 @@
             </tr>`;
       }).join('')}</tbody>
         </table></div>`;
+    }
+
+    // Mini gráfico de brechas por categoría, directo en el acordeón de
+    // Tiempos (no solo en el modal de Stats) -- de un vistazo, qué tan
+    // apretada está la clase. Barras horizontales en CSS puro (sin
+    // Chart.js: se dibujan decenas de estas por acordeón y crear un canvas
+    // por cada una sería mucho más costoso que unos <div>). Se limita a los
+    // primeros 8 clasificados con tiempo válido -- suficiente para leer la
+    // pelea de punta sin saturar el acordeón.
+    function buildGapBarChart(rows, catColor) {
+      const validos = (rows || []).filter(r => !r.estadoEspecial).slice(0, 8);
+      if (validos.length < 2) return '';
+      const gaps = validos.map(r => r.dif ? intervalToMsPublic(r.dif) / 1000 : 0);
+      const maxGap = Math.max(...gaps, 0.5);
+      const color = catColor || 'var(--accent-primary)';
+      return `<div class="gap-bar-chart">
+        ${validos.map((r, i) => {
+        const gap = gaps[i];
+        const isLeader = gap === 0;
+        const pct = isLeader ? 3 : Math.max(6, Math.min(100, (gap / maxGap) * 100));
+        return `<div class="gap-bar-row" style="--i:${i};">
+            <span class="gap-bar-num">#${r.num}</span>
+            <div class="gap-bar-track"><div class="gap-bar-fill" style="width:${pct}%; background:${isLeader ? 'var(--live-green)' : color};"></div></div>
+            <span class="gap-bar-time">${isLeader ? 'LÍDER' : '+' + fmtInterval(r.dif)}</span>
+          </div>`;
+      }).join('')}
+      </div>`;
     }
 
     // Determina el "estado a mostrar" de un piloto en un tramo a partir de sus filas de
@@ -2540,7 +3769,7 @@
           const label = labelEstadoEspecial(r).label;
           return { pos: '-', num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: label, dif: '', _especial: true };
         }
-        return { pos: String(r.pos), num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: r.tiempo, dif: r.dif == null ? 'LÍDER' : '+' + r.dif, _especial: false };
+        return { pos: String(r.pos), num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: fmtInterval(r.tiempo), dif: r.dif == null ? 'LÍDER' : '+' + fmtInterval(r.dif), _especial: false };
       });
     }
 
@@ -2587,7 +3816,7 @@
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(230, 57, 70);
-        doc.text('CRONOMETRAJE OFICIAL EN VIVO', marginX + 21, y + 7.5);
+        doc.text('CRONOMETRAJE EN VIVO', marginX + 21, y + 7.5);
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
@@ -2596,7 +3825,7 @@
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(100, 100, 100);
-        doc.text('Resultados Oficiales', pageW / 2, y + 9.5, { align: 'center' });
+        doc.text('Resultados Extra Oficiales', pageW / 2, y + 9.5, { align: 'center' });
 
         const fecha = new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         doc.setFont('helvetica', 'normal');
@@ -2891,11 +4120,15 @@
     function renderCategoriasHtml(byCat) {
       const cats = Object.keys(byCat);
       if (cats.length === 0) return '<p class="acc-empty">Sin tiempos registrados aún.</p>';
-      return cats.sort().map(cat => `
+      return cats.sort().map(cat => {
+        const catColor = categoriaColorFor(cat);
+        return `
         <div style="margin-bottom: 16px;">
-          <h4 style="margin-bottom:8px; color: var(--accent-primary); font-size: 14px; display:flex; align-items:center; gap:6px;">${iconCategory}${cat}</h4>
+          <h4 style="margin-bottom:8px; color: ${catColor}; font-size: 14px; display:flex; align-items:center; gap:6px;">${iconCategory}${cat}</h4>
+          ${buildGapBarChart(byCat[cat], catColor)}
           ${buildResultTable(byCat[cat])}
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
 
     function escPrintText(str) {
@@ -3168,7 +4401,9 @@
       document.getElementById('tiempos-num-search').value = '';
       document.getElementById('btn-tiempos-pdf').style.display = 'none';
       window.tiemposVueltaMangaFilter = 'ALL';
+      window.showGlobalLoader();
 
+      try {
       const rallyInfo = allRallies.find(r => r.id === rallyId);
       const esCircuito = rallyInfo?.tipo_evento === 'circuito';
 
@@ -3200,8 +4435,8 @@
           // (ver sumarTiempoRecorridoInscripcion) y necesita este total aparte.
           esCircuito
             ? supabase.schema('rally').from('penalizaciones')
-                .select('recorrido_id, inscripcion_id, tiempo_penalizacion')
-                .in('recorrido_id', recorridoIds).eq('tipo', 'tiempo').is('deleted_at', null)
+              .select('recorrido_id, inscripcion_id, tiempo_penalizacion')
+              .in('recorrido_id', recorridoIds).eq('tipo', 'tiempo').is('deleted_at', null)
             : Promise.resolve({ data: [] })
         ]);
         // Blindaje ante duplicados: si por un reproceso de la Carga Masiva (u otra
@@ -3233,6 +4468,9 @@
       }
 
       window.filtrarAccordionTiempos();
+      } finally {
+        window.hideGlobalLoader();
+      }
     };
 
     // --- STATS ---
@@ -3559,11 +4797,24 @@
     };
 
     function kpiCard(label, value, sub, cls) {
+      // data-final guarda el valor real; el div arranca vacío y se anima con
+      // animateKpiGrid() después de insertar el HTML -- así los KPIs "cuentan"
+      // hasta su valor (posición, tiempo, velocidad...) como telemetría en vivo.
+      const finalAttr = String(value).replace(/"/g, '&quot;');
       return `<div class="stat-kpi-card">
         <div class="stat-kpi-label">${label}</div>
-        <div class="stat-kpi-value ${cls || ''}">${value}</div>
+        <div class="stat-kpi-value ${cls || ''}" data-final="${finalAttr}"></div>
         ${sub ? `<div class="stat-kpi-sub">${sub}</div>` : ''}
       </div>`;
+    }
+
+    // Recorre los .stat-kpi-value recién insertados en el grid indicado y
+    // los anima uno a uno con un pequeño escalonado (no todos a la vez).
+    function animateKpiGrid(gridId) {
+      const nodes = document.querySelectorAll(`#${gridId} .stat-kpi-value[data-final]`);
+      nodes.forEach((el, i) => {
+        setTimeout(() => animateValueText(el, el.getAttribute('data-final'), 650), i * 70);
+      });
     }
 
     document.getElementById('stats-pilot-selector').addEventListener('change', async (e) => {
@@ -3595,12 +4846,12 @@
       const statsRallyData = window.statsRallyData;
       const filasPilotoGeneral = statsRallyData
         ? statsRallyData.recorridoOrden
-            .map(recId => {
-              const info = calcularRankingsPorRecorrido(statsRallyData.tiemposRally)[recId]?.[insId];
-              if (!info) return null;
-              return { recId, ...statsRallyData.recorridoInfo[recId], ...info };
-            })
-            .filter(Boolean)
+          .map(recId => {
+            const info = calcularRankingsPorRecorrido(statsRallyData.tiemposRally)[recId]?.[insId];
+            if (!info) return null;
+            return { recId, ...statsRallyData.recorridoInfo[recId], ...info };
+          })
+          .filter(Boolean)
         : [];
 
       if (!statsRallyData || filasPilotoGeneral.length === 0) {
@@ -3651,6 +4902,7 @@
         kpiHtml += kpiCard('Tramos Ganados', `${tramosGanados}`, `de ${filasPiloto.length} disputados`, tramosGanados > 0 ? 'positive' : '');
 
         document.getElementById('stats-kpi-grid').innerHTML = kpiHtml;
+        animateKpiGrid('stats-kpi-grid');
 
         const catDrivers = new Set(tiemposRally.filter(t => t.inscripcion?.categoria?.nombre === categoriaPiloto).map(t => t.inscripcion_id));
         const accumulatedTimesByCategoryDriver = {};
@@ -3683,8 +4935,8 @@
           let trendHtml = '';
           if (i > 0) {
             const prevF = filasPiloto[i - 1];
-            if (f.posCategoria < prevF.posCategoria) trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
-            else if (f.posCategoria > prevF.posCategoria) trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E63946" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+            if (f.posCategoria < prevF.posCategoria) trendHtml = `<svg class="trend-pop" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
+            else if (f.posCategoria > prevF.posCategoria) trendHtml = `<svg class="trend-pop" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E63946" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
             else trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
           }
 
@@ -3697,7 +4949,7 @@
           }
 
           return `
-          <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: background 0.2s; --i:${i};" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
             <td style="font-weight:600; padding: 12px 16px;">PE${f.numero}: ${f.nombre}</td>
             <td style="color: var(--text-muted); padding: 12px 16px;">${f.distancia_km ? parseFloat(f.distancia_km).toFixed(2) + ' km' : '-'}</td>
             <td style="font-family: var(--font-mono); color: var(--accent-primary); font-weight: bold; padding: 12px 16px;">${fmtInterval(msToIntervalStrPublic(f.ms))}</td>
@@ -3864,6 +5116,7 @@
           kpiHtml += kpiCard('Vueltas Ganadas', `${vueltasGanadas}`, `de ${filasPiloto.length} completadas`, vueltasGanadas > 0 ? 'positive' : '');
 
           document.getElementById('clasif-kpi-grid').innerHTML = kpiHtml;
+          animateKpiGrid('clasif-kpi-grid');
 
           const catDrivers = new Set(tiemposRally.filter(t => t.inscripcion?.categoria?.nombre === categoriaPiloto).map(t => t.inscripcion_id));
           const accumulatedTimesByCategoryDriver = {};
@@ -3897,8 +5150,8 @@
             let trendHtml = '';
             if (i > 0) {
               const prevF = filasPiloto[i - 1];
-              if (f.posCategoria < prevF.posCategoria) trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
-              else if (f.posCategoria > prevF.posCategoria) trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E63946" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+              if (f.posCategoria < prevF.posCategoria) trendHtml = `<svg class="trend-pop" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--live-green)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
+              else if (f.posCategoria > prevF.posCategoria) trendHtml = `<svg class="trend-pop" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E63946" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
               else trendHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="3" style="vertical-align: middle; margin-left:4px;"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
             }
 
@@ -3911,7 +5164,7 @@
             }
 
             return `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: background 0.2s; --i:${i};" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
               <td style="font-weight:600; padding: 12px 16px;">${f.nombre}</td>
               <td style="color: var(--text-muted); padding: 12px 16px;">${f.distancia_km ? parseFloat(f.distancia_km).toFixed(2) + ' km' : '-'}</td>
               <td style="font-family: var(--font-mono); color: var(--accent-primary); font-weight: bold; padding: 12px 16px;">${fmtInterval(msToIntervalStrPublic(f.ms))}</td>
