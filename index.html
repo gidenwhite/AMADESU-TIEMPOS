@@ -4579,6 +4579,7 @@
         // refresco automático) para no sumar una consulta extra cada 25s.
         const { data: ambitosRallyData, error: ambitosRallyError } = await supabase.schema('rally').from('rallies_ambitos_campeonato').select('ambito:ambitos_campeonato(id, codigo, nombre)').eq('rally_id', rallyId);
         if (ambitosRallyError) console.error('Error al cargar campeonatos del rally:', ambitosRallyError);
+        console.log('DEBUG campeonatos rallyId:', rallyId, 'ambitosRallyData:', JSON.stringify(ambitosRallyData));
         (ambitosRallyData || []).map(x => x.ambito).filter(Boolean).sort((a, b) => a.codigo.localeCompare(b.codigo)).forEach(a => {
           tiemposCampSelect.innerHTML += `<option value="${a.id}">${a.nombre.toUpperCase()}</option>`;
         });
