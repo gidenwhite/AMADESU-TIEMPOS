@@ -3532,7 +3532,11 @@
     // Circuito.
     // ==========================================
     async function fetchAmbitosCampeonatoGlobales() {
-      const { data } = await supabase.schema('rally').from('ambitos_campeonato').select('*').eq('activa', true).order('orden');
+      const { data, error } = await supabase.schema('rally').from('ambitos_campeonato').select('*').eq('activa', true).order('orden');
+      if (error) {
+        console.error('Error al cargar ambitos_campeonato:', error);
+        window.toast('No se pudieron cargar los campeonatos: ' + error.message, 'error');
+      }
       window.globalAmbitosCampeonato = data || [];
     }
 
