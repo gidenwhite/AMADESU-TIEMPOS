@@ -1910,7 +1910,15 @@
             </div>
             <button class="btn-secondary" onclick="window.cargarClasificacion()" style="padding: 0 16px; display:inline-flex; align-items:center; gap:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
           </div>
-          
+          <!-- Campeonato: multi-selección (podés marcar solo MUN., o MUN.+DEP., o
+               los tres a la vez) -- a diferencia de Clase/Manga de arriba, que son
+               de una sola opción. Solo aparece si el rally tiene campeonatos
+               habilitados (ver "Editar Circuito"). -->
+          <div class="form-group" id="clasificacion-campeonato-group" style="display:none; margin-top: -4px; margin-bottom: 16px;">
+            <label class="form-label" style="font-size: 11px; margin-bottom: 8px; display:block;">Campeonato</label>
+            <div id="clasificacion-campeonato-checkboxes" style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;"></div>
+          </div>
+
           <div style="overflow-x: auto;">
             <table class="data-table">
               <thead>
@@ -5189,6 +5197,9 @@
     };
 
     window.cargarConfigTiempos = async function() {
+      if (!window.globalAmbitosCampeonato || window.globalAmbitosCampeonato.length === 0) {
+        await cargarAmbitosCampeonatoGlobales();
+      }
       const rallyId = document.getElementById('tiempo-rally-select').value;
       const etapaSelect = document.getElementById('tiempo-etapa-select');
       const recSelect = document.getElementById('tiempo-recorrido-select');
@@ -5208,7 +5219,7 @@
       // seguidos solo para entrar a esta pantalla. Ahora se piden en paralelo
       // las partes que no dependen entre sí, y los recorridos de TODAS las
       // etapas en una sola consulta con "in(...)" en vez de una por etapa.
-      const [, etapasRes, inscritosRes, rallyRes, mangasRes] = await Promise.all([
+      const [, etapasRes, inscritosRes, rallyRes, mangasRes, ambitosRallyRes] = await Promise.all([
         window.cargarShakedownInfo(rallyId), // El Shakedown se maneja aparte (botón dedicado), nunca se mezcla con las Etapas oficiales.
         supabase.schema('rally').from('etapas').select('id, nombre').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero'),
         supabase.schema('rally').from('inscripciones').select(`
@@ -5217,8 +5228,15 @@
           categoria:categorias(nombre, codigo)
         `).eq('rally_id', rallyId).is('deleted_at', null).order('numero'),
         supabase.schema('rally').from('rallies').select('cronograma_filas').eq('id', rallyId).maybeSingle(),
-        supabase.schema('rally').from('mangas').select('id, numero, nombre').eq('rally_id', rallyId).is('deleted_at', null).order('numero')
+        supabase.schema('rally').from('mangas').select('id, numero, nombre').eq('rally_id', rallyId).is('deleted_at', null).order('numero'),
+        // Campeonatos habilitados para este rally -- para el filtro (multi-selección,
+        // checkboxes) de la Clasificación en Vivo, ver window.renderClasificacionCampeonatoCheckboxes.
+        supabase.rpc('obtener_ambitos_campeonato_rally', { p_rally_id: rallyId })
       ]);
+
+      const ambitoEnabledIds = (ambitosRallyRes.data || []).map(a => a.ambito_campeonato_id);
+      window.clasificacionAmbitosCampeonato = (window.globalAmbitosCampeonato || []).filter(a => ambitoEnabledIds.includes(a.id));
+      window.renderClasificacionCampeonatoCheckboxes();
 
       const etapas = etapasRes.data;
       if(!etapas || etapas.length === 0) {
@@ -6789,6 +6807,27 @@
       }
     });
 
+    // Checkboxes de Campeonato para la Clasificación en Vivo -- a diferencia
+    // del filtro de Clase (una sola opción), acá se puede marcar cualquier
+    // combinación (solo MUN., MUN.+DEP., los tres...): filtrarClasificacion
+    // muestra a quien tenga AL MENOS UNO de los marcados.
+    window.renderClasificacionCampeonatoCheckboxes = function() {
+      const group = document.getElementById('clasificacion-campeonato-group');
+      const container = document.getElementById('clasificacion-campeonato-checkboxes');
+      const ambitos = window.clasificacionAmbitosCampeonato || [];
+      if (ambitos.length === 0) {
+        group.style.display = 'none';
+        container.innerHTML = '';
+        return;
+      }
+      group.style.display = '';
+      container.innerHTML = ambitos.map(a => `
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-main);">
+          <input type="checkbox" name="clasificacion-campeonato" value="${a.id}" style="width: 16px; height: 16px; accent-color: var(--accent-primary); cursor: pointer;" onchange="window.filtrarClasificacion()"> ${escapeHtml(a.codigo)}
+        </label>
+      `).join('');
+    };
+
     window.cargarClasificacion = async function() {
       const recId = document.getElementById('tiempo-recorrido-select').value;
       const tbody = document.getElementById('clasificacion-tbody');
@@ -6806,7 +6845,8 @@
             numero, manga_id,
             piloto:pilotos(nombre, apellido),
             categoria:categorias(nombre, codigo),
-            manga:mangas(nombre)
+            manga:mangas(nombre),
+            ambitos_campeonato:inscripcion_ambitos_campeonato(ambito_campeonato_id)
           )
         `).eq('recorrido_id', recId).is('deleted_at', null),
         supabase.schema('rally').from('penalizaciones')
@@ -6943,6 +6983,7 @@
     window.filtrarClasificacion = function() {
       const catFilter = document.getElementById('clasificacion-categoria-select').value;
       const mangaFilter = document.getElementById('clasificacion-manga-select').value;
+      const campFilterIds = Array.from(document.querySelectorAll('input[name="clasificacion-campeonato"]:checked')).map(cb => cb.value);
       const tbody = document.getElementById('clasificacion-tbody');
 
       if(tiemposCurrentClasificacion.length === 0) {
@@ -6956,6 +6997,11 @@
       }
       if(mangaFilter !== 'ALL') {
         filtered = filtered.filter(t => t.inscripcion?.manga_id === mangaFilter);
+      }
+      // Campeonato: multi-selección -- se queda con quien tenga AL MENOS UNO
+      // de los ámbitos marcados (si no marcaste ninguno, no filtra por esto).
+      if (campFilterIds.length > 0) {
+        filtered = filtered.filter(t => (t.inscripcion?.ambitos_campeonato || []).some(ac => campFilterIds.includes(ac.ambito_campeonato_id)));
       }
 
       filtered.sort((a, b) => a._ms - b._ms);
