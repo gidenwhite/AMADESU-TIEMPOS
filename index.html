@@ -1669,9 +1669,12 @@
       width: fit-content;
     }
 
-    /* Chips de Campeonato (NAL/DEP/MUN) en la tarjeta de piloto -- un
-       piloto puede estar en varios a la vez, así que van en fila, no como
-       badge único. */
+    /* Chips de Campeonato (Nacional/Departamental/Municipal... o los que
+       el admin haya creado) en la tarjeta de piloto -- un piloto puede
+       estar en varios a la vez, así que van en fila, no como badge único.
+       El color de cada uno sale de categoriaColorFor(codigo) (mismo hash
+       estable que ya usan las clases), inline en el HTML -- no hay un set
+       fijo de colores acá porque el catálogo de campeonatos es dinámico. */
     .pilot-camp-badges {
       display: flex;
       gap: 4px;
@@ -1687,9 +1690,6 @@
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
-    .pilot-camp-chip.nal { background: rgba(0, 229, 255, 0.12); color: var(--status-upcoming); border: 1px solid rgba(0, 229, 255, 0.3); }
-    .pilot-camp-chip.dep { background: rgba(0, 245, 160, 0.12); color: var(--live-green); border: 1px solid rgba(0, 245, 160, 0.3); }
-    .pilot-camp-chip.mun { background: rgba(255, 209, 102, 0.12); color: var(--status-finished); border: 1px solid rgba(255, 209, 102, 0.3); }
 
     .pilot-card-content {
       position: relative;
@@ -2577,9 +2577,6 @@
         </select>
         <select id="pilotos-campeonato-filter" class="custom-select" style="width: 190px;">
           <option value="TODOS">TODOS LOS CAMPEONATOS</option>
-          <option value="NAL">NACIONAL</option>
-          <option value="DEP">DEPARTAMENTAL</option>
-          <option value="MUN">MUNICIPAL</option>
         </select>
         <select id="pilotos-sort" class="custom-select" style="width: 195px;">
           <option value="numero">Ordenar por Número</option>
@@ -2618,9 +2615,6 @@
         <select id="tiempos-camp-filter" class="pilot-selector" style="width:auto; min-width:190px; margin-bottom:0;"
           onchange="window.filtrarAccordionTiempos()">
           <option value="ALL">Todos los Campeonatos</option>
-          <option value="NAL">Nacional</option>
-          <option value="DEP">Departamental</option>
-          <option value="MUN">Municipal</option>
         </select>
         <div style="display:flex; gap:6px; align-items:center;">
           <input type="text" id="tiempos-num-search" class="pilot-selector" style="width:160px; margin-bottom:0;"
@@ -3379,13 +3373,25 @@
 
       grid.innerHTML = Array(6).fill(pilotSkeletonCard()).join('');
       filter.innerHTML = '<option value="TODAS">TODAS LAS CLASES</option>';
-      document.getElementById('pilotos-campeonato-filter').value = 'TODOS';
+      const campFilterSelect = document.getElementById('pilotos-campeonato-filter');
+      campFilterSelect.innerHTML = '<option value="TODOS">TODOS LOS CAMPEONATOS</option>';
       document.getElementById('pilotos-count').innerText = '';
       document.getElementById('pilotos-search').value = '';
       document.getElementById('pilotos-search-clear').style.display = 'none';
       document.getElementById('pilotos-sort').value = 'numero';
 
-      const { data, error } = await supabase.schema('rally').from('inscripciones').select('numero, campeonato_nacional, campeonato_departamental, campeonato_municipal, piloto:pilotos(nombre, apellido, pais, celular), navegante:navegantes(nombre, apellido, pais, celular), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre), asociacion:asociaciones(nombre), manga:mangas(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero');
+      const [{ data, error }, { data: ambitosRallyData }] = await Promise.all([
+        supabase.schema('rally').from('inscripciones').select('numero, ambitos_campeonato:inscripcion_ambitos_campeonato(ambito_campeonato_id, ambito:ambitos_campeonato(codigo)), piloto:pilotos(nombre, apellido, pais, celular), navegante:navegantes(nombre, apellido, pais, celular), vehiculo:vehiculos(marca, modelo), categoria:categorias(nombre), equipo:equipos(nombre), asociacion:asociaciones(nombre), manga:mangas(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero'),
+        // Solo los campeonatos que el admin habilitó para ESTE rally se ofrecen
+        // como filtro -- aunque un piloto ya esté anotado en uno oculto, no
+        // aparece como opción (ver window.currentRallyAmbitosCampeonatoPub).
+        supabase.schema('rally').from('rallies_ambitos_campeonato').select('ambito:ambitos_campeonato(id, codigo, nombre)').eq('rally_id', rallyId)
+      ]);
+
+      window.currentRallyAmbitosCampeonatoPub = (ambitosRallyData || []).map(x => x.ambito).filter(Boolean).sort((a, b) => a.codigo.localeCompare(b.codigo));
+      window.currentRallyAmbitosCampeonatoPub.forEach(a => {
+        campFilterSelect.innerHTML += `<option value="${a.id}">${a.nombre.toUpperCase()}</option>`;
+      });
 
       if (error) {
         grid.innerHTML = `<div class="no-results">
@@ -3459,8 +3465,6 @@
     const iconWrenchSmall = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2z"></path></svg>`;
     const iconShieldSmall = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"></path></svg>`;
 
-    const PILOTOS_CAMPEONATO_CAMPO = { NAL: 'campeonato_nacional', DEP: 'campeonato_departamental', MUN: 'campeonato_municipal' };
-
     function renderPilotosCards(categoriaFiltro) {
       const grid = document.getElementById('pilotos-grid');
 
@@ -3471,7 +3475,7 @@
 
       let filtered = currentPilotosData.filter(ins => {
         if (categoriaFiltro !== 'TODAS' && ins.categoria?.nombre !== categoriaFiltro) return false;
-        if (campeonatoFiltro !== 'TODOS' && !ins[PILOTOS_CAMPEONATO_CAMPO[campeonatoFiltro]]) return false;
+        if (campeonatoFiltro !== 'TODOS' && !(ins.ambitos_campeonato || []).some(ac => ac.ambito_campeonato_id === campeonatoFiltro)) return false;
         if (searchVal) {
           const numMatch = String(ins.numero).toLowerCase().includes(searchVal);
           const catMatch = (ins.categoria?.nombre || '').toLowerCase().includes(searchVal);
@@ -3526,10 +3530,12 @@
               <div>
                 <div class="pilot-number-plate"><span class="pilot-number-plate-hash">#</span>${ins.numero}</div>
                 ${ins.manga ? `<div class="pilot-manga-badge">${ins.manga.nombre}</div>` : ''}
-                ${(ins.campeonato_nacional || ins.campeonato_departamental || ins.campeonato_municipal) ? `<div class="pilot-camp-badges">
-                  ${ins.campeonato_nacional ? '<span class="pilot-camp-chip nal">NAL.</span>' : ''}
-                  ${ins.campeonato_departamental ? '<span class="pilot-camp-chip dep">DEP.</span>' : ''}
-                  ${ins.campeonato_municipal ? '<span class="pilot-camp-chip mun">MUN.</span>' : ''}
+                ${(ins.ambitos_campeonato && ins.ambitos_campeonato.length > 0) ? `<div class="pilot-camp-badges">
+                  ${ins.ambitos_campeonato.map(ac => {
+                    const codigo = ac.ambito?.codigo || '?';
+                    const color = categoriaColorFor(codigo);
+                    return `<span class="pilot-camp-chip" style="background:${color}22; color:${color}; border:1px solid ${color}55;">${escPrintText(codigo)}.</span>`;
+                  }).join('')}
                 </div>` : ''}
               </div>
               <div class="pilot-cat-badge">${c}</div>
@@ -3781,7 +3787,7 @@
       if (!recorrido) return null;
 
       const { data: tiemposRaw, error } = await supabase.schema('rally').from('tiempos')
-        .select('recorrido_id, inscripcion_id, vuelta, updated_at, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, campeonato_nacional, campeonato_departamental, campeonato_municipal, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
+        .select('recorrido_id, inscripcion_id, vuelta, updated_at, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, ambitos_campeonato:inscripcion_ambitos_campeonato(ambito_campeonato_id), piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), vehiculo:vehiculos(marca,modelo))')
         .eq('recorrido_id', recorrido.id).is('deleted_at', null);
       if (error || !tiemposRaw || tiemposRaw.length === 0) return null;
 
@@ -4248,13 +4254,11 @@
 
     // mangaFilter solo se aplica dentro del panel "Vueltas" (ver más abajo) --
     // Clasificación/Shakedown y General siguen mostrando todas las mangas juntas.
-    // NAL/DEP/MUN -> nombre real de la columna booleana en rally.inscripciones.
-    const TIEMPOS_CAMPEONATO_CAMPO = { NAL: 'campeonato_nacional', DEP: 'campeonato_departamental', MUN: 'campeonato_municipal' };
-
+    // campFilter es el id (uuid) del ámbito de campeonato elegido en el selector.
     function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, mangaFilter, penalMap, campFilter) {
       const pasaFiltro = (ins) => {
         if (catFilter && catFilter !== 'ALL' && (ins?.categoria?.nombre || 'Sin Categoría') !== catFilter) return false;
-        if (campFilter && campFilter !== 'ALL' && !ins?.[TIEMPOS_CAMPEONATO_CAMPO[campFilter]]) return false;
+        if (campFilter && campFilter !== 'ALL' && !(ins?.ambitos_campeonato || []).some(ac => ac.ambito_campeonato_id === campFilter)) return false;
         return true;
       };
 
@@ -4513,7 +4517,7 @@
       if (recorridoIds.length > 0) {
         const [tiemposRes, penalRes] = await Promise.all([
           supabase.schema('rally').from('tiempos')
-            .select('id, updated_at, recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, campeonato_nacional, campeonato_departamental, campeonato_municipal, piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
+            .select('id, updated_at, recorrido_id, inscripcion_id, vuelta, tiempo_bruto, tiempo_neto, estado, inscripcion:inscripciones(numero, manga_id, ambitos_campeonato:inscripcion_ambitos_campeonato(ambito_campeonato_id), piloto:pilotos(nombre,apellido), navegante:navegantes(nombre,apellido), categoria:categorias(nombre), manga:mangas(nombre))')
             .in('recorrido_id', recorridoIds).is('deleted_at', null),
           // Solo hace falta para circuitos: un PE de una sola vuelta usa tiempo_neto (ya
           // trae la penalización), pero uno de varias vueltas suma tiempo_bruto por vuelta
@@ -4560,7 +4564,8 @@
       const container = document.getElementById('tiempos-accordion');
       container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
       document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Categorías</option>';
-      document.getElementById('tiempos-camp-filter').value = 'ALL';
+      const tiemposCampSelect = document.getElementById('tiempos-camp-filter');
+      tiemposCampSelect.innerHTML = '<option value="ALL">Todos los Campeonatos</option>';
       document.getElementById('tiempos-num-resultado').innerHTML = '';
       document.getElementById('tiempos-num-search').value = '';
       document.getElementById('btn-tiempos-pdf').style.display = 'none';
@@ -4569,6 +4574,14 @@
       window.showGlobalLoader();
 
       try {
+        // Los campeonatos habilitados para este rally no cambian mientras el
+        // modal está abierto -- se traen una sola vez acá (no en cada
+        // refresco automático) para no sumar una consulta extra cada 25s.
+        const { data: ambitosRallyData } = await supabase.schema('rally').from('rallies_ambitos_campeonato').select('ambito:ambitos_campeonato(id, codigo, nombre)').eq('rally_id', rallyId);
+        (ambitosRallyData || []).map(x => x.ambito).filter(Boolean).sort((a, b) => a.codigo.localeCompare(b.codigo)).forEach(a => {
+          tiemposCampSelect.innerHTML += `<option value="${a.id}">${a.nombre.toUpperCase()}</option>`;
+        });
+
         await cargarDatosTiempos(rallyId, { preservarFiltroCategoria: false });
         window.marcarTiemposActualizados();
         window.iniciarAutoRefreshTiempos();

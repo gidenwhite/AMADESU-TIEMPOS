@@ -980,6 +980,18 @@
                 </div>
               </div>
               <div class="form-group full-width">
+                <label class="form-label">Campeonatos Habilitados</label>
+                <p style="font-size: 12px; color: var(--text-muted, #8E9BAE); margin: 4px 0 8px;">Solo los que marques acá se podrán asignar a un piloto y se mostrarán como filtro en el sitio público de este rally.</p>
+                <div id="ambitos-campeonato-checkboxes-container" style="display: flex; flex-wrap: wrap; gap: 12px; background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                   <span style="color: var(--text-muted); font-size: 13px;">Cargando campeonatos...</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                  <input type="text" id="edit-ambito-campeonato-codigo" class="form-control" placeholder="Abreviatura (ej. ZON)" style="max-width: 160px;">
+                  <input type="text" id="edit-ambito-campeonato-nombre" class="form-control" placeholder="Nombre completo (ej. Zonal)" style="max-width: 220px;">
+                  <button type="button" class="btn-secondary" onclick="window.agregarAmbitoCampeonatoNuevo('edit')">+ Agregar Campeonato</button>
+                </div>
+              </div>
+              <div class="form-group full-width">
                 <label class="form-label">Subir/Cambiar Foto del Afiche</label>
                 <input type="file" id="edit-rally-imagen" class="form-control" accept="image/*">
                 <p style="font-size: 12px; color: var(--text-muted, #8E9BAE); margin-top: 6px;">
@@ -1122,18 +1134,10 @@
                     <label class="form-label" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8;">Asociación</label>
                     <input type="text" id="ins-asociacion" class="form-control" placeholder="Ej. BOLIVIA" style="height: 44px; background: rgba(0,0,0,0.2);">
                   </div>
-                  <div class="form-group">
+                  <div class="form-group full-width" id="ins-campeonato-wrapper" style="grid-column: 1 / -1;">
                     <label class="form-label" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8;">Campeonato (se puede marcar más de uno)</label>
-                    <div style="display: flex; gap: 16px; align-items: center; height: 44px;">
-                      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-main);">
-                        <input type="checkbox" id="ins-camp-nacional" style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;"> NAL.
-                      </label>
-                      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-main);">
-                        <input type="checkbox" id="ins-camp-departamental" style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;"> DEP.
-                      </label>
-                      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-main);">
-                        <input type="checkbox" id="ins-camp-municipal" style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;"> MUN.
-                      </label>
+                    <div id="ins-campeonato-checkboxes" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; min-height: 44px;">
+                      <span style="color: var(--text-muted); font-size: 13px;">Este rally no tiene campeonatos habilitados. Configúralos en "Editar Circuito".</span>
                     </div>
                   </div>
                 </div>
@@ -1324,6 +1328,26 @@
             <div style="display: flex; gap: 8px; margin-top: 12px;">
               <input type="text" id="create-clase-nueva-input" class="form-control" placeholder="Código de clase nueva (ej. RC6)" style="max-width: 260px;">
               <button type="button" class="btn-secondary" onclick="window.agregarClaseNueva('create')">+ Agregar Clase</button>
+            </div>
+          </div>
+
+          <!-- 2b. CAMPEONATOS HABILITADOS -->
+          <div class="card-panel">
+            <h2 class="panel-title">
+              <div class="panel-title-inner">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"></circle><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"></path></svg>
+                Campeonatos Habilitados
+              </div>
+            </h2>
+            <p class="form-label" style="margin-bottom: 16px;">Solo estos se podrán asignar a un piloto y se mostrarán como filtro en el sitio público de este rally:</p>
+
+            <div id="create-ambitos-campeonato-container" style="display: flex; flex-wrap: wrap; gap: 12px; background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+              <span style="color: var(--text-muted); font-size: 13px;">Cargando campeonatos...</span>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+              <input type="text" id="create-ambito-campeonato-codigo" class="form-control" placeholder="Abreviatura (ej. ZON)" style="max-width: 160px;">
+              <input type="text" id="create-ambito-campeonato-nombre" class="form-control" placeholder="Nombre completo (ej. Zonal)" style="max-width: 220px;">
+              <button type="button" class="btn-secondary" onclick="window.agregarAmbitoCampeonatoNuevo('create')">+ Agregar Campeonato</button>
             </div>
           </div>
 
@@ -2330,6 +2354,7 @@
     }
     checkAuth();
     cargarCategoriasGlobales();
+    cargarAmbitosCampeonatoGlobales();
 
     // Logo del sitio (si el admin lo configuró en "Sitio Web"), reemplaza
     // el ícono por defecto de la bandera en el topbar de este panel.
@@ -2994,7 +3019,7 @@
         // 4. Guardar categorías habilitadas
         const checkboxes = document.querySelectorAll('input[name="create-rally-categoria"]:checked');
         const categorias_ids = Array.from(checkboxes).map(cb => cb.value);
-        
+
         if (categorias_ids.length > 0) {
           const { data: dbCount, error: catError } = await supabase.rpc('actualizar_categorias_rally', {
             p_rally_id: rallyId,
@@ -3003,6 +3028,21 @@
           if (catError) {
              console.error("Error al guardar categorías:", catError);
              window.toast('El resto se guardó, pero las categorías no: ' + catError.message, 'error');
+          }
+        }
+
+        // 5. Guardar campeonatos habilitados
+        const ambitoCheckboxes = document.querySelectorAll('input[name="create-rally-ambito-campeonato"]:checked');
+        const ambitos_ids = Array.from(ambitoCheckboxes).map(cb => cb.value);
+
+        if (ambitos_ids.length > 0) {
+          const { error: ambitoError } = await supabase.rpc('actualizar_ambitos_campeonato_rally', {
+            p_rally_id: rallyId,
+            p_ambito_ids: ambitos_ids
+          });
+          if (ambitoError) {
+             console.error("Error al guardar campeonatos:", ambitoError);
+             window.toast('El resto se guardó, pero los campeonatos no: ' + ambitoError.message, 'error');
           }
         }
 
@@ -3477,9 +3517,98 @@
       }
     };
 
+    // ==========================================
+    // ÁMBITOS DE CAMPEONATO (Nacional/Departamental/Municipal + los que
+    // se agreguen) -- mismo patrón que las categorías de arriba: catálogo
+    // global editable, habilitación por rally, checkboxes en Crear/Editar
+    // Circuito.
+    // ==========================================
+    async function fetchAmbitosCampeonatoGlobales() {
+      const { data } = await supabase.schema('rally').from('ambitos_campeonato').select('*').eq('activa', true).order('orden');
+      window.globalAmbitosCampeonato = data || [];
+    }
+
+    window.renderCreateAmbitosCampeonatoCheckboxes = function(checkedIds = null) {
+      const container = document.getElementById('create-ambitos-campeonato-container');
+      if (!container) return;
+      if (window.globalAmbitosCampeonato.length === 0) {
+        container.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">No hay campeonatos globales en el sistema.</span>';
+        return;
+      }
+      container.innerHTML = window.globalAmbitosCampeonato.map(a => {
+        const isChecked = checkedIds ? checkedIds.includes(a.id) : true;
+        return `
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+            <input type="checkbox" name="create-rally-ambito-campeonato" value="${a.id}" ${isChecked ? 'checked' : ''}> <span>${a.codigo} — ${a.nombre}</span>
+          </label>
+        `;
+      }).join('');
+    };
+
+    window.renderEditAmbitosCampeonatoCheckboxes = function(checkedIds) {
+      const container = document.getElementById('ambitos-campeonato-checkboxes-container');
+      if (!container) return;
+      if (window.globalAmbitosCampeonato.length === 0) {
+        container.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">No hay campeonatos globales en el sistema.</span>';
+        return;
+      }
+      container.innerHTML = window.globalAmbitosCampeonato.map(a => {
+        const isChecked = (checkedIds || []).includes(a.id);
+        return `
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+            <input type="checkbox" name="rally-ambito-campeonato" value="${a.id}" ${isChecked ? 'checked' : ''}> ${a.codigo} — ${a.nombre}
+          </label>
+        `;
+      }).join('');
+    };
+
+    async function cargarAmbitosCampeonatoGlobales() {
+      await fetchAmbitosCampeonatoGlobales();
+      window.renderCreateAmbitosCampeonatoCheckboxes();
+    }
+
+    // Crea un ámbito de campeonato nuevo al vuelo (nombre + abreviatura) desde
+    // "Crear Circuito" o "Editar Circuito", igual que agregarClaseNueva.
+    window.agregarAmbitoCampeonatoNuevo = async function(contexto) {
+      const codigoInputId = contexto === 'create' ? 'create-ambito-campeonato-codigo' : 'edit-ambito-campeonato-codigo';
+      const nombreInputId = contexto === 'create' ? 'create-ambito-campeonato-nombre' : 'edit-ambito-campeonato-nombre';
+      const codigoInput = document.getElementById(codigoInputId);
+      const nombreInput = document.getElementById(nombreInputId);
+      const codigo = codigoInput.value.trim();
+      const nombre = nombreInput.value.trim();
+      if (!codigo) return window.toast('Escribe la abreviatura del campeonato (ej. ZON).', 'warn');
+
+      try {
+        const { data, error } = await supabase.rpc('crear_ambito_campeonato_simple', { p_codigo: codigo, p_nombre: nombre || null });
+        if (error) throw error;
+
+        codigoInput.value = '';
+        nombreInput.value = '';
+
+        if (contexto === 'create') {
+          const checkedIds = Array.from(document.querySelectorAll('input[name="create-rally-ambito-campeonato"]:checked')).map(el => el.value);
+          checkedIds.push(data.id);
+          await fetchAmbitosCampeonatoGlobales();
+          window.renderCreateAmbitosCampeonatoCheckboxes(checkedIds);
+        } else {
+          const checkedIds = Array.from(document.querySelectorAll('input[name="rally-ambito-campeonato"]:checked')).map(el => el.value);
+          checkedIds.push(data.id);
+          await fetchAmbitosCampeonatoGlobales();
+          window.renderEditAmbitosCampeonatoCheckboxes(checkedIds);
+        }
+
+        window.toast(`Campeonato "${data.codigo}" agregado.`, 'ok');
+      } catch (err) {
+        window.toast('Error al crear el campeonato: ' + err.message, 'error');
+      }
+    };
+
     async function cargarRallies() {
       if (window.globalCategorias.length === 0) {
         await cargarCategoriasGlobales();
+      }
+      if (!window.globalAmbitosCampeonato || window.globalAmbitosCampeonato.length === 0) {
+        await cargarAmbitosCampeonatoGlobales();
       }
       const container = document.getElementById('mis-circuitos-grid');
       container.innerHTML = '<p>Cargando circuitos...</p>';
@@ -3580,6 +3709,17 @@
       
       const selectedIds = catData ? catData.map(c => c.categoria_id) : [];
       window.renderEditCategoriasCheckboxes(selectedIds);
+
+      // Cargar checkboxes de campeonatos habilitados
+      const ambitoContainer = document.getElementById('ambitos-campeonato-checkboxes-container');
+      ambitoContainer.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">Cargando campeonatos...</span>';
+      const { data: ambitoData, error: readAmbitoError } = await supabase.rpc('obtener_ambitos_campeonato_rally', { p_rally_id: id });
+      if (readAmbitoError) {
+        console.error("Error reading ambitos campeonato:", readAmbitoError);
+        window.toast('Error al leer campeonatos guardados: ' + readAmbitoError.message, 'error');
+      }
+      const selectedAmbitoIds = ambitoData ? ambitoData.map(a => a.ambito_campeonato_id) : [];
+      window.renderEditAmbitosCampeonatoCheckboxes(selectedAmbitoIds);
 
       const tipoEvento = rally.tipo_evento || 'rally';
       document.getElementById('edit-rally-tipo-evento').value = tipoEvento;
@@ -3773,7 +3913,7 @@
         // Guardar categorías
         const checkboxes = document.querySelectorAll('input[name="rally-categoria"]:checked');
         const categorias_ids = Array.from(checkboxes).map(cb => cb.value);
-        
+
         if (categorias_ids.length >= 0) {
           const { data: dbCount, error: catError } = await supabase.rpc('actualizar_categorias_rally', {
             p_rally_id: rallyId,
@@ -3782,6 +3922,21 @@
           if (catError) {
              console.error("Error al guardar categorías:", catError);
              window.toast('El resto se guardó, pero las categorías no: ' + catError.message, 'error');
+          }
+        }
+
+        // Guardar campeonatos habilitados
+        const ambitoCheckboxes = document.querySelectorAll('input[name="rally-ambito-campeonato"]:checked');
+        const ambitos_ids = Array.from(ambitoCheckboxes).map(cb => cb.value);
+
+        if (ambitos_ids.length >= 0) {
+          const { error: ambitoError } = await supabase.rpc('actualizar_ambitos_campeonato_rally', {
+            p_rally_id: rallyId,
+            p_ambito_ids: ambitos_ids
+          });
+          if (ambitoError) {
+             console.error("Error al guardar campeonatos:", ambitoError);
+             window.toast('El resto se guardó, pero los campeonatos no: ' + ambitoError.message, 'error');
           }
         }
 
@@ -4080,6 +4235,11 @@
           document.getElementById('ins-p-pais').tomselect.clear();
           document.getElementById('ins-n-pais').tomselect.clear();
         }
+        // form.reset() vuelve al atributo "checked" que tenía cada casilla
+        // al insertarse en el DOM -- si la última vez se renderizaron para
+        // EDITAR a alguien (con algunas marcadas), reset() las dejaría
+        // marcadas también acá. Se vuelven a pintar todas sin marcar.
+        window.renderInsCampeonatoCheckboxes();
       }
 
       if (tab === 'mangas') {
@@ -4092,6 +4252,25 @@
         document.getElementById('manga-disp-buscar').value = '';
         window.mangaRenderOverview();
       }
+    };
+
+    // Pinta las casillas de "Campeonato" del formulario de inscripción --
+    // solo con los ámbitos habilitados para el rally que está abierto en
+    // ese momento (window.currentRallyAmbitosCampeonato, cargado en
+    // abrirModalInscripciones).
+    window.renderInsCampeonatoCheckboxes = function(checkedIds = []) {
+      const container = document.getElementById('ins-campeonato-checkboxes');
+      if (!container) return;
+      const ambitos = window.currentRallyAmbitosCampeonato || [];
+      if (ambitos.length === 0) {
+        container.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">Este rally no tiene campeonatos habilitados. Configúralos en "Editar Circuito".</span>';
+        return;
+      }
+      container.innerHTML = ambitos.map(a => `
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-main);">
+          <input type="checkbox" name="ins-campeonato" value="${a.id}" style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;" ${checkedIds.includes(a.id) ? 'checked' : ''}> ${escapeHtml(a.codigo)}
+        </label>
+      `).join('');
     };
 
     window.abrirModalInscripciones = async function(rallyId) {
@@ -4135,6 +4314,13 @@
         });
       }
 
+      // 1b. Cargar los campeonatos habilitados para este rally, para las
+      // checkboxes de "Campeonato" del formulario de inscripción.
+      const { data: ambitoRallyData } = await supabase.rpc('obtener_ambitos_campeonato_rally', { p_rally_id: rallyId });
+      const ambitoEnabledIds = (ambitoRallyData || []).map(a => a.ambito_campeonato_id);
+      window.currentRallyAmbitosCampeonato = (window.globalAmbitosCampeonato || []).filter(a => ambitoEnabledIds.includes(a.id));
+      window.renderInsCampeonatoCheckboxes();
+
       // Asegurar que los países estén cargados
       if (document.getElementById('ins-p-pais').options.length <= 1) {
         if(window.populateCountryDropdown) {
@@ -4168,7 +4354,7 @@
         .from('inscripciones')
         .select(`
           id, numero, estado, categoria_id, manga_id,
-          campeonato_nacional, campeonato_departamental, campeonato_municipal,
+          ambitos_campeonato:inscripcion_ambitos_campeonato(ambito_campeonato_id, ambito:ambitos_campeonato(id, codigo, nombre)),
           piloto:pilotos(nombre, apellido, pais, foto_url, celular),
           navegante:navegantes(nombre, apellido, pais, foto_url, celular),
           categoria:categorias(codigo, nombre),
@@ -4212,10 +4398,8 @@
               <div>
                 <div style="font-family: var(--font-display); font-size: 28px; color: var(--accent-primary); line-height: 1;">#${ins.numero}</div>
                 ${ins.manga ? `<div style="margin-top: 6px; display: inline-block; background: var(--accent-primary); color: #000; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase;">${ins.manga.nombre}</div>` : ''}
-                ${(ins.campeonato_nacional || ins.campeonato_departamental || ins.campeonato_municipal) ? `<div style="margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap;">
-                  ${ins.campeonato_nacional ? '<span style="background: rgba(0,229,255,0.15); color: var(--pe-cyan); border: 1px solid rgba(0,229,255,0.3); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold;">NAL.</span>' : ''}
-                  ${ins.campeonato_departamental ? '<span style="background: rgba(0,245,160,0.15); color: var(--live-green); border: 1px solid rgba(0,245,160,0.3); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold;">DEP.</span>' : ''}
-                  ${ins.campeonato_municipal ? '<span style="background: rgba(255,209,102,0.15); color: #FFD166; border: 1px solid rgba(255,209,102,0.3); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold;">MUN.</span>' : ''}
+                ${(ins.ambitos_campeonato && ins.ambitos_campeonato.length > 0) ? `<div style="margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap;">
+                  ${ins.ambitos_campeonato.map(ac => `<span style="background: rgba(0,229,255,0.15); color: var(--pe-cyan); border: 1px solid rgba(0,229,255,0.3); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold;">${escapeHtml(ac.ambito?.codigo || '?')}</span>`).join('')}
                 </div>` : ''}
               </div>
               <div style="flex: 1;">
@@ -4536,9 +4720,7 @@
           p_equipo_nombre: document.getElementById('ins-equipo').value,
           p_asociacion_nombre: document.getElementById('ins-asociacion').value,
           p_manga_id: document.getElementById('ins-manga').value || null,
-          p_camp_nacional: document.getElementById('ins-camp-nacional').checked,
-          p_camp_departamental: document.getElementById('ins-camp-departamental').checked,
-          p_camp_municipal: document.getElementById('ins-camp-municipal').checked
+          p_ambito_campeonato_ids: Array.from(document.querySelectorAll('#ins-campeonato-checkboxes input[name="ins-campeonato"]:checked')).map(cb => cb.value)
         };
 
         if (window.inscripcionEditandoId) {
@@ -4583,9 +4765,8 @@
       document.getElementById('ins-manga').value = insc.manga_id || '';
       document.getElementById('ins-equipo').value = insc.equipo?.nombre || '';
       document.getElementById('ins-asociacion').value = insc.asociacion?.nombre || '';
-      document.getElementById('ins-camp-nacional').checked = !!insc.campeonato_nacional;
-      document.getElementById('ins-camp-departamental').checked = !!insc.campeonato_departamental;
-      document.getElementById('ins-camp-municipal').checked = !!insc.campeonato_municipal;
+      const ambitoCheckedIds = (insc.ambitos_campeonato || []).map(ac => ac.ambito_campeonato_id);
+      window.renderInsCampeonatoCheckboxes(ambitoCheckedIds);
 
       document.getElementById('ins-p-nombre').value = insc.piloto?.nombre || '';
       document.getElementById('ins-p-apellido').value = insc.piloto?.apellido || '';
@@ -7252,7 +7433,7 @@
         // Fila 6: formato esperado de cada columna
         ws.mergeCells(6, 1, 6, lastCol);
         const hintCell = ws.getCell(6, 1);
-        hintCell.value = 'PILOTO / NAVEGANTE: "Nombre Completo / Nombre Completo"   |   Hr. Salida: hh:mm   |   Hr. Paso: hh:mm:ss,cc (o NO LARGO / ABANDONO)   |   Penalización: hh:mm:ss,cc   |   Campeonato: NAL. / MUN. / DEP. (se puede combinar)   |   Nº y Psto. son solo referencia, no se importan   |   Una fila vacía se ignora (sirve para separar categorías)';
+        hintCell.value = 'PILOTO / NAVEGANTE: "Nombre Completo / Nombre Completo"   |   Hr. Salida: hh:mm   |   Hr. Paso: hh:mm:ss,cc (o NO LARGO / ABANDONO)   |   Penalización: hh:mm:ss,cc   |   Campeonato: NAL. / MUN. / DEP. u otro que hayas creado en "Editar Circuito" (se puede combinar)   |   Nº y Psto. son solo referencia, no se importan   |   Una fila vacía se ignora (sirve para separar categorías)';
         hintCell.font = { size: 8, italic: true, color: { argb: 'FF888888' } };
         hintCell.alignment = { horizontal: 'left', wrapText: true, vertical: 'middle' };
         ws.getRow(6).height = 26;
@@ -7361,13 +7542,25 @@
       return { h, mi, se, cc };
     }
 
+    // Reconoce los ámbitos de campeonato escritos en la celda CAMPEONATO
+    // del Excel (ej. "NAL. / DEP.", "NACIONAL, MUNICIPAL") contra el
+    // catálogo real de rally.ambitos_campeonato -- no solo los 3 fijos,
+    // cualquiera que se haya creado desde "Editar Circuito" también se
+    // reconoce, sea por su abreviatura o por su nombre completo. Un token
+    // que no esté en el catálogo pasa igual tal cual está escrito -- el
+    // RPC importar_resultados_masivo lo crea solo, mismo criterio que ya
+    // usa esta función con la CLASE.
     function cmParseCampeonato(raw) {
-      const s = String(raw || '').toUpperCase();
-      return {
-        nacional: /\bNAL\b|NACIONAL/.test(s),
-        departamental: /\bDEP\b|DEPARTAMENTAL/.test(s),
-        municipal: /\bMUN\b|MUNICIPAL/.test(s)
-      };
+      const s = String(raw || '').toUpperCase().trim();
+      if (!s) return [];
+      const catalogo = window.globalAmbitosCampeonato || [];
+      return s.split(/[\/,+]+/)
+        .map(t => t.trim().replace(/\.+$/, ''))
+        .filter(Boolean)
+        .map(tok => {
+          const match = catalogo.find(a => a.codigo.toUpperCase() === tok || a.nombre.toUpperCase() === tok);
+          return match ? match.codigo.toUpperCase() : tok;
+        });
     }
 
     function cmSplitPilotoNav(raw) {
@@ -7530,7 +7723,7 @@
       tbody.innerHTML = rows.map((r, idx) => {
         const ok = r.errores.length === 0;
         if (ok) okCount++; else errCount++;
-        const campTxt = [r.camp.nacional ? 'NAL.' : null, r.camp.departamental ? 'DEP.' : null, r.camp.municipal ? 'MUN.' : null].filter(Boolean).join(' / ') || r.campRaw;
+        const campTxt = (r.camp && r.camp.length > 0) ? r.camp.map(c => c + '.').join(' / ') : r.campRaw;
         return `
           <tr style="${ok ? '' : 'background: rgba(255,77,90,0.08);'}">
             <td>${r.fila}</td>
@@ -7601,9 +7794,7 @@
           nav_nombre: r.navSplit ? r.navSplit.nombre : null,
           nav_apellido: r.navSplit ? r.navSplit.apellido : null,
           asociacion_nombre: r.asociacion,
-          camp_nacional: r.camp.nacional,
-          camp_departamental: r.camp.departamental,
-          camp_municipal: r.camp.municipal,
+          camp_ambito_codigos: r.camp || [],
           hora_salida: toIso(r.sal),
           hora_llegada: toIso(r.paso),
           estado_llegada: r.estadoLlegada,
