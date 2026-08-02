@@ -349,6 +349,22 @@
   <script type="module">
     import { supabase } from './supabase_config.js';
 
+    // Logo del sitio (si el admin lo configuró en "Sitio Web") también como
+    // ícono de la pestaña del navegador (favicon), en vez de la bandera
+    // por defecto.
+    (async function aplicarFaviconSitio() {
+      const { data } = await supabase.schema('rally').from('sitio_config').select('valor').eq('clave', 'logo_url').maybeSingle();
+      const logoUrl = data?.valor;
+      if (!logoUrl) return;
+      const idDrive = (logoUrl.match(/\/d\/([a-zA-Z0-9_-]{15,})/) || logoUrl.match(/[?&]id=([a-zA-Z0-9_-]{15,})/) || [])[1];
+      const src = idDrive ? `https://drive.google.com/thumbnail?id=${idDrive}&sz=w200` : logoUrl;
+      const faviconEl = document.querySelector('link[rel="icon"]');
+      if (faviconEl) {
+        faviconEl.removeAttribute('type');
+        faviconEl.href = src;
+      }
+    })();
+
     // Mostrar/ocultar contraseña
     const passwordInput = document.getElementById('password');
     const togglePassword = document.getElementById('togglePassword');
