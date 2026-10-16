@@ -3723,6 +3723,22 @@
       header.classList.toggle('open', opening);
     };
 
+    // Alterna, solo dentro del panel de Shakedown/Clasificación, entre la
+    // vista agrupada por categoría y la vista "Tiempo General" (todas las
+    // clases mezcladas en una sola tabla, ordenadas por tiempo).
+    window.toggleVistaShakedown = function (which) {
+      const vistaCat = document.getElementById('shake-vista-cat');
+      const vistaGeneral = document.getElementById('shake-vista-general');
+      const btnCat = document.getElementById('shake-vista-btn-cat');
+      const btnGeneral = document.getElementById('shake-vista-btn-general');
+      if (!vistaCat || !vistaGeneral) return;
+      const mostrarGeneral = which === 'general';
+      vistaCat.style.display = mostrarGeneral ? 'none' : '';
+      vistaGeneral.style.display = mostrarGeneral ? '' : 'none';
+      btnCat.classList.toggle('active', !mostrarGeneral);
+      btnGeneral.classList.toggle('active', mostrarGeneral);
+    };
+
     // Colapsa filas duplicadas de rally.tiempos (mismo vehículo + mismo recorrido +
     // misma vuelta) a una sola: se queda con la de updated_at más reciente y
     // descarta el resto. Es un blindaje aparte de que la base esté limpia -- si
@@ -4309,6 +4325,35 @@
     // tiempo parcial -- entre ellos, primero quien llegó más lejos (más vueltas),
     // y a igual cantidad de vueltas, quien fue más rápido; 3) al final, quienes no
     // completaron ninguna vuelta (No Largó/Abandono/Doblado/pendiente), sin tiempo.
+    // Ranking de un solo grupo (ya filtrado por categoría o no -- ver abajo
+    // agruparPorCategoriaYClasificar y clasificarSinCategoria).
+    function clasificarGrupo(arr) {
+      const validos = arr.filter(e => e.ms !== null).sort((a, b) => a.ms - b.ms);
+      const parciales = arr.filter(e => e.ms === null && e.estado === 'incompleto')
+        .sort((a, b) => (b.vueltasCompletadas - a.vueltasCompletadas) || (a.msParcial - b.msParcial));
+      const abandonos = arr.filter(e => e.ms === null && e.estado !== 'incompleto');
+      const liderMs = validos.length ? validos[0].ms : null;
+
+      const filasValidas = validos.map((e, i) => ({
+        pos: i + 1,
+        num: e.inscripcion?.numero || '-',
+        name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
+        navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
+        tiempo: msToIntervalStrPublic(e.ms),
+        dif: i === 0 ? null : msToIntervalStrPublic(e.ms - liderMs)
+      }));
+      const filaEspecial = (e) => ({
+        num: e.inscripcion?.numero || '-',
+        name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
+        navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
+        estadoEspecial: e.estado || 'pendiente',
+        vueltasCompletadas: e.vueltasCompletadas,
+        vueltasRequeridas: e.vueltasRequeridas,
+        msParcial: e.msParcial
+      });
+      return [...filasValidas, ...parciales.map(filaEspecial), ...abandonos.map(filaEspecial)];
+    }
+
     function agruparPorCategoriaYClasificar(entries) {
       const byCat = {};
       entries.forEach(e => {
@@ -4318,32 +4363,16 @@
       });
       const out = {};
       for (const [cat, arr] of Object.entries(byCat)) {
-        const validos = arr.filter(e => e.ms !== null).sort((a, b) => a.ms - b.ms);
-        const parciales = arr.filter(e => e.ms === null && e.estado === 'incompleto')
-          .sort((a, b) => (b.vueltasCompletadas - a.vueltasCompletadas) || (a.msParcial - b.msParcial));
-        const abandonos = arr.filter(e => e.ms === null && e.estado !== 'incompleto');
-        const liderMs = validos.length ? validos[0].ms : null;
-
-        const filasValidas = validos.map((e, i) => ({
-          pos: i + 1,
-          num: e.inscripcion?.numero || '-',
-          name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
-          navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
-          tiempo: msToIntervalStrPublic(e.ms),
-          dif: i === 0 ? null : msToIntervalStrPublic(e.ms - liderMs)
-        }));
-        const filaEspecial = (e) => ({
-          num: e.inscripcion?.numero || '-',
-          name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
-          navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
-          estadoEspecial: e.estado || 'pendiente',
-          vueltasCompletadas: e.vueltasCompletadas,
-          vueltasRequeridas: e.vueltasRequeridas,
-          msParcial: e.msParcial
-        });
-        out[cat] = [...filasValidas, ...parciales.map(filaEspecial), ...abandonos.map(filaEspecial)];
+        out[cat] = clasificarGrupo(arr);
       }
       return out;
+    }
+
+    // Mismo ranking que arriba, pero mezclando TODAS las categorías en una
+    // sola tabla (sin separar por clase) -- usado solo en el botón "Ver
+    // Tiempo General" del Shakedown/Clasificación.
+    function clasificarSinCategoria(entries) {
+      return clasificarGrupo(entries);
     }
 
     function renderCategoriasHtml(byCat) {
@@ -4435,9 +4464,19 @@
       // --- SHAKEDOWN / CLASIFICACIÓN ---
       const shakeFilasFiltradas = (shakeFilas || []).filter(f => pasaFiltro(f.inscripcion));
       if (shakeFilasFiltradas.length > 0) {
-        const shakeByCat = agruparPorCategoriaYClasificar(shakeFilasFiltradas.map(f => ({ inscripcion: f.inscripcion, ms: f.ms, estado: f.estado })));
+        const shakeEntries = shakeFilasFiltradas.map(f => ({ inscripcion: f.inscripcion, ms: f.ms, estado: f.estado }));
+        const shakeByCat = agruparPorCategoriaYClasificar(shakeEntries);
+        const shakeGeneral = clasificarSinCategoria(shakeEntries);
         const shakeLabel = esCircuito ? 'Clasificación' : 'Shakedown';
-        html += accordionItem('shakedown', shakeLabel, 'acc-header-shakedown', renderCategoriasHtml(shakeByCat));
+        const shakeBodyHtml = `
+          <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+            <button type="button" class="stats-view-tab active" id="shake-vista-btn-cat" onclick="window.toggleVistaShakedown('cat')" style="padding:8px 14px; font-size:12px;">Por Categoría</button>
+            <button type="button" class="stats-view-tab" id="shake-vista-btn-general" onclick="window.toggleVistaShakedown('general')" style="padding:8px 14px; font-size:12px;">Ver Tiempo General</button>
+          </div>
+          <div id="shake-vista-cat">${renderCategoriasHtml(shakeByCat)}</div>
+          <div id="shake-vista-general" style="display:none;">${buildGapBarChart(shakeGeneral)}${buildResultTable(shakeGeneral)}</div>
+        `;
+        html += accordionItem('shakedown', shakeLabel, 'acc-header-shakedown', shakeBodyHtml);
       }
 
       // --- GENERAL (suma de todas las PEs de todas las etapas, por inscripción) ---
