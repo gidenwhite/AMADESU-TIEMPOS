@@ -3723,20 +3723,18 @@
       header.classList.toggle('open', opening);
     };
 
-    // Alterna, solo dentro del panel de Shakedown/Clasificación, entre la
-    // vista agrupada por categoría y la vista "Tiempo General" (todas las
-    // clases mezcladas en una sola tabla, ordenadas por tiempo).
+    // Alterna, solo dentro del panel de Shakedown/Clasificación, entre 3
+    // vistas: "vuelta" (cada intento por separado, sin sumar), "cat"
+    // (Clasificación por clase, mejor vuelta de cada uno) y "general"
+    // (todas las clases mezcladas en una sola tabla).
     window.toggleVistaShakedown = function (which) {
-      const vistaCat = document.getElementById('shake-vista-cat');
-      const vistaGeneral = document.getElementById('shake-vista-general');
-      const btnCat = document.getElementById('shake-vista-btn-cat');
-      const btnGeneral = document.getElementById('shake-vista-btn-general');
-      if (!vistaCat || !vistaGeneral) return;
-      const mostrarGeneral = which === 'general';
-      vistaCat.style.display = mostrarGeneral ? 'none' : '';
-      vistaGeneral.style.display = mostrarGeneral ? '' : 'none';
-      btnCat.classList.toggle('active', !mostrarGeneral);
-      btnGeneral.classList.toggle('active', mostrarGeneral);
+      const vistas = { vuelta: document.getElementById('shake-vista-vuelta'), cat: document.getElementById('shake-vista-cat'), general: document.getElementById('shake-vista-general') };
+      const btns = { vuelta: document.getElementById('shake-vista-btn-vuelta'), cat: document.getElementById('shake-vista-btn-cat'), general: document.getElementById('shake-vista-btn-general') };
+      if (!vistas.vuelta || !vistas.cat || !vistas.general) return;
+      for (const key of Object.keys(vistas)) {
+        vistas[key].style.display = (key === which) ? '' : 'none';
+        btns[key].classList.toggle('active', key === which);
+      }
     };
 
     // Colapsa filas duplicadas de rally.tiempos (mismo vehículo + mismo recorrido +
@@ -3933,6 +3931,18 @@
     // SHAKEDOWN: usado únicamente por el acordeón del modal de Tiempos (no tiene botón/modal propio).
     // ==========================================
 
+    // A diferencia de sumarTiempoRecorridoInscripcion/resolverEntradaTiempo
+    // (que SUMAN las vueltas, porque en una PE de circuito son tramos de una
+    // misma carrera continua), en Shakedown/Clasificación cada vuelta es un
+    // intento independiente: lo que clasifica es la vuelta MÁS RÁPIDA, nunca
+    // el total de todas.
+    function resolverMejorVuelta(rows) {
+      const tiempos = rows.map(r => intervalToMsPublic(r.tiempo_neto)).filter(ms => ms);
+      if (tiempos.length > 0) return { ms: Math.min(...tiempos), estado: 'valido' };
+      const especial = rows.find(r => r.estado === 'no_presentado' || r.estado === 'abandono' || r.estado === 'doblado');
+      return { ms: null, estado: especial ? especial.estado : 'pendiente' };
+    }
+
     // Devuelve null si el rally no tiene Shakedown configurado o no tiene tiempos aún.
     async function obtenerShakedownFilas(rallyId) {
       const { data: etapa } = await supabase.schema('rally').from('etapas')
@@ -3961,7 +3971,9 @@
         porInscripcion[t.inscripcion_id] = entry;
       });
 
-      const filas = Object.values(porInscripcion).map(e => ({ inscripcion: e.inscripcion, ...resolverEntradaTiempo(e.rows) }));
+      // Se conservan las filas (rows) de cada inscripción -- las necesita la
+      // vista "Por Vuelta" para mostrar cada intento por separado.
+      const filas = Object.values(porInscripcion).map(e => ({ inscripcion: e.inscripcion, rows: e.rows, ...resolverMejorVuelta(e.rows) }));
       return filas.length > 0 ? filas : null;
     }
 
@@ -4395,6 +4407,47 @@
       return d.innerHTML;
     }
 
+    // Vista "Por Vuelta" del Shakedown/Clasificación: cada intento (vuelta)
+    // de cada auto en su propia columna, sin sumarlos -- la columna "Mejor"
+    // resalta cuál de esos intentos es el que lo clasifica. Ordenado por esa
+    // mejor vuelta (los que no tienen ninguna vuelta válida, al final).
+    function renderShakedownPorVuelta(filasConRows) {
+      if (!filasConRows || filasConRows.length === 0) return '<p class="acc-empty">Sin tiempos registrados aún.</p>';
+
+      const vueltasOrdenadas = [...new Set(filasConRows.flatMap(f => f.rows.map(r => r.vuelta)))].sort((a, b) => a - b);
+
+      const filasOrdenadas = [...filasConRows].sort((a, b) => {
+        if (a.ms === null && b.ms === null) return 0;
+        if (a.ms === null) return 1;
+        if (b.ms === null) return -1;
+        return a.ms - b.ms;
+      });
+
+      return `<div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr>
+            <th>#</th><th>Piloto</th>
+            ${vueltasOrdenadas.map(v => `<th>Vuelta ${v}</th>`).join('')}
+            <th>Mejor</th>
+          </tr></thead>
+          <tbody>${filasOrdenadas.map((f, i) => {
+        const porVuelta = {};
+        f.rows.forEach(r => { porVuelta[r.vuelta] = intervalToMsPublic(r.tiempo_neto) || null; });
+        const name = f.inscripcion?.piloto ? escPrintText(`${f.inscripcion.piloto.nombre} ${f.inscripcion.piloto.apellido}`) : 'Desconocido';
+        return `<tr style="--i:${i};">
+              <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${f.inscripcion?.numero ?? '-'}</td>
+              <td style="font-weight:600;">${name}</td>
+              ${vueltasOrdenadas.map(v => {
+          const ms = porVuelta[v];
+          const esMejor = ms !== null && ms === f.ms;
+          return `<td style="font-family:var(--font-mono); ${esMejor ? 'color:var(--live-green); font-weight:bold;' : 'color:var(--text-muted);'}">${ms !== null ? fmtInterval(msToIntervalStrPublic(ms)) : '—'}</td>`;
+        }).join('')}
+              <td style="font-family:var(--font-mono); font-weight:bold; color:var(--text-main);">${f.ms !== null ? fmtInterval(msToIntervalStrPublic(f.ms)) : labelEstadoEspecial({ estadoEspecial: f.estado }).label}</td>
+            </tr>`;
+      }).join('')}</tbody>
+        </table></div>`;
+    }
+
     // Suma el tiempo de un vehículo en un recorrido. Normalmente hay 1 sola fila (rally clásico) y
     // se usa tiempo_neto (ya incluye penalización); si hay varias filas (circuito, una por vuelta)
     // se suman los tiempo_bruto de todas y se agrega la penalización UNA sola vez (penalMs) --
@@ -4462,6 +4515,9 @@
       let html = '';
 
       // --- SHAKEDOWN / CLASIFICACIÓN ---
+      // 3 vistas: "Por Vuelta" (cada intento por separado, default), "Clasificación"
+      // (por clase, usando la mejor vuelta de cada uno) y "Ver Tiempo General"
+      // (todas las clases juntas, también por la mejor vuelta).
       const shakeFilasFiltradas = (shakeFilas || []).filter(f => pasaFiltro(f.inscripcion));
       if (shakeFilasFiltradas.length > 0) {
         const shakeEntries = shakeFilasFiltradas.map(f => ({ inscripcion: f.inscripcion, ms: f.ms, estado: f.estado }));
@@ -4470,10 +4526,12 @@
         const shakeLabel = esCircuito ? 'Clasificación' : 'Shakedown';
         const shakeBodyHtml = `
           <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-            <button type="button" class="stats-view-tab active" id="shake-vista-btn-cat" onclick="window.toggleVistaShakedown('cat')" style="padding:8px 14px; font-size:12px;">Por Categoría</button>
+            <button type="button" class="stats-view-tab active" id="shake-vista-btn-vuelta" onclick="window.toggleVistaShakedown('vuelta')" style="padding:8px 14px; font-size:12px;">Por Vuelta</button>
+            <button type="button" class="stats-view-tab" id="shake-vista-btn-cat" onclick="window.toggleVistaShakedown('cat')" style="padding:8px 14px; font-size:12px;">Clasificación</button>
             <button type="button" class="stats-view-tab" id="shake-vista-btn-general" onclick="window.toggleVistaShakedown('general')" style="padding:8px 14px; font-size:12px;">Ver Tiempo General</button>
           </div>
-          <div id="shake-vista-cat">${renderCategoriasHtml(shakeByCat)}</div>
+          <div id="shake-vista-vuelta">${renderShakedownPorVuelta(shakeFilasFiltradas)}</div>
+          <div id="shake-vista-cat" style="display:none;">${renderCategoriasHtml(shakeByCat)}</div>
           <div id="shake-vista-general" style="display:none;">${buildGapBarChart(shakeGeneral)}${buildResultTable(shakeGeneral)}</div>
         `;
         html += accordionItem('shakedown', shakeLabel, 'acc-header-shakedown', shakeBodyHtml);
