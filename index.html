@@ -2485,6 +2485,19 @@
       display: none;
     }
 
+    .pe-falta {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(255, 209, 102, 0.12);
+      border: 1px solid rgba(255, 209, 102, 0.35);
+      color: var(--status-finished, #FFD166);
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
     /* Tablet, celular y celular acostado (poca altura). */
     @media (max-width: 1100px),
     (max-height: 600px) {
@@ -2519,6 +2532,14 @@
       .data-table th.col-nombre {
         white-space: normal;
         line-height: 1.25;
+      }
+
+      .data-table td.col-pe {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        min-width: 44px;
+        max-width: 80px;
+        line-height: 1.3;
       }
 
       .data-table .nav-inline {
@@ -4219,7 +4240,7 @@
             <th>#</th>
             <th class="col-nombre">Piloto</th>
             <th class="col-nav">Navegante</th>
-            ${showPe ? '<th>P.E.</th>' : ''}
+            ${showPe ? '<th class="col-pe"><span class="th-long">P.E. sumadas</span><span class="th-short">P.E.</span></th>' : ''}
             <th>Tiempo</th>
             <th><span class="th-long">+Diferencia</span><span class="th-short">Dif.</span></th>
           </tr></thead>
@@ -4231,7 +4252,7 @@
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
               <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}</td>
               <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
-              ${showPe ? `<td style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
+              ${showPe ? `<td class="col-pe" style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
               <td colspan="2" style="font-family:var(--font-display); font-weight:700; letter-spacing:0.05em; color:${color};">${label}</td>
             </tr>`;
         }
@@ -4246,9 +4267,9 @@
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
               <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}</td>
               <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
-              ${showPe ? `<td style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
+              ${showPe ? `<td class="col-pe" style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
               <td style="font-family:var(--font-mono); font-weight:bold; color:var(--text-main);">${fmtInterval(r.tiempo)}</td>
-              <td style="font-family:var(--font-mono); color:var(--text-muted);">${r.dif ? '+' + fmtInterval(r.dif) : '—'}</td>
+              <td style="font-family:var(--font-mono); color:var(--text-muted);">${r.faltanPe ? `<span class="pe-falta">Faltan ${r.faltanPe} PE</span>` : (r.dif ? '+' + fmtInterval(r.dif) : '—')}</td>
             </tr>`;
       }).join('')}</tbody>
         </table></div>`;
@@ -4262,7 +4283,7 @@
     // primeros 8 clasificados con tiempo válido -- suficiente para leer la
     // pelea de punta sin saturar el acordeón.
     function buildGapBarChart(rows, catColor) {
-      const validos = (rows || []).filter(r => !r.estadoEspecial).slice(0, 8);
+      const validos = (rows || []).filter(r => !r.estadoEspecial && !r.faltanPe).slice(0, 8);
       if (validos.length < 2) return '';
       const gaps = validos.map(r => r.dif ? intervalToMsPublic(r.dif) / 1000 : 0);
       const maxGap = Math.max(...gaps, 0.5);
@@ -4418,7 +4439,7 @@
           const label = labelEstadoEspecial(r).label;
           return { pos: '-', num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: label, dif: '', _especial: true };
         }
-        return { pos: String(r.pos), num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: fmtInterval(r.tiempo), dif: r.dif == null ? 'LÍDER' : '+' + fmtInterval(r.dif), _especial: false };
+        return { pos: String(r.pos), num: String(r.num), name: r.name, navName: r.navName || '—', tiempo: fmtInterval(r.tiempo), dif: r.faltanPe ? `Faltan ${r.faltanPe} PE` : (r.dif == null ? 'LÍDER' : '+' + fmtInterval(r.dif)), _especial: false };
       });
     }
 
@@ -4636,7 +4657,7 @@
           dibujarByCat(agruparPorCategoriaYClasificar(shakeFilas.map(f => ({ inscripcion: f.inscripcion, ms: f.ms, estado: f.estado }))));
         }
 
-        const generalFilas = acumularEntradas(entradas);
+        const generalFilas = conConteoPE(acumularEntradas(entradas), entradas);
         if (generalFilas.length > 0) {
           huboContenido = true;
           dibujarSeccionTitulo(esCircuito ? 'Tiempo General Circuito' : 'General');
@@ -4684,7 +4705,7 @@
           etapas.forEach(etapa => {
             const recorridoIdsEtapa = etapa.recorridos.map(r => r.id);
             const entradasEtapa = entradas.filter(e => recorridoIdsEtapa.includes(e.recorrido_id));
-            const acumFilas = acumularEntradas(entradasEtapa);
+            const acumFilas = conConteoPE(acumularEntradas(entradasEtapa), entradasEtapa);
             if (acumFilas.length > 0) {
               huboContenido = true;
               dibujarSeccionTitulo(`Etapa ${etapa.nombre} — Acumulado`);
@@ -4923,8 +4944,14 @@
     // completaron ninguna vuelta (No Largó/Abandono/Doblado/pendiente), sin tiempo.
     // Ranking de un solo grupo (ya filtrado por categoría o no -- ver abajo
     // agruparPorCategoriaYClasificar y clasificarSinCategoria).
+    // Con varias PE sumadas (peCount, solo General y "Todas las PE"): primero
+    // quien completó más PE y, a igual cantidad, el menor tiempo. Quien tiene
+    // menos PE que el que más tiene queda debajo con "Faltan N PE" en vez de
+    // diferencia -- su suma es de menos tramos y no es comparable.
     function clasificarGrupo(arr) {
-      const validos = arr.filter(e => e.ms !== null).sort((a, b) => a.ms - b.ms);
+      const validos = arr.filter(e => e.ms !== null)
+        .sort((a, b) => ((b.peCount || 0) - (a.peCount || 0)) || (a.ms - b.ms));
+      const maxPe = validos.length ? (validos[0].peCount || 0) : 0;
       const parciales = arr.filter(e => e.ms === null && e.estado === 'incompleto')
         .sort((a, b) => (b.vueltasCompletadas - a.vueltasCompletadas) || (a.msParcial - b.msParcial));
       const abandonos = arr.filter(e => e.ms === null && e.estado !== 'incompleto');
@@ -4937,7 +4964,8 @@
         navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
         peRango: e.peRango,
         tiempo: msToIntervalStrPublic(e.ms),
-        dif: i === 0 ? null : msToIntervalStrPublic(e.ms - liderMs)
+        faltanPe: (e.peCount || 0) < maxPe ? maxPe - e.peCount : 0,
+        dif: (i === 0 || (e.peCount || 0) < maxPe) ? null : msToIntervalStrPublic(e.ms - liderMs)
       }));
       const filaEspecial = (e) => ({
         num: e.inscripcion?.numero || '-',
@@ -5064,9 +5092,17 @@
         : { inscripcion: g.inscripcion, inscripcion_id: g.inscripcion_id, ms: null, estado: g.ultimoEstado, vueltasCompletadas: g.vueltasCompletadas, vueltasRequeridas: g.vueltasRequeridas, msParcial: g.msParcial });
     }
 
-    // "PE 1-5" (o "PE 3" si es una sola) a partir del conjunto de números de
-    // PE en los que una inscripción tiene algún tiempo cargado -- solo para
-    // la columna de "General" (ver construirAcordeonTiempos).
+    // Agrega peCount (cuántas PE con tiempo válido se sumaron) a cada fila acumulada.
+    function conConteoPE(filas, entradasFuente) {
+      const pes = {};
+      entradasFuente.forEach(e => {
+        if (e.ms == null) return;
+        (pes[e.inscripcion_id] ??= new Set()).add(e.recorrido_id);
+      });
+      return filas.map(g => ({ ...g, peCount: pes[g.inscripcion_id]?.size || 0 }));
+    }
+
+    // Rango de las PE con tiempo válido sumado: "PE 1-5" (o "PE 3" si es una).
     function formatearRangoPE(nums) {
       if (!nums || nums.size === 0) return '—';
       const arr = [...nums].sort((a, b) => a - b);
@@ -5152,12 +5188,12 @@
       const peNumerosPorInscripcion = {};
       entradas.forEach(e => {
         const peNum = peNumeroPorRecorrido[e.recorrido_id];
-        if (!peNum) return;
+        if (!peNum || e.ms == null) return;
         if (!peNumerosPorInscripcion[e.inscripcion_id]) peNumerosPorInscripcion[e.inscripcion_id] = new Set();
         peNumerosPorInscripcion[e.inscripcion_id].add(peNum);
       });
       const generalFilas = acumularEntradas(entradas)
-        .map(g => ({ ...g, peRango: formatearRangoPE(peNumerosPorInscripcion[g.inscripcion_id]) }));
+        .map(g => ({ ...g, peRango: formatearRangoPE(peNumerosPorInscripcion[g.inscripcion_id]), peCount: peNumerosPorInscripcion[g.inscripcion_id]?.size || 0 }));
       const generalLabel = esCircuito ? 'Tiempo General Circuito' : 'General';
       let generalHtml;
       if (generalFilas.length > 0) {
@@ -5261,15 +5297,15 @@
             // -- en una sola PE sería siempre ese mismo número, no aporta nada.
             const peNumerosEtapa = {};
             entradasEtapa.forEach(e => {
-              const peNum = peNumeroPorRecorrido[e.recorrido_id];
-              if (!peNum) return;
+              const peNum = etapa.recorridos.find(r => r.id === e.recorrido_id)?.numero ?? peNumeroPorRecorrido[e.recorrido_id];
+              if (!peNum || e.ms == null) return;
               if (!peNumerosEtapa[e.inscripcion_id]) peNumerosEtapa[e.inscripcion_id] = new Set();
               peNumerosEtapa[e.inscripcion_id].add(peNum);
             });
 
             const bloquesHtml = opciones.map((op, i) => {
               const filasOp = op.value === 'todas'
-                ? acumularEntradas(entradasEtapa).map(g => ({ ...g, peRango: formatearRangoPE(peNumerosEtapa[g.inscripcion_id]) }))
+                ? acumularEntradas(entradasEtapa).map(g => ({ ...g, peRango: formatearRangoPE(peNumerosEtapa[g.inscripcion_id]), peCount: peNumerosEtapa[g.inscripcion_id]?.size || 0 }))
                 : entradas.filter(e => e.recorrido_id === op.value);
               const display = i === 0 ? '' : 'display:none;';
               if (filasOp.length === 0) {
