@@ -2476,6 +2476,298 @@
         font-size: 21px;
       }
     }
+
+    /* ==========================================================
+       MODALES EN CELULAR Y TABLET
+       ========================================================== */
+    .nav-inline,
+    .th-short {
+      display: none;
+    }
+
+    /* Tablet, celular y celular acostado (poca altura). */
+    @media (max-width: 1100px),
+    (max-height: 600px) {
+
+      /* TIEMPOS: un solo scroll para todo. Antes el título + filtros quedaban
+         fijos y la tabla solo tenía la parte de abajo de la pantalla. Ahora
+         solo la barra de título queda fija; filtros y tablas se desplazan. */
+      #modal-tiempos .modal-content {
+        display: block !important;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-top: 0;
+      }
+
+      #modal-tiempos .modal-header-sticky {
+        padding-top: calc(14px + env(safe-area-inset-top, 0px));
+      }
+
+      #tiempos-accordion {
+        overflow: visible !important;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      }
+
+      /* Navegante debajo del piloto en vez de una columna más, y el nombre
+         puede ocupar 2 líneas -- así entran Tiempo y Diferencia sin tener
+         que deslizar de costado. */
+      .data-table .col-nav {
+        display: none;
+      }
+
+      .data-table td.col-nombre,
+      .data-table th.col-nombre {
+        white-space: normal;
+        line-height: 1.25;
+      }
+
+      .data-table .nav-inline {
+        display: block;
+        font-weight: 400;
+        font-size: 0.9em;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+    }
+
+    /* Celular acostado: pantalla completa también. */
+    @media (max-height: 500px) {
+      .modal-overlay {
+        align-items: stretch;
+      }
+
+      .modal-content {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        height: 100dvh;
+        max-height: none !important;
+        border-radius: 0 !important;
+      }
+    }
+
+    /* Tablet: el modal casi a pantalla completa, más alto para los datos. */
+    @media (min-width: 769px) and (max-width: 1100px) {
+      .modal-content {
+        width: 96vw !important;
+        max-width: 96vw !important;
+        max-height: 94vh !important;
+      }
+
+      .modal-content {
+        --modal-pad: 22px;
+      }
+    }
+
+    @media (max-width: 768px) {
+
+      /* Pantalla completa: sin márgenes ni bordes que roben espacio. */
+      .modal-overlay {
+        align-items: stretch;
+        height: 100vh;
+        height: 100dvh;
+      }
+
+      .modal-content {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100vh;
+        height: 100dvh;
+        max-height: none !important;
+        border-radius: 0 !important;
+        border: none;
+        transform: none;
+        padding-top: 0;
+      }
+
+      .modal-overlay.active .modal-content {
+        transform: none;
+      }
+
+      /* Barra de título fija y compacta: título + Atrás/Cerrar en una fila. */
+      .modal-header-sticky {
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 10px;
+        padding: calc(12px + env(safe-area-inset-top, 0px)) 0 12px 0;
+        margin-bottom: 12px !important;
+      }
+
+      .modal-header-sticky .modal-title,
+      .stats-header-sticky .modal-title {
+        font-size: 19px;
+        line-height: 1.15;
+        letter-spacing: 0.03em;
+        min-width: 0;
+        margin: 0 !important;
+      }
+
+      .modal-back,
+      .modal-close {
+        padding: 7px 10px !important;
+        font-size: 12px !important;
+      }
+
+      .tiempos-toolbar {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+      }
+
+      .tiempos-toolbar .pilot-selector {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+
+      .tiempos-toolbar>select {
+        grid-column: 1 / -1;
+      }
+
+      .tiempos-search-group {
+        grid-column: 1 / -1;
+      }
+
+      .tiempos-search-group input {
+        flex: 1;
+        width: auto !important;
+        min-width: 0;
+      }
+
+      #btn-tiempos-refrescar {
+        justify-content: center;
+        padding: 9px 10px !important;
+      }
+
+      #tiempos-ultima-actualizacion {
+        align-self: center;
+        font-size: 10px !important;
+      }
+
+      #btn-tiempos-pdf {
+        grid-column: 1 / -1;
+        justify-content: center;
+        padding: 10px 12px !important;
+      }
+
+      /* Acordeón más compacto */
+      .acc-header {
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+
+      .acc-header-pe {
+        padding: 10px 14px 10px 22px;
+      }
+
+      .acc-body {
+        padding: 4px 10px 14px;
+      }
+
+      .acc-etapa-summary {
+        padding: 0 10px 10px;
+      }
+
+      /* Botones de vista (Por Clase / General / Descargar PDF) chicos y en fila */
+      .acc-body .stats-view-tab {
+        padding: 7px 11px !important;
+        font-size: 11px !important;
+      }
+
+      .modal-content {
+        --modal-pad: 12px;
+      }
+
+      .data-table {
+        margin-top: 10px;
+      }
+
+      .data-table th,
+      .data-table td {
+        padding: 8px 5px !important;
+        font-size: 12px !important;
+      }
+
+      .data-table th {
+        font-size: 10px !important;
+        letter-spacing: 0.03em;
+      }
+
+      .data-table td.col-nombre,
+      .data-table th.col-nombre {
+        min-width: 96px;
+      }
+
+      .data-table .rank-badge {
+        transform: scale(0.85);
+      }
+
+      .data-table .th-long {
+        display: none;
+      }
+
+      .data-table .th-short {
+        display: inline;
+      }
+
+      /* Indicador visual de que la tabla se puede deslizar de costado
+         cuando todavía no entra completa (p. ej. muchas vueltas). */
+      div[style*="overflow-x:auto"] {
+        background:
+          linear-gradient(to right, var(--bg-surface-elevated) 30%, transparent) left center / 24px 100% no-repeat local,
+          linear-gradient(to left, var(--bg-surface-elevated) 30%, transparent) right center / 24px 100% no-repeat local,
+          radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.55), transparent) left center / 12px 100% no-repeat scroll,
+          radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.55), transparent) right center / 12px 100% no-repeat scroll;
+      }
+
+      /* STATS: encabezado compacto (sin la descripción larga) para que el
+         análisis tenga casi toda la pantalla. */
+      #modal-stats .stats-desc {
+        display: none;
+      }
+
+      .stats-header-sticky {
+        flex-wrap: nowrap;
+        align-items: center;
+        padding: calc(12px + env(safe-area-inset-top, 0px)) 14px 12px !important;
+      }
+
+      .stats-controls-bar {
+        display: grid !important;
+        grid-template-columns: 1fr;
+        gap: 8px !important;
+        padding: 12px 14px !important;
+      }
+
+      .stats-controls-bar .pilot-selector {
+        min-width: 0 !important;
+        width: 100% !important;
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+
+      #stats-content {
+        padding: 14px !important;
+      }
+
+      /* PILOTOS: filtros en grilla de 2 columnas */
+      .pilots-toolbar {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .pilots-search-wrap {
+        min-width: 0;
+      }
+
+      .pilots-toolbar select.custom-select {
+        width: 100% !important;
+        min-width: 0 !important;
+        font-size: 13px;
+        padding: 10px 36px 10px 12px;
+      }
+    }
   </style>
 </head>
 
@@ -2719,7 +3011,7 @@
         </div>
       </div>
 
-      <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px; flex-wrap: wrap;">
+      <div class="tiempos-toolbar" style="display:flex; gap:12px; align-items:center; margin-bottom:8px; flex-wrap: wrap;">
         <select id="tiempos-cat-filter" class="pilot-selector" style="width:auto; min-width:220px; margin-bottom:0;"
           onchange="window.filtrarAccordionTiempos()">
           <option value="ALL">Todas las Clases</option>
@@ -2728,7 +3020,7 @@
           onchange="window.filtrarAccordionTiempos()">
           <option value="ALL">Todos los Campeonatos</option>
         </select>
-        <div style="display:flex; gap:6px; align-items:center;">
+        <div class="tiempos-search-group" style="display:flex; gap:6px; align-items:center;">
           <input type="text" id="tiempos-num-search" class="pilot-selector" style="width:160px; margin-bottom:0;"
             placeholder="Buscar Nº o nombre..."
             onkeydown="if(event.key==='Enter'){event.preventDefault(); window.buscarPorNumeroTiempos();}">
@@ -2765,7 +3057,7 @@
       <div id="tiempos-num-resultado"></div>
 
       <!-- ACORDEÓN: Shakedown / General / Etapas > PEs -->
-      <div id="tiempos-accordion" style="overflow-y: auto; flex: 1;">
+      <div id="tiempos-accordion" style="overflow-y: auto; flex: 1; min-height: 0;">
         <p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>
       </div>
     </div>
@@ -2780,7 +3072,7 @@
       <div class="stats-header-sticky">
         <div style="min-width:0;">
           <h2 class="modal-title" id="stats-title" style="margin-bottom: 8px;">Telemetría & Estadísticas</h2>
-          <p style="color:var(--text-muted); font-size:13px; margin:0; max-width: 600px;">Análisis de rendimiento tramo
+          <p class="stats-desc" style="color:var(--text-muted); font-size:13px; margin:0; max-width: 600px;">Análisis de rendimiento tramo
             a tramo. Compara tiempos, velocidades y evolución de posiciones contra el líder de clase.</p>
         </div>
         <div style="display:flex; gap:10px; flex-shrink:0;">
@@ -3925,11 +4217,11 @@
           <thead><tr>
             <th style="width:50px;">Pos</th>
             <th>#</th>
-            <th>Piloto</th>
-            <th>Navegante</th>
+            <th class="col-nombre">Piloto</th>
+            <th class="col-nav">Navegante</th>
             ${showPe ? '<th>P.E.</th>' : ''}
             <th>Tiempo</th>
-            <th>+Diferencia</th>
+            <th><span class="th-long">+Diferencia</span><span class="th-short">Dif.</span></th>
           </tr></thead>
           <tbody>${rows.map((r, i) => {
         if (r.estadoEspecial) {
@@ -3937,8 +4229,8 @@
           return `<tr style="--i:${i};">
               <td><span style="font-family:var(--font-mono); font-size:15px; color:var(--text-dim); padding-left:6px;">—</span></td>
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
-              <td style="font-weight:600;">${r.name}</td>
-              <td style="color:var(--text-muted);">${r.navName || '—'}</td>
+              <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}</td>
+              <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
               ${showPe ? `<td style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
               <td colspan="2" style="font-family:var(--font-display); font-weight:700; letter-spacing:0.05em; color:${color};">${label}</td>
             </tr>`;
@@ -3952,8 +4244,8 @@
         return `<tr style="${rowStyle}--i:${i};">
               <td>${posCell}</td>
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
-              <td style="font-weight:600;">${r.name}</td>
-              <td style="color:var(--text-muted);">${r.navName || '—'}</td>
+              <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}</td>
+              <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
               ${showPe ? `<td style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
               <td style="font-family:var(--font-mono); font-weight:bold; color:var(--text-main);">${fmtInterval(r.tiempo)}</td>
               <td style="font-family:var(--font-mono); color:var(--text-muted);">${r.dif ? '+' + fmtInterval(r.dif) : '—'}</td>
@@ -4720,7 +5012,7 @@
       return `<div style="overflow-x:auto;">
         <table class="data-table">
           <thead><tr>
-            <th>#</th><th>Piloto</th>
+            <th>#</th><th class="col-nombre">Piloto</th>
             ${vueltasOrdenadas.map(v => `<th>Vuelta ${v}</th>`).join('')}
             <th>Mejor</th>
           </tr></thead>
@@ -4730,7 +5022,7 @@
         const name = f.inscripcion?.piloto ? escPrintText(`${f.inscripcion.piloto.nombre} ${f.inscripcion.piloto.apellido}`) : 'Desconocido';
         return `<tr style="--i:${i};">
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${f.inscripcion?.numero ?? '-'}</td>
-              <td style="font-weight:600;">${name}</td>
+              <td class="col-nombre" style="font-weight:600;">${name}</td>
               ${vueltasOrdenadas.map(v => {
           const ms = porVuelta[v];
           const esMejor = ms !== null && ms === f.ms;
