@@ -4628,7 +4628,7 @@
         }
 
         function dibujarByCat(byCat) {
-          Object.keys(byCat).sort().forEach(cat => dibujarCategoria(cat, byCat[cat]));
+          ordenarClases(Object.keys(byCat), !esCircuito).forEach(cat => dibujarCategoria(cat, byCat[cat]));
         }
 
         // --- Recalcula todo sin el filtro de categoría de pantalla (el PDF es siempre completo) ---
@@ -5001,10 +5001,26 @@
       return clasificarGrupo(entries);
     }
 
-    function renderCategoriasHtml(byCat) {
+    // Orden fijo de las tablas por clase en modo rally; el resto de las
+    // clases va después, en orden alfabético. PROMO y PROMOCIONAL cuentan
+    // como la misma posición.
+    const ORDEN_CLASES_RALLY = ['RC2', 'PROTO', 'RC2N', 'RC4', 'R2B', 'R1B', 'PROMOCIONAL'];
+    function posicionClaseRally(cat) {
+      let c = String(cat || '').trim().toUpperCase();
+      if (c === 'PROMO') c = 'PROMOCIONAL';
+      const i = ORDEN_CLASES_RALLY.indexOf(c);
+      return i === -1 ? ORDEN_CLASES_RALLY.length : i;
+    }
+    function ordenarClases(cats, ordenRally) {
+      const alfa = [...cats].sort();
+      if (!ordenRally) return alfa;
+      return alfa.sort((a, b) => posicionClaseRally(a) - posicionClaseRally(b));
+    }
+
+    function renderCategoriasHtml(byCat, ordenRally = false) {
       const cats = Object.keys(byCat);
       if (cats.length === 0) return '<p class="acc-empty">Sin tiempos registrados aún.</p>';
-      return cats.sort().map(cat => {
+      return ordenarClases(cats, ordenRally).map(cat => {
         const catColor = categoriaColorFor(cat);
         return `
         <div style="margin-bottom: 16px;">
@@ -5176,7 +5192,7 @@
             ${botonDescargarPdf('#acc-wrap-shakedown', shakeLabel)}
           </div>
           <div id="shake-vista-vuelta" data-vista-label="Por Vuelta">${renderShakedownPorVuelta(shakeFilasFiltradas)}</div>
-          <div id="shake-vista-cat" data-vista-label="Clasificación" style="display:none;">${renderCategoriasHtml(shakeByCat)}</div>
+          <div id="shake-vista-cat" data-vista-label="Clasificación" style="display:none;">${renderCategoriasHtml(shakeByCat, !esCircuito)}</div>
           <div id="shake-vista-general" data-vista-label="Ver Tiempo General" style="display:none;">${buildGapBarChart(shakeGeneral)}${buildResultTable(shakeGeneral)}</div>
         `;
         html += accordionItem('shakedown', shakeLabel, 'acc-header-shakedown', shakeBodyHtml);
@@ -5208,7 +5224,7 @@
             ${botonDescargarPdf('#acc-wrap-general', generalLabel)}
           </div>
           <p class="acc-empty" id="general-vista-elegir">Elegí cómo ver los tiempos: por clase o general.</p>
-          <div id="general-vista-cat" data-vista-label="Por Clase" style="display:none;">${renderCategoriasHtml(generalByCat)}</div>
+          <div id="general-vista-cat" data-vista-label="Por Clase" style="display:none;">${renderCategoriasHtml(generalByCat, !esCircuito)}</div>
           <div id="general-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(generalMezclado)}${buildResultTable(generalMezclado)}</div>
         `;
       } else {
@@ -5324,7 +5340,7 @@
                   ${botonDescargarPdf(wrapDeEsteBloque, `ETAPA: ${escPrintText(etapa.nombre)} — ${escPrintText(op.label)}`)}
                 </div>
                 <p class="acc-empty etapa-vista-elegir">Elegí cómo ver los tiempos: por clase o general.</p>
-                <div class="etapa-vista-cat" data-vista-label="Por Clase" style="display:none;">${renderCategoriasHtml(porClase)}</div>
+                <div class="etapa-vista-cat" data-vista-label="Por Clase" style="display:none;">${renderCategoriasHtml(porClase, true)}</div>
                 <div class="etapa-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(mezclado)}${buildResultTable(mezclado)}</div>
               </div>`;
             }).join('');
