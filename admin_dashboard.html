@@ -1752,15 +1752,15 @@
                  con solo HH:MM se perdían los segundos y cada vuelta salía con
                  varios segundos de más, corriendo mal el tiempo general. -->
             <div class="form-group">
-              <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Entrada (HH:MM:SS.cc)</label>
+              <label class="form-label" id="sal-label" style="text-align: center; display: block; margin-bottom: 8px;">Entrada (HH:MM:SS.cc)</label>
               <div class="time-display-container" id="sal-container">
-                <input type="text" id="sal-hh" maxlength="2" inputmode="numeric" placeholder="HH" oninput="window.autoTabTime(this, 'sal-mm', 23); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, null)">
+                <input type="text" id="sal-hh" maxlength="2" inputmode="numeric" placeholder="HH" oninput="window.autoTabTime(this, 'sal-mm', 23); window.limpiarSegLargada(); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, null)">
                 <span class="colon">:</span>
-                <input type="text" id="sal-mm" maxlength="2" inputmode="numeric" placeholder="MM" oninput="window.autoTabTime(this, 'sal-ss', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
-                <span class="colon">:</span>
-                <input type="text" id="sal-ss" maxlength="2" inputmode="numeric" placeholder="SS" oninput="window.autoTabTime(this, 'sal-cc', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')">
-                <span class="dot">.</span>
-                <input type="text" id="sal-cc" maxlength="2" inputmode="numeric" placeholder="cc" oninput="window.autoTabTime(this, 'lle-hh', 99); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'sal-ss')">
+                <input type="text" id="sal-mm" maxlength="2" inputmode="numeric" placeholder="MM" oninput="window.autoTabTime(this, window.largadaSoloHHMM() ? 'lle-hh' : 'sal-ss', 59); window.limpiarSegLargada(); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-hh')">
+                <span class="colon sal-seg">:</span>
+                <input type="text" id="sal-ss" class="sal-seg" maxlength="2" inputmode="numeric" placeholder="SS" oninput="window.autoTabTime(this, 'sal-cc', 59); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'sal-mm')">
+                <span class="dot sal-seg">.</span>
+                <input type="text" id="sal-cc" class="sal-seg" maxlength="2" inputmode="numeric" placeholder="cc" oninput="window.autoTabTime(this, 'lle-hh', 99); window.onEntradaChange();" onblur="window.validateTimeBlur(this, 99)" onkeydown="window.handleTimeBackspace(event, this, 'sal-ss')">
               </div>
             </div>
             <!-- Se completa UNO de los dos: Tiempo Empleado (duración) o Tiempo
@@ -1769,7 +1769,7 @@
             <div class="form-group">
               <label class="form-label" style="text-align: center; display: block; margin-bottom: 8px;">Tiempo Llegada (HH:MM:SS.cc)</label>
               <div class="time-display-container" id="lle-container" style="border-color: rgba(0, 245, 160, 0.3); transition: opacity 0.15s;">
-                <input type="text" id="lle-hh" maxlength="2" inputmode="numeric" placeholder="HH" oninput="window.autoTabTime(this, 'lle-mm', 23); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, 'sal-cc')" style="color: #00F5A0;">
+                <input type="text" id="lle-hh" maxlength="2" inputmode="numeric" placeholder="HH" oninput="window.autoTabTime(this, 'lle-mm', 23); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 23)" onkeydown="window.handleTimeBackspace(event, this, window.largadaSoloHHMM() ? 'sal-mm' : 'sal-cc')" style="color: #00F5A0;">
                 <span class="colon">:</span>
                 <input type="text" id="lle-mm" maxlength="2" inputmode="numeric" placeholder="MM" oninput="window.autoTabTime(this, 'lle-ss', 59); window.onLlegadaInput();" onblur="window.validateTimeBlur(this, 59)" onkeydown="window.handleTimeBackspace(event, this, 'lle-hh')" style="color: #00F5A0;">
                 <span class="colon">:</span>
@@ -5200,6 +5200,7 @@
       window.adminCurrentRallyId = id;
       window.adminCurrentTipoEvento = tipoEvento || 'rally';
       window.actualizarLabelShakedown();
+      window.aplicarFormatoLargada();
       document.getElementById('tiempos-lobby').style.display = 'none';
       document.getElementById('tiempos-workspace').style.display = 'block';
       document.getElementById('tiempos-workspace-title').innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg> Trabajando en: ' + escapeHtml(nombre);
@@ -5797,6 +5798,25 @@
       if (input.value.length === 2 && nextId) {
         document.getElementById(nextId).focus();
       }
+    };
+
+    // La Entrada se carga solo HH:MM; segundos/centésimas quedan ocultos y
+    // cuentan como 00. Siguen existiendo para la Entrada de la vuelta 2+ de
+    // un circuito, que se copia EXACTA (con segundos) de la Llegada anterior:
+    // se guardan ocultos y el cálculo no pierde precisión.
+    window.largadaSoloHHMM = () => true;
+    window.aplicarFormatoLargada = function() {
+      const solo = window.largadaSoloHHMM();
+      document.querySelectorAll('#sal-container .sal-seg').forEach(el => { el.style.display = solo ? 'none' : ''; });
+      const lbl = document.getElementById('sal-label');
+      if (lbl) lbl.textContent = solo ? 'Entrada (HH:MM)' : 'Entrada (HH:MM:SS.cc)';
+    };
+    // Al tipear la hora a mano en rally, los segundos ocultos no deben
+    // arrastrar un valor viejo (p. ej. de un registro cargado antes).
+    window.limpiarSegLargada = function() {
+      if (!window.largadaSoloHHMM()) return;
+      document.getElementById('sal-ss').value = '';
+      document.getElementById('sal-cc').value = '';
     };
 
     window.validateTimeBlur = function(input, max) {
