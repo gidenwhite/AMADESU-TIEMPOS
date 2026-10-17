@@ -2481,8 +2481,20 @@
        MODALES EN CELULAR Y TABLET
        ========================================================== */
     .nav-inline,
+    .clase-inline,
     .th-short {
       display: none;
+    }
+
+    .clase-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
     }
 
     .pe-falta {
@@ -2681,7 +2693,7 @@
       }
 
       .acc-body {
-        padding: 4px 10px 14px;
+        padding: 4px 6px 14px;
       }
 
       .acc-etapa-summary {
@@ -2704,7 +2716,7 @@
 
       .data-table th,
       .data-table td {
-        padding: 8px 5px !important;
+        padding: 8px 4px !important;
         font-size: 12px !important;
       }
 
@@ -2720,6 +2732,39 @@
 
       .data-table .rank-badge {
         transform: scale(0.85);
+      }
+
+      .data-table .col-clase {
+        display: none;
+      }
+
+      .data-table .clase-inline {
+        display: block;
+        margin-top: 4px;
+      }
+
+      .data-table th:first-child {
+        width: 28px !important;
+      }
+
+      .data-table td:first-child>span {
+        font-size: 13px !important;
+        padding-left: 0 !important;
+      }
+
+      .data-table td:last-child {
+        font-size: 11px !important;
+        padding-right: 2px !important;
+      }
+
+      .data-table td.col-nombre,
+      .data-table th.col-nombre {
+        min-width: 88px !important;
+      }
+
+      .data-table .clase-inline .clase-badge {
+        font-size: 10px;
+        padding: 1px 6px;
       }
 
       .data-table .th-long {
@@ -4228,7 +4273,12 @@
       return MAPA[r.estadoEspecial] || { label: 'SIN TIEMPO', color: 'var(--text-dim)' };
     }
 
-    function buildResultTable(rows) {
+    function claseBadge(nombre) {
+      const color = categoriaColorFor(nombre);
+      return `<span class="clase-badge" style="color:${color}; border-color:${color}55; background:${color}1a;">${escPrintText(nombre)}</span>`;
+    }
+
+    function buildResultTable(rows, mostrarClase = false) {
       if (!rows || rows.length === 0) return '<p style="color:var(--text-muted); text-align:center; padding: 24px;">Sin datos registrados.</p>';
       // Columna "P.E." (ej. "PE 1-5") solo aparece cuando las filas la traen
       // -- hoy, solo en la sección "General" (ver formatearRangoPE).
@@ -4240,6 +4290,7 @@
             <th>#</th>
             <th class="col-nombre">Piloto</th>
             <th class="col-nav">Navegante</th>
+            ${mostrarClase ? '<th class="col-clase">Clase</th>' : ''}
             ${showPe ? '<th class="col-pe"><span class="th-long">P.E. sumadas</span><span class="th-short">P.E.</span></th>' : ''}
             <th>Tiempo</th>
             <th><span class="th-long">+Diferencia</span><span class="th-short">Dif.</span></th>
@@ -4250,8 +4301,9 @@
           return `<tr style="--i:${i};">
               <td><span style="font-family:var(--font-mono); font-size:15px; color:var(--text-dim); padding-left:6px;">—</span></td>
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
-              <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}</td>
+              <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}${mostrarClase ? `<span class="clase-inline">${claseBadge(r.clase)}</span>` : ''}</td>
               <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
+              ${mostrarClase ? `<td class="col-clase">${claseBadge(r.clase)}</td>` : ''}
               ${showPe ? `<td class="col-pe" style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
               <td colspan="2" style="font-family:var(--font-display); font-weight:700; letter-spacing:0.05em; color:${color};">${label}</td>
             </tr>`;
@@ -4265,8 +4317,9 @@
         return `<tr style="${rowStyle}--i:${i};">
               <td>${posCell}</td>
               <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
-              <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}</td>
+              <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}${mostrarClase ? `<span class="clase-inline">${claseBadge(r.clase)}</span>` : ''}</td>
               <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
+              ${mostrarClase ? `<td class="col-clase">${claseBadge(r.clase)}</td>` : ''}
               ${showPe ? `<td class="col-pe" style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
               <td style="font-family:var(--font-mono); font-weight:bold; color:var(--text-main);">${fmtInterval(r.tiempo)}</td>
               <td style="font-family:var(--font-mono); color:var(--text-muted);">${r.faltanPe ? `<span class="pe-falta">Faltan ${r.faltanPe} PE</span>` : (r.dif ? '+' + fmtInterval(r.dif) : '—')}</td>
@@ -4963,6 +5016,7 @@
         name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
         navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
         peRango: e.peRango,
+        clase: e.inscripcion?.categoria?.nombre || 'Sin Clase',
         tiempo: msToIntervalStrPublic(e.ms),
         faltanPe: (e.peCount || 0) < maxPe ? maxPe - e.peCount : 0,
         dif: (i === 0 || (e.peCount || 0) < maxPe) ? null : msToIntervalStrPublic(e.ms - liderMs)
@@ -4972,6 +5026,7 @@
         name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
         navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
         peRango: e.peRango,
+        clase: e.inscripcion?.categoria?.nombre || 'Sin Clase',
         estadoEspecial: e.estado || 'pendiente',
         vueltasCompletadas: e.vueltasCompletadas,
         vueltasRequeridas: e.vueltasRequeridas,
@@ -5193,7 +5248,7 @@
           </div>
           <div id="shake-vista-vuelta" data-vista-label="Por Vuelta">${renderShakedownPorVuelta(shakeFilasFiltradas)}</div>
           <div id="shake-vista-cat" data-vista-label="Clasificación" style="display:none;">${renderCategoriasHtml(shakeByCat, !esCircuito)}</div>
-          <div id="shake-vista-general" data-vista-label="Ver Tiempo General" style="display:none;">${buildGapBarChart(shakeGeneral)}${buildResultTable(shakeGeneral)}</div>
+          <div id="shake-vista-general" data-vista-label="Ver Tiempo General" style="display:none;">${buildGapBarChart(shakeGeneral)}${buildResultTable(shakeGeneral, true)}</div>
         `;
         html += accordionItem('shakedown', shakeLabel, 'acc-header-shakedown', shakeBodyHtml);
       }
@@ -5225,7 +5280,7 @@
           </div>
           <p class="acc-empty" id="general-vista-elegir">Elegí cómo ver los tiempos: por clase o general.</p>
           <div id="general-vista-cat" data-vista-label="Por Clase" style="display:none;">${renderCategoriasHtml(generalByCat, !esCircuito)}</div>
-          <div id="general-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(generalMezclado)}${buildResultTable(generalMezclado)}</div>
+          <div id="general-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(generalMezclado)}${buildResultTable(generalMezclado, true)}</div>
         `;
       } else {
         generalHtml = '<p class="acc-empty">Sin tiempos registrados aún.</p>';
@@ -5341,7 +5396,7 @@
                 </div>
                 <p class="acc-empty etapa-vista-elegir">Elegí cómo ver los tiempos: por clase o general.</p>
                 <div class="etapa-vista-cat" data-vista-label="Por Clase" style="display:none;">${renderCategoriasHtml(porClase, true)}</div>
-                <div class="etapa-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(mezclado)}${buildResultTable(mezclado)}</div>
+                <div class="etapa-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(mezclado)}${buildResultTable(mezclado, true)}</div>
               </div>`;
             }).join('');
 
