@@ -3738,7 +3738,7 @@
     };
 
     // Alterna, solo dentro del panel "General", entre "Por Clase" y
-    // "Ver Todo Mezclado". A diferencia de Shakedown, acá ninguna de las dos
+    // "Ver General". A diferencia de Shakedown, acá ninguna de las dos
     // se muestra de entrada -- primero hay que elegir (ver el mensaje
     // "general-vista-elegir" que arma construirAcordeonTiempos).
     window.toggleVistaGeneral = function (which) {
@@ -3768,7 +3768,7 @@
     };
 
     // Alterna, dentro de UNA PE (o "todas") de una Etapa, entre "Por Clase" y
-    // "Ver Todo Mezclado" -- igual que en General, ninguna se ve hasta elegir.
+    // "Ver General" -- igual que en General, ninguna se ve hasta elegir.
     window.toggleVistaEtapa = function (etapaId, peValue, which) {
       const wrap = document.getElementById('etapa-pe-wrap-' + etapaId);
       if (!wrap) return;
@@ -3790,7 +3790,7 @@
 
     // Antes de reconstruir el acordeón (refrescarTiempos), guarda qué vista
     // tenía elegida cada quien -- General, Shakedown y cada Etapa (PE elegida
-    // + Por Clase/Mezclado) -- para que un tiempo nuevo no le "cierre" la
+    // + Por Clase/General) -- para que un tiempo nuevo no le "cierre" la
     // pantalla a quien está siguiendo la carrera en vivo.
     function capturarVistaTiempos() {
       const estado = { general: null, shakedown: null, etapas: {} };
@@ -4129,6 +4129,53 @@
       });
     }
 
+    // Pie de página de marca (GIDEN TECHNOLOGY) para todos los PDF del sitio
+    // -- toda la barra queda clickeable y abre WhatsApp directo, para que
+    // quien lo lea pueda escribir sin tener que copiar el número a mano.
+    const GIDEN_WHATSAPP_URL = 'https://wa.me/59178671169';
+
+    function dibujarPiePaginaGiden(doc, marginX, pageW, pageH, textoDerecha) {
+      const fy = pageH - 9;
+      doc.setFillColor(10, 10, 10);
+      doc.roundedRect(marginX, fy - 5.5, pageW - marginX * 2, 10, 2, 2, 'F');
+      // Área clickeable sobre toda la barra -- abre WhatsApp al tocar
+      // cualquier parte (no solo el texto del teléfono).
+      doc.link(marginX, fy - 5.5, pageW - marginX * 2, 10, { url: GIDEN_WHATSAPP_URL });
+
+      let fx = marginX + 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(230, 57, 70);
+      doc.text('GIDEN TECHNOLOGY', fx, fy);
+      fx += doc.getTextWidth('GIDEN TECHNOLOGY') + 4;
+
+      doc.setTextColor(90, 90, 90);
+      doc.setFont('helvetica', 'normal');
+      doc.text('|', fx, fy);
+      fx += 4;
+
+      doc.setTextColor(205, 205, 205);
+      doc.setFontSize(8);
+      const tag = 'Ingeniería · Tecnología · Industria';
+      doc.text(tag, fx, fy);
+      fx += doc.getTextWidth(tag) + 4;
+
+      doc.setTextColor(90, 90, 90);
+      doc.text('|', fx, fy);
+      fx += 4;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 245, 160);
+      doc.text('CEL. 78671169', fx, fy);
+
+      if (textoDerecha) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(150, 150, 150);
+        doc.text(textoDerecha, pageW - marginX - 5, fy, { align: 'right' });
+      }
+    }
+
     window.printTiempos = async function () {
       if (!window.tiemposAccordionData) return;
       if (!window.jspdf) {
@@ -4371,40 +4418,7 @@
         const totalPaginas = doc.internal.getNumberOfPages();
         for (let p = 1; p <= totalPaginas; p++) {
           doc.setPage(p);
-          const fy = pageH - 9;
-          doc.setFillColor(10, 10, 10);
-          doc.roundedRect(marginX, fy - 5.5, pageW - marginX * 2, 10, 2, 2, 'F');
-
-          let fx = marginX + 5;
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          doc.setTextColor(230, 57, 70);
-          doc.text('GIDEN TECHNOLOGY', fx, fy);
-          fx += doc.getTextWidth('GIDEN TECHNOLOGY') + 4;
-
-          doc.setTextColor(90, 90, 90);
-          doc.setFont('helvetica', 'normal');
-          doc.text('|', fx, fy);
-          fx += 4;
-
-          doc.setTextColor(205, 205, 205);
-          doc.setFontSize(8);
-          const tag = 'Ingeniería Mecatrónica  ·  Tecnología & Industria';
-          doc.text(tag, fx, fy);
-          fx += doc.getTextWidth(tag) + 4;
-
-          doc.setTextColor(90, 90, 90);
-          doc.text('|', fx, fy);
-          fx += 4;
-
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(0, 245, 160);
-          doc.text('Tel. 62402261', fx, fy);
-
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7.5);
-          doc.setTextColor(150, 150, 150);
-          doc.text(`Página ${p} de ${totalPaginas}`, pageW - marginX - 5, fy, { align: 'right' });
+          dibujarPiePaginaGiden(doc, marginX, pageW, pageH, `Página ${p} de ${totalPaginas}`);
         }
 
         const nombreArchivo = 'Resultados_' + (rallyNombre || 'Rally').replace(/[^a-zA-Z0-9]+/g, '_') + '.pdf';
@@ -4414,6 +4428,184 @@
         window.toast ? window.toast('No se pudo generar el PDF: ' + err.message, 'error') : alert('No se pudo generar el PDF: ' + err.message);
       } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+      }
+    };
+
+    // ==========================================
+    // DESCARGA DE PDF DE "SOLO LA TABLA QUE SE ESTÁ VIENDO" -- a diferencia
+    // de window.printTiempos (reporte completo con TODAS las secciones),
+    // este botón descarga nada más la vista activa en ese momento: si estás
+    // en General por Clase, eso; si cambiaste a Shakedown por Vuelta, eso;
+    // si estás en la Etapa 1 mirando solo la PE3 mezclada, exactamente eso.
+    // No duplica la lógica de cálculo de cada tabla -- lee directamente el
+    // HTML (encabezados de clase + <table>) que ya está dibujado en
+    // pantalla para esa vista, así siempre coincide con lo que se ve.
+    // ==========================================
+
+    // Nota: el selector va como atributo data-* (no interpolado dentro del
+    // JS del onclick) justamente porque algunos selectores traen comillas
+    // propias (ej. [data-pe='todas']) -- meterlas en un string de JS
+    // embebido en un atributo HTML es una fuente segura de bugs de comillas
+    // cruzadas (ya pasó una vez acá).
+    function botonDescargarPdf(wrapSelector, titulo) {
+      const tituloEscapado = escPrintText(titulo).replace(/"/g, '&quot;');
+      return `<button type="button" class="stats-view-tab" data-wrap-selector="${wrapSelector.replace(/"/g, '&quot;')}" data-descarga-titulo="${tituloEscapado}" onclick="window.descargarTablaVisible(this)" style="padding:8px 14px; font-size:12px;" title="Descargar esta tabla en PDF">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Descargar PDF
+      </button>`;
+    }
+
+    // Un elemento puede estar oculto porque ÉL tiene display:none, o porque
+    // algún ancestro (hasta "tope") lo tiene -- hay que chequear toda la
+    // cadena, no solo el propio estilo.
+    function elementoVisibleHasta(el, tope) {
+      let node = el;
+      while (node && node !== tope) {
+        if (node.style && node.style.display === 'none') return false;
+        node = node.parentElement;
+      }
+      return true;
+    }
+
+    async function generarPdfDeContenedor(containerEl, titulo) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const marginX = 12;
+      const footerH = 15;
+      let y = 14;
+
+      const rallyNombre = window.tiemposAccordionData?.rallyNombre;
+      const logoUrl = window.sitioConfigCache && window.sitioConfigCache.logo_url;
+      const logoData = logoUrl ? await cargarImagenComoDataUrl(siteDriveImageUrl(logoUrl)) : null;
+
+      if (logoData) {
+        try { doc.addImage(logoData, 'PNG', marginX, y - 3, 17, 17, undefined, 'FAST'); } catch (e) { /* sigue sin logo */ }
+      } else {
+        doc.setFillColor(230, 57, 70);
+        doc.roundedRect(marginX, y - 3, 17, 17, 3, 3, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(255, 255, 255);
+        doc.text('AR', marginX + 8.5, y + 7, { align: 'center' });
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(17, 17, 17);
+      doc.text('AMADESU RALLYS', marginX + 21, y + 2);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(230, 57, 70);
+      doc.text('CRONOMETRAJE EN VIVO', marginX + 21, y + 7.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(17, 17, 17);
+      doc.text((rallyNombre || 'RESULTADOS').toUpperCase(), pageW / 2, y + 3, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Resultados Extra Oficiales', pageW / 2, y + 9.5, { align: 'center' });
+
+      const fecha = new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Generado', pageW - marginX, y, { align: 'right' });
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(60, 60, 60);
+      doc.text(fecha, pageW - marginX, y + 5, { align: 'right' });
+
+      y += 21;
+      doc.setDrawColor(230, 57, 70);
+      doc.setLineWidth(0.8);
+      doc.line(marginX, y, pageW - marginX, y);
+      y += 9;
+
+      function asegurarEspacio(minimo) { if (y > pageH - footerH - minimo) { doc.addPage(); y = 14; } }
+
+      asegurarEspacio(16);
+      doc.setFillColor(17, 17, 17);
+      doc.roundedRect(marginX, y, pageW - marginX * 2, 8, 1.5, 1.5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text(titulo.toUpperCase(), marginX + 4, y + 5.6);
+      y += 12;
+
+      let hayTablas = false;
+      containerEl.querySelectorAll('h4, table').forEach(node => {
+        if (node.tagName === 'TABLE') {
+          hayTablas = true;
+          asegurarEspacio(20);
+          doc.autoTable({
+            html: node,
+            startY: y,
+            margin: { left: marginX, right: marginX, bottom: footerH },
+            theme: 'grid',
+            styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.3, lineColor: [210, 210, 210], lineWidth: 0.15, textColor: [20, 20, 20] },
+            headStyles: { fillColor: [232, 232, 232], textColor: [30, 30, 30], fontStyle: 'bold', fontSize: 8 },
+          });
+          y = doc.lastAutoTable.finalY + 10;
+        } else {
+          asegurarEspacio(12);
+          let color = [230, 57, 70];
+          try {
+            const rgb = getComputedStyle(node).color.match(/\d+/g);
+            if (rgb) color = rgb.slice(0, 3).map(Number);
+          } catch (e) { /* color por defecto */ }
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(color[0], color[1], color[2]);
+          doc.text(node.textContent.trim().toUpperCase(), marginX, y + 5);
+          y += 9;
+        }
+      });
+
+      if (!hayTablas) {
+        window.toast ? window.toast('No hay datos para descargar en esta vista.', 'warn') : alert('No hay datos para descargar en esta vista.');
+        return;
+      }
+
+      const totalPaginasTabla = doc.internal.getNumberOfPages();
+      for (let p = 1; p <= totalPaginasTabla; p++) {
+        doc.setPage(p);
+        dibujarPiePaginaGiden(doc, marginX, pageW, pageH, totalPaginasTabla > 1 ? `Página ${p} de ${totalPaginasTabla}` : '');
+      }
+
+      const slug = (titulo || 'tiempos').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      doc.save(`tiempos_${slug}.pdf`);
+    }
+
+    // onclick de cada botón "Descargar PDF": wrapSelector acota la búsqueda
+    // a UN bloque (General, Shakedown, o una PE/Etapa puntual), adentro del
+    // cual solo una vista (Por Clase/General/Por Vuelta/etc.) está
+    // visible a la vez -- esa es la que se descarga.
+    window.descargarTablaVisible = async function (btnEl) {
+      if (!window.jspdf) {
+        window.toast ? window.toast('No se pudo cargar el generador de PDF. Revisa tu conexión y volvé a intentar.', 'error') : alert('No se pudo cargar el generador de PDF.');
+        return;
+      }
+      const wrapSelector = btnEl.dataset.wrapSelector;
+      const baseTitle = btnEl.dataset.descargaTitulo;
+      const wrap = document.querySelector(wrapSelector);
+      if (!wrap) return;
+      const visible = Array.from(wrap.querySelectorAll('[data-vista-label]')).find(el => elementoVisibleHasta(el, wrap));
+      if (!visible) {
+        window.toast ? window.toast('Elegí primero cómo ver los tiempos.', 'warn') : alert('Elegí primero cómo ver los tiempos.');
+        return;
+      }
+
+      const btnHtmlOriginal = btnEl ? btnEl.innerHTML : null;
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Generando...'; }
+      try {
+        await generarPdfDeContenedor(visible, `${baseTitle} — ${visible.dataset.vistaLabel}`);
+      } catch (err) {
+        console.error(err);
+        window.toast ? window.toast('No se pudo generar el PDF: ' + err.message, 'error') : alert('No se pudo generar el PDF: ' + err.message);
+      } finally {
+        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = btnHtmlOriginal; }
       }
     };
 
@@ -4652,10 +4844,11 @@
             <button type="button" class="stats-view-tab active" id="shake-vista-btn-vuelta" onclick="window.toggleVistaShakedown('vuelta')" style="padding:8px 14px; font-size:12px;">Por Vuelta</button>
             <button type="button" class="stats-view-tab" id="shake-vista-btn-cat" onclick="window.toggleVistaShakedown('cat')" style="padding:8px 14px; font-size:12px;">Clasificación</button>
             <button type="button" class="stats-view-tab" id="shake-vista-btn-general" onclick="window.toggleVistaShakedown('general')" style="padding:8px 14px; font-size:12px;">Ver Tiempo General</button>
+            ${botonDescargarPdf('#acc-wrap-shakedown', shakeLabel)}
           </div>
-          <div id="shake-vista-vuelta">${renderShakedownPorVuelta(shakeFilasFiltradas)}</div>
-          <div id="shake-vista-cat" style="display:none;">${renderCategoriasHtml(shakeByCat)}</div>
-          <div id="shake-vista-general" style="display:none;">${buildGapBarChart(shakeGeneral)}${buildResultTable(shakeGeneral)}</div>
+          <div id="shake-vista-vuelta" data-vista-label="Por Vuelta">${renderShakedownPorVuelta(shakeFilasFiltradas)}</div>
+          <div id="shake-vista-cat" data-vista-label="Clasificación" style="display:none;">${renderCategoriasHtml(shakeByCat)}</div>
+          <div id="shake-vista-general" data-vista-label="Ver Tiempo General" style="display:none;">${buildGapBarChart(shakeGeneral)}${buildResultTable(shakeGeneral)}</div>
         `;
         html += accordionItem('shakedown', shakeLabel, 'acc-header-shakedown', shakeBodyHtml);
       }
@@ -4682,11 +4875,12 @@
         generalHtml = `
           <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
             <button type="button" class="stats-view-tab" id="general-vista-btn-cat" onclick="window.toggleVistaGeneral('cat')" style="padding:8px 14px; font-size:12px;">Por Clase</button>
-            <button type="button" class="stats-view-tab" id="general-vista-btn-mix" onclick="window.toggleVistaGeneral('mix')" style="padding:8px 14px; font-size:12px;">Ver Todo Mezclado</button>
+            <button type="button" class="stats-view-tab" id="general-vista-btn-mix" onclick="window.toggleVistaGeneral('mix')" style="padding:8px 14px; font-size:12px;">Ver General</button>
+            ${botonDescargarPdf('#acc-wrap-general', generalLabel)}
           </div>
-          <p class="acc-empty" id="general-vista-elegir">Elegí cómo ver los tiempos: por categoría o todo mezclado.</p>
-          <div id="general-vista-cat" style="display:none;">${renderCategoriasHtml(generalByCat)}</div>
-          <div id="general-vista-mix" style="display:none;">${buildGapBarChart(generalMezclado)}${buildResultTable(generalMezclado)}</div>
+          <p class="acc-empty" id="general-vista-elegir">Elegí cómo ver los tiempos: por clase o general.</p>
+          <div id="general-vista-cat" data-vista-label="Por Clase" style="display:none;">${renderCategoriasHtml(generalByCat)}</div>
+          <div id="general-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(generalMezclado)}${buildResultTable(generalMezclado)}</div>
         `;
       } else {
         generalHtml = '<p class="acc-empty">Sin tiempos registrados aún.</p>';
@@ -4755,7 +4949,7 @@
       } else {
         // --- RALLY CLÁSICO: Etapas ---
         // Un selector de PE ("Todas las PE" o una en particular) + el toggle
-        // Por Clase/Todo Mezclado -- reemplaza los paneles PE1, PE2... sueltos
+        // Por Clase/General -- reemplaza los paneles PE1, PE2... sueltos
         // de antes (quedaban duplicados con esto). Ninguna tabla se muestra
         // hasta que se elige una vista, igual que en "General".
         etapas.forEach(etapa => {
@@ -4790,14 +4984,19 @@
               }
               const porClase = agruparPorCategoriaYClasificar(filasOp);
               const mezclado = clasificarSinCategoria(filasOp);
+              // Comillas simples adentro del selector CSS -- va embebido en un
+              // atributo onclick="" que usa comillas dobles; si acá también
+              // fueran dobles, cortarían el atributo HTML a la mitad.
+              const wrapDeEsteBloque = `#etapa-pe-wrap-${etapaId} [data-pe='${op.value}']`;
               return `<div class="etapa-vista-pe" data-pe="${op.value}" style="${display}">
                 <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
                   <button type="button" class="stats-view-tab etapa-vista-btn-cat" onclick="window.toggleVistaEtapa('${etapaId}','${op.value}','cat')" style="padding:8px 14px; font-size:12px;">Por Clase</button>
-                  <button type="button" class="stats-view-tab etapa-vista-btn-mix" onclick="window.toggleVistaEtapa('${etapaId}','${op.value}','mix')" style="padding:8px 14px; font-size:12px;">Ver Todo Mezclado</button>
+                  <button type="button" class="stats-view-tab etapa-vista-btn-mix" onclick="window.toggleVistaEtapa('${etapaId}','${op.value}','mix')" style="padding:8px 14px; font-size:12px;">Ver General</button>
+                  ${botonDescargarPdf(wrapDeEsteBloque, `ETAPA: ${escPrintText(etapa.nombre)} — ${escPrintText(op.label)}`)}
                 </div>
-                <p class="acc-empty etapa-vista-elegir">Elegí cómo ver los tiempos: por clase o todo mezclado.</p>
-                <div class="etapa-vista-cat" style="display:none;">${renderCategoriasHtml(porClase)}</div>
-                <div class="etapa-vista-mix" style="display:none;">${buildGapBarChart(mezclado)}${buildResultTable(mezclado)}</div>
+                <p class="acc-empty etapa-vista-elegir">Elegí cómo ver los tiempos: por clase o general.</p>
+                <div class="etapa-vista-cat" data-vista-label="Por Clase" style="display:none;">${renderCategoriasHtml(porClase)}</div>
+                <div class="etapa-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(mezclado)}${buildResultTable(mezclado)}</div>
               </div>`;
             }).join('');
 
