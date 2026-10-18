@@ -2482,8 +2482,21 @@
        ========================================================== */
     .nav-inline,
     .clase-inline,
+    .vel-inline,
     .th-short {
       display: none;
+    }
+
+    .data-table.compacta .col-nav {
+      display: none;
+    }
+
+    .data-table.compacta .nav-inline {
+      display: block;
+      font-weight: 400;
+      font-size: 0.9em;
+      color: var(--text-muted);
+      margin-top: 2px;
     }
 
     /* Franja de anuncios al pie de Tiempos / Estadísticas */
@@ -2711,12 +2724,29 @@
         line-height: 1.25;
       }
 
+      .data-table th,
+      .data-table td {
+        padding: 10px 9px;
+      }
+
+      .data-table .th-long {
+        display: none;
+      }
+
+      .data-table .th-short {
+        display: inline;
+      }
+
       .data-table td.col-pe {
         white-space: normal;
         overflow-wrap: anywhere;
         min-width: 44px;
         max-width: 80px;
         line-height: 1.3;
+      }
+
+      .data-table .pe-prefijo {
+        display: none;
       }
 
       .data-table .nav-inline {
@@ -2881,7 +2911,7 @@
 
       .data-table th,
       .data-table td {
-        padding: 8px 4px !important;
+        padding: 8px 3px !important;
         font-size: 12px !important;
       }
 
@@ -2899,8 +2929,17 @@
         transform: scale(0.85);
       }
 
-      .data-table .col-clase {
+      .data-table .col-clase,
+      .data-table .col-vel {
         display: none;
+      }
+
+      .data-table .vel-inline {
+        display: block;
+        font-weight: 500;
+        font-size: 10px;
+        color: var(--status-upcoming);
+        margin-top: 2px;
       }
 
       .data-table .clase-inline {
@@ -2932,13 +2971,7 @@
         padding: 1px 6px;
       }
 
-      .data-table .th-long {
-        display: none;
-      }
 
-      .data-table .th-short {
-        display: inline;
-      }
 
       /* Indicador visual de que la tabla se puede deslizar de costado
          cuando todavía no entra completa (p. ej. muchas vueltas). */
@@ -4476,8 +4509,14 @@
       // Columna "P.E." (ej. "PE 1-5") solo aparece cuando las filas la traen
       // -- hoy, solo en la sección "General" (ver formatearRangoPE).
       const showPe = rows.some(r => r.peRango !== undefined);
+      const showVel = rows.some(r => r.vel != null);
+      const velTxt = v => v != null ? v.toFixed(1) : '—';
+      const peHtml = pe => pe ? String(pe).replace(/^PE /, '<span class="pe-prefijo">PE </span>') : '—';
+      // Tabla con muchas columnas (General mezclado + velocidad): el navegante
+      // va debajo del piloto también en PC, para que entre todo sin deslizar.
+      const compacta = mostrarClase && showVel;
       return `<div style="overflow-x:auto;">
-        <table class="data-table">
+        <table class="data-table${compacta ? ' compacta' : ''}">
           <thead><tr>
             <th style="width:50px;">Pos</th>
             <th>#</th>
@@ -4487,6 +4526,7 @@
             ${showPe ? '<th class="col-pe"><span class="th-long">P.E. sumadas</span><span class="th-short">P.E.</span></th>' : ''}
             <th>Tiempo</th>
             <th><span class="th-long">+Diferencia</span><span class="th-short">Dif.</span></th>
+            ${showVel ? '<th class="col-vel" title="Distancia de las PE ÷ tiempo de manejo (sin penalizaciones)"><span class="th-long">Vel. km/h</span><span class="th-short">km/h</span></th>' : ''}
           </tr></thead>
           <tbody>${rows.map((r, i) => {
         if (r.estadoEspecial) {
@@ -4497,8 +4537,9 @@
               <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}${mostrarClase ? `<span class="clase-inline">${claseBadge(r.clase)}</span>` : ''}</td>
               <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
               ${mostrarClase ? `<td class="col-clase">${claseBadge(r.clase)}</td>` : ''}
-              ${showPe ? `<td class="col-pe" style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
+              ${showPe ? `<td class="col-pe" style="font-family:var(--font-mono); color:var(--text-muted);">${peHtml(r.peRango)}</td>` : ''}
               <td colspan="2" style="font-family:var(--font-display); font-weight:700; letter-spacing:0.05em; color:${color};">${label}</td>
+              ${showVel ? '<td class="col-vel" style="color:var(--text-dim);">—</td>' : ''}
             </tr>`;
         }
         const pos = r.pos !== undefined ? r.pos : (i + 1);
@@ -4513,9 +4554,10 @@
               <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}${mostrarClase ? `<span class="clase-inline">${claseBadge(r.clase)}</span>` : ''}</td>
               <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
               ${mostrarClase ? `<td class="col-clase">${claseBadge(r.clase)}</td>` : ''}
-              ${showPe ? `<td class="col-pe" style="font-family:var(--font-mono); color:var(--text-muted);">${r.peRango || '—'}</td>` : ''}
-              <td style="font-family:var(--font-mono); font-weight:bold; color:var(--text-main);">${fmtInterval(r.tiempo)}</td>
+              ${showPe ? `<td class="col-pe" style="font-family:var(--font-mono); color:var(--text-muted);">${peHtml(r.peRango)}</td>` : ''}
+              <td style="font-family:var(--font-mono); font-weight:bold; color:var(--text-main);">${fmtInterval(r.tiempo)}${showVel && r.vel != null ? `<span class="vel-inline">${velTxt(r.vel)} km/h</span>` : ''}</td>
               <td style="font-family:var(--font-mono); color:var(--text-muted);">${r.faltanPe ? `<span class="pe-falta">Faltan ${r.faltanPe} PE</span>` : (r.dif ? '+' + fmtInterval(r.dif) : '—')}</td>
+              ${showVel ? `<td class="col-vel" style="font-family:var(--font-mono); color:var(--status-upcoming);">${velTxt(r.vel)}</td>` : ''}
             </tr>`;
       }).join('')}</tbody>
         </table></div>`;
@@ -5212,6 +5254,7 @@
         clase: e.inscripcion?.categoria?.nombre || 'Sin Clase',
         tiempo: msToIntervalStrPublic(e.ms),
         faltanPe: (e.peCount || 0) < maxPe ? maxPe - e.peCount : 0,
+        vel: (e.km && e.manejoMs) ? e.km / (e.manejoMs / 3600000) : null,
         dif: (i === 0 || (e.peCount || 0) < maxPe) ? null : msToIntervalStrPublic(e.ms - liderMs)
       }));
       const filaEspecial = (e) => ({
@@ -5332,6 +5375,15 @@
     // nunca se usa tiempo_neto acá porque cada fila ya trae la penalización TOTAL del recorrido
     // metida adentro (se calcula así al guardar cada vuelta), así que sumar tiempo_neto de varias
     // vueltas la contaría una vez por vuelta en vez de una sola vez.
+    // Tiempo de MANEJO (sin penalizaciones) para la velocidad promedio: una
+    // penalización no hace más lento al auto en el tramo. Usa tiempo_bruto;
+    // si no está cargado, lo deduce del tiempo de clasificación menos la penal.
+    function tiempoManejoMs(rows, msClasificacion, penalMs = 0) {
+      let suma = 0;
+      rows.forEach(r => { suma += intervalToMsPublic(r.tiempo_bruto) || 0; });
+      return suma > 0 ? suma : Math.max(0, (msClasificacion || 0) - penalMs);
+    }
+
     function sumarTiempoRecorridoInscripcion(rows, penalMs = 0) {
       if (rows.length === 1) return intervalToMsPublic(rows[0].tiempo_neto) || null;
       let sum = 0, tiene = false;
@@ -5347,12 +5399,13 @@
       entradas.forEach(e => {
         const g = acc[e.inscripcion_id] || { inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, ms: 0, tiene: false, ultimoEstado: e.estado, vueltasCompletadas: e.vueltasCompletadas, vueltasRequeridas: e.vueltasRequeridas, msParcial: e.msParcial };
         if (e.ms !== null) { g.ms += e.ms; g.tiene = true; }
+        if (e.km && e.manejoMs) { g.km = (g.km || 0) + e.km; g.manejoMs = (g.manejoMs || 0) + e.manejoMs; }
         g.ultimoEstado = e.estado;
         if (e.vueltasCompletadas !== undefined) { g.vueltasCompletadas = e.vueltasCompletadas; g.vueltasRequeridas = e.vueltasRequeridas; g.msParcial = e.msParcial; }
         acc[e.inscripcion_id] = g;
       });
       return Object.values(acc).map(g => g.tiene
-        ? { inscripcion: g.inscripcion, inscripcion_id: g.inscripcion_id, ms: g.ms, estado: 'valido' }
+        ? { inscripcion: g.inscripcion, inscripcion_id: g.inscripcion_id, ms: g.ms, estado: 'valido', km: g.km, manejoMs: g.manejoMs }
         : { inscripcion: g.inscripcion, inscripcion_id: g.inscripcion_id, ms: null, estado: g.ultimoEstado, vueltasCompletadas: g.vueltasCompletadas, vueltasRequeridas: g.vueltasRequeridas, msParcial: g.msParcial });
     }
 
@@ -5411,13 +5464,23 @@
         });
       });
 
+      // Distancia de cada PE (km) -- para la velocidad promedio (solo rally).
+      const kmPorRecorrido = {};
+      if (!esCircuito) etapas.forEach(e => e.recorridos.forEach(r => { const km = parseFloat(r.distancia_km); if (km > 0) kmPorRecorrido[r.id] = km; }));
+
       const entradas = Object.values(porRecorridoInscripcion)
         .map(e => {
           const penalMs = (penalMap || {})[e.recorrido_id + '||' + e.inscripcion_id] || 0;
           const resuelto = esCircuito
             ? resolverGeneralCircuito(e.rows, vueltasReqPorRecorrido[e.recorrido_id], penalMs)
             : resolverEntradaTiempo(e.rows, penalMs);
-          return { inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resuelto };
+          const entrada = { inscripcion: e.inscripcion, inscripcion_id: e.inscripcion_id, recorrido_id: e.recorrido_id, ...resuelto };
+          const km = kmPorRecorrido[e.recorrido_id];
+          if (km && resuelto.ms !== null) {
+            const manejoMs = tiempoManejoMs(e.rows, resuelto.ms, penalMs);
+            if (manejoMs > 0) { entrada.km = km; entrada.manejoMs = manejoMs; }
+          }
+          return entrada;
         });
 
       let html = '';
@@ -6400,17 +6463,22 @@
         let totalDistancia = 0;
         let totalPenalidadesMs = 0;
 
-        const misVelocidades = filasPiloto.map(f => {
+        // Velocidad promedio = km totales ÷ tiempo total de manejo (sin
+        // penalizaciones) -- NO el promedio de las velocidades de cada PE,
+        // que daría mal cuando las PE tienen largos distintos.
+        let kmConTiempo = 0, manejoTotalMs = 0;
+        filasPiloto.forEach(f => {
           const row = tiemposRally.find(t => t.recorrido_id === f.recId && t.inscripcion_id === insId);
           if (f.distancia_km) totalDistancia += parseFloat(f.distancia_km);
           if (row) {
             const msNeto = intervalToMsPublic(row.tiempo_neto);
             const msBruto = intervalToMsPublic(row.tiempo_bruto);
             if (msNeto > msBruto) totalPenalidadesMs += (msNeto - msBruto);
+            const km = parseFloat(f.distancia_km);
+            if (km > 0 && msBruto > 0) { kmConTiempo += km; manejoTotalMs += msBruto; }
           }
-          return row ? parseFloat(row.velocidad_promedio_kmh) || 0 : 0;
-        }).filter(v => v > 0);
-        const velPromedioGeneral = misVelocidades.length ? (misVelocidades.reduce((a, b) => a + b, 0) / misVelocidades.length) : 0;
+        });
+        const velPromedioGeneral = manejoTotalMs > 0 ? kmConTiempo / (manejoTotalMs / 3600000) : 0;
 
         const tramosGanados = filasPiloto.filter(f => f.difLiderCategoria <= 0).length;
 
