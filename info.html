@@ -124,19 +124,78 @@
 
     /* HERO */
     .info-hero {
-      position: relative; height: 320px; overflow: hidden;
+      position: relative; min-height: 400px; overflow: hidden;
       border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: flex-end;
     }
-    .info-hero img { width: 100%; height: 100%; object-fit: cover; }
+    .info-hero > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .info-hero::after {
       content: ''; position: absolute; inset: 0;
-      background: linear-gradient(to top, var(--bg-void) 5%, rgba(3,3,3,0.35) 60%, rgba(3,3,3,0.55) 100%);
+      background: linear-gradient(to top, var(--bg-void) 4%, rgba(3,3,3,0.55) 55%, rgba(3,3,3,0.35) 100%);
     }
     .info-hero-content {
-      position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-      max-width: 1200px; margin: 0 auto; padding: 0 40px 28px;
+      position: relative; z-index: 2; width: 100%;
+      max-width: 1200px; margin: 0 auto; padding: 96px 40px 32px;
     }
     .info-hero-badges { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .info-hero-meta {
+      display: flex; flex-wrap: wrap; gap: 8px 22px; color: #d8dde4; font-size: 15px; font-weight: 600;
+      margin-top: 8px;
+    }
+    .info-hero-meta span { display: inline-flex; align-items: center; gap: 7px; }
+    .info-hero-meta svg { color: var(--accent-primary); flex-shrink: 0; }
+    .info-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .hero-btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 10px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 700; text-decoration: none;
+      background: rgba(255,255,255,0.08); border: 1px solid var(--border-strong); color: var(--text-main);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.2s;
+    }
+    .hero-btn:hover { background: rgba(255,255,255,0.16); }
+    .hero-btn.primary { background: var(--accent-primary); border-color: var(--accent-primary); color: #fff; box-shadow: 0 6px 20px var(--accent-glow); }
+    .hero-btn.primary:hover { background: var(--accent-hover); }
+    .hero-btn.live { background: var(--live-green); border-color: var(--live-green); color: #04140d; box-shadow: 0 6px 20px var(--live-glow); }
+
+    /* Datos clave */
+    .info-facts {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: var(--sp-8);
+    }
+    .info-fact {
+      background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px;
+      padding: 14px 16px; min-width: 0;
+    }
+    .info-fact-label {
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-dim); margin-bottom: 6px;
+    }
+    .info-fact-value { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-main); line-height: 1.15; overflow-wrap: anywhere; }
+    .info-fact-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+    .info-about {
+      background: var(--bg-surface); border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent-primary);
+      border-radius: 12px; padding: 18px 20px; margin-bottom: var(--sp-8);
+      color: #cfd5dd; font-size: 15px; line-height: 1.6; white-space: pre-line;
+    }
+
+    /* Menú de secciones */
+    .info-nav {
+      position: sticky; top: 80px; z-index: 15; display: flex; gap: 8px; overflow-x: auto;
+      padding: 10px 0; margin-bottom: var(--sp-6); background: linear-gradient(var(--bg-void) 75%, transparent);
+      scrollbar-width: none;
+    }
+    .info-nav::-webkit-scrollbar { display: none; }
+    .info-nav a {
+      flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 20px;
+      background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-muted);
+      font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s;
+    }
+    .info-nav a:hover { color: var(--text-main); border-color: var(--border-strong); }
+    .info-nav a b {
+      font-family: var(--font-mono); font-size: 11px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+      display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.06); color: var(--text-main);
+    }
+    .info-nav a.has-items b { background: var(--accent-primary); color: #fff; }
+    .info-section { scroll-margin-top: 140px; }
     .badge {
       padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: var(--font-mono);
       font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
@@ -164,20 +223,37 @@
     .info-section-note { font-size: 13px; color: var(--text-dim); }
     .info-empty {
       background: var(--bg-surface); border: 1px dashed var(--border-strong); border-radius: 12px;
-      padding: 28px; text-align: center; color: var(--text-muted); font-size: 14px;
+      padding: 16px 18px; color: var(--text-dim); font-size: 13px;
+      display: flex; align-items: center; gap: 10px;
     }
+    .info-empty::before {
+      content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0;
+    }
+    #recorrido-map-wrap > .info-empty, #recorrido-container > .info-empty { min-height: 54px; }
 
     /* CARRUSEL */
-    .carrusel-section { margin-bottom: var(--sp-12); }
+    .carrusel-section { margin-bottom: var(--sp-12); position: relative; }
     .carrusel-viewport {
-      position: relative; width: 100%; height: 420px; border-radius: 16px; overflow: hidden;
+      position: relative; width: 100%; aspect-ratio: 16 / 7; max-height: 460px; border-radius: 16px; overflow: hidden;
       background: var(--bg-surface); border: 1px solid var(--border-subtle);
     }
     .carrusel-slide {
       position: absolute; inset: 0; opacity: 0; transition: opacity 0.7s ease; z-index: 1;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
     }
     .carrusel-slide.active { opacity: 1; z-index: 2; }
-    .carrusel-slide img { width: 100%; height: 100%; object-fit: cover; }
+    /* El anuncio se ve COMPLETO (contain); el fondo difuminado de la misma
+       imagen rellena los costados, así un flyer vertical no se recorta. */
+    .carrusel-slide::before {
+      content: ''; position: absolute; inset: -30px; background: var(--slide-bg) center / cover no-repeat;
+      filter: blur(26px) brightness(0.45);
+    }
+    .carrusel-slide img { position: relative; max-width: 100%; max-height: 100%; object-fit: contain; }
+    .carrusel-tag {
+      position: absolute; top: 12px; left: 12px; z-index: 4; font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.85);
+      background: rgba(0,0,0,0.55); padding: 3px 8px; border-radius: 4px;
+    }
     .carrusel-dots {
       position: absolute; left: 0; right: 0; bottom: 14px; z-index: 3;
       display: flex; justify-content: center; gap: 8px;
@@ -300,12 +376,25 @@
     }
     .info-error h2 { font-family: var(--font-display); font-size: 28px; color: var(--text-main); }
 
+    @media (max-width: 900px) {
+      .info-facts { grid-template-columns: repeat(2, 1fr); }
+    }
+
     @media (max-width: 720px) {
-      .topbar { padding: 0 16px; }
+      .topbar { padding: 0 16px; height: 64px; }
+      .brand-text { font-size: 21px; }
+      .info-nav { top: 64px; }
       .info-wrap { padding: var(--sp-6) 16px var(--sp-12); }
-      .info-hero-content { padding: 0 16px 20px; }
-      .info-hero-title { font-size: 30px; }
-      .carrusel-viewport { height: 260px; }
+      .info-hero { min-height: 340px; }
+      .info-hero-content { padding: 72px 16px 22px; }
+      .info-hero-title { font-size: 32px; }
+      .info-hero-meta { font-size: 13px; gap: 6px 16px; }
+      .info-hero-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .hero-btn { justify-content: center; padding: 10px 6px; font-size: 13px; flex-direction: column; gap: 4px; }
+      .info-fact { padding: 12px; }
+      .info-fact-value { font-size: 17px; }
+      .info-section-title { font-size: 22px; }
+      .carrusel-viewport { aspect-ratio: 4 / 3; }
       #recorrido-map { height: 320px; }
       .lightbox-overlay { padding: 12px; }
       .lightbox-body { padding: 12px; }
@@ -484,7 +573,7 @@
       }
 
       const { data: rally, error } = await supabase.schema('rally').from('rallies')
-        .select('id, nombre, descripcion, ciudad, pais, fecha_inicio, fecha_fin, imagen_url, tipo_evento, estado')
+        .select('id, nombre, descripcion, ciudad, pais, organizador, fecha_inicio, fecha_fin, imagen_url, tipo_evento, estado')
         .eq('id', rallyId).is('deleted_at', null).maybeSingle();
 
       if (error || !rally) {
@@ -522,23 +611,93 @@
       </div>`;
     }
 
+    const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    function fechaLocal(iso) {
+      if (!iso) return null;
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    // "16 al 18 de octubre de 2026", "30 de septiembre al 2 de octubre de 2026", "16 de octubre de 2026"
+    function rangoFechas(ini, fin) {
+      const a = fechaLocal(ini), b = fechaLocal(fin) || a;
+      if (!a) return '';
+      const dm = f => `${f.getDate()} de ${MESES[f.getMonth()]}`;
+      if (a.getTime() === b.getTime()) return `${dm(a)} de ${a.getFullYear()}`;
+      if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) return `${a.getDate()} al ${dm(b)} de ${b.getFullYear()}`;
+      if (a.getFullYear() === b.getFullYear()) return `${dm(a)} al ${dm(b)} de ${b.getFullYear()}`;
+      return `${dm(a)} de ${a.getFullYear()} al ${dm(b)} de ${b.getFullYear()}`;
+    }
+    // Texto corto bajo el estado: "Día 2 de 3", "Faltan 5 días", "Terminó hace 3 días"
+    function detalleEstado(rally, estado) {
+      const hoyD = new Date(); hoyD.setHours(0, 0, 0, 0);
+      const a = fechaLocal(rally.fecha_inicio), b = fechaLocal(rally.fecha_fin) || a;
+      if (!a) return '';
+      const DIA = 86400000;
+      if (estado === 'en_curso') {
+        const total = Math.round((b - a) / DIA) + 1;
+        const n = Math.min(total, Math.max(1, Math.round((hoyD - a) / DIA) + 1));
+        return total > 1 ? `Día ${n} de ${total}` : 'Hoy';
+      }
+      if (estado === 'finalizado') {
+        const dias = Math.round((hoyD - b) / DIA);
+        return dias <= 0 ? 'Terminó hoy' : dias === 1 ? 'Terminó ayer' : `Terminó hace ${dias} días`;
+      }
+      if (estado === 'cancelado') return 'Evento cancelado';
+      if (estado === 'pospuesto') return 'Nueva fecha a confirmar';
+      const faltan = Math.round((a - hoyD) / DIA);
+      return faltan <= 0 ? 'Empieza hoy' : faltan === 1 ? 'Empieza mañana' : `Faltan ${faltan} días`;
+    }
+    const ESTADO_TXT = { en_curso: 'En vivo', finalizado: 'Finalizado', cancelado: 'Cancelado', pospuesto: 'Pospuesto' };
+    const ico = {
+      cal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+      pin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"></path><circle cx="12" cy="10" r="3"></circle></svg>',
+      org: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>',
+      reloj: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M9 2h6"></path></svg>',
+      gente: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+      graf: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>',
+    };
+
     function renderPage(rally, boletines, comunicados, rpps, gpxTracks, anuncios, tickers) {
       const img = rally.imagen_url || 'https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=1600';
+      const estado = estadoSegunFechas(rally);
+      const esCircuito = rally.tipo_evento === 'circuito';
+      const lugar = [rally.ciudad, rally.pais].filter(Boolean).join(', ');
+      const fechas = rangoFechas(rally.fecha_inicio, rally.fecha_fin);
+      const enlace = ver => `index.html?rally=${encodeURIComponent(rally.id)}&ver=${ver}`;
+      const navItem = (href, label, n) => `<a href="#${href}" class="${n ? 'has-items' : ''}">${label} <b>${n}</b></a>`;
 
       main.innerHTML = `
         <section class="info-hero">
-          <img src="${img}" alt="${esc(rally.nombre)}" onerror="this.src='https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=1600';">
+          <img src="${esc(img)}" alt="${esc(rally.nombre)}" onerror="this.src='https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=1600';">
           <div class="info-hero-content">
             <div class="info-hero-badges">
-              <div class="badge">${rally.tipo_evento === 'circuito' ? 'CIRCUITO' : 'RALLY'}</div>
-              ${renderStatusBadge(estadoSegunFechas(rally))}
+              <div class="badge">${esCircuito ? 'CIRCUITO' : 'RALLY'}</div>
+              ${renderStatusBadge(estado)}
             </div>
             <h1 class="info-hero-title">${esc(rally.nombre)}</h1>
-            <div class="info-hero-sub">${esc(rally.ciudad || '')}${rally.ciudad && rally.pais ? ', ' : ''}${esc(rally.pais || '')} · ${esc(rally.fecha_inicio || '')}</div>
+            <div class="info-hero-meta">
+              ${fechas ? `<span>${ico.cal}${esc(fechas)}</span>` : ''}
+              ${lugar ? `<span>${ico.pin}${esc(lugar)}</span>` : ''}
+              ${rally.organizador ? `<span>${ico.org}${esc(rally.organizador)}</span>` : ''}
+            </div>
+            <div class="info-hero-actions">
+              <a class="hero-btn ${estado === 'en_curso' ? 'live' : 'primary'}" href="${enlace('tiempos')}">${ico.reloj}${estado === 'en_curso' ? 'Tiempos en vivo' : 'Tiempos'}</a>
+              <a class="hero-btn" href="${enlace('pilotos')}">${ico.gente}Pilotos</a>
+              <a class="hero-btn" href="${enlace('stats')}">${ico.graf}Estadísticas</a>
+            </div>
           </div>
         </section>
 
         <div class="info-wrap">
+          <div class="info-facts">
+            <div class="info-fact"><div class="info-fact-label">Estado</div><div class="info-fact-value" style="color:${estado === 'en_curso' ? 'var(--live-green)' : estado === 'finalizado' ? 'var(--status-finished)' : 'var(--status-upcoming)'}">${ESTADO_TXT[estado] || 'Próximo'}</div><div class="info-fact-sub">${esc(detalleEstado(rally, estado))}</div></div>
+            <div class="info-fact"><div class="info-fact-label">Fecha</div><div class="info-fact-value">${esc(fechas || '—')}</div></div>
+            <div class="info-fact"><div class="info-fact-label">Lugar</div><div class="info-fact-value">${esc(lugar || '—')}</div></div>
+            <div class="info-fact"><div class="info-fact-label">Tipo</div><div class="info-fact-value">${esCircuito ? 'Circuito' : 'Rally'}</div>${gpxTracks.length ? `<div class="info-fact-sub">${gpxTracks.length} recorrido${gpxTracks.length > 1 ? 's' : ''} en mapa</div>` : ''}</div>
+          </div>
+
+          ${rally.descripcion ? `<div class="info-about">${esc(rally.descripcion)}</div>` : ''}
+
           <section class="carrusel-section" id="carrusel-section" style="display:none;">
             <div class="carrusel-viewport" id="carrusel-viewport"></div>
             <div class="carrusel-dots" id="carrusel-dots"></div>
@@ -548,7 +707,14 @@
             </div>
           </section>
 
-          <section class="info-section">
+          <nav class="info-nav" aria-label="Secciones">
+            ${navItem('sec-boletines', 'Boletines', boletines.length)}
+            ${navItem('sec-comunicados', 'Comunicados', comunicados.length)}
+            ${navItem('sec-rpp', 'Reglamento', rpps.length)}
+            ${navItem('sec-recorrido', 'Recorrido', gpxTracks.length)}
+          </nav>
+
+          <section class="info-section" id="sec-boletines">
             <div class="info-section-head">
               <div class="info-section-title">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
@@ -558,7 +724,7 @@
             <div id="boletines-container"></div>
           </section>
 
-          <section class="info-section">
+          <section class="info-section" id="sec-comunicados">
             <div class="info-section-head">
               <div class="info-section-title">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
@@ -568,7 +734,7 @@
             <div id="comunicados-container"></div>
           </section>
 
-          <section class="info-section">
+          <section class="info-section" id="sec-rpp">
             <div class="info-section-head">
               <div class="info-section-title">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
@@ -579,7 +745,7 @@
             <div id="rpp-container"></div>
           </section>
 
-          <section class="info-section">
+          <section class="info-section" id="sec-recorrido">
             <div class="info-section-head">
               <div class="info-section-title">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
@@ -608,12 +774,16 @@
       if (anuncios.length > 0) {
         const viewport = document.getElementById('carrusel-viewport');
         const dotsWrap = document.getElementById('carrusel-dots');
-        viewport.innerHTML = anuncios.map((a, i) => `
-          <div class="carrusel-slide ${i === 0 ? 'active' : ''}" data-i="${i}">
-            <img src="${driveImageUrl(a.url_imagen)}" onerror="this.onerror=null; this.src='${driveImageUrlFallback(a.url_imagen)}';" alt="Anuncio ${i + 1}">
-          </div>`).join('');
+        viewport.innerHTML = anuncios.map((a, i) => {
+          const src = esc(driveImageUrl(a.url_imagen));
+          return `
+          <div class="carrusel-slide ${i === 0 ? 'active' : ''}" data-i="${i}" style="--slide-bg:url('${src}')">
+            <img src="${src}" onerror="this.onerror=null; this.src='${esc(driveImageUrlFallback(a.url_imagen))}';" alt="Anuncio ${i + 1}">
+          </div>`;
+        }).join('') + '<span class="carrusel-tag">Publicidad</span>';
         if (anuncios.length > 1) {
-          dotsWrap.innerHTML = anuncios.map((_, i) => `<button class="carrusel-dot ${i === 0 ? 'active' : ''}" data-i="${i}"></button>`).join('');
+          viewport.appendChild(dotsWrap);
+          dotsWrap.innerHTML =anuncios.map((_, i) => `<button class="carrusel-dot ${i === 0 ? 'active' : ''}" data-i="${i}"></button>`).join('');
           let current = 0;
           const slides = [...viewport.querySelectorAll('.carrusel-slide')];
           const dots = [...dotsWrap.querySelectorAll('.carrusel-dot')];

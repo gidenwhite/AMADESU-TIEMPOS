@@ -844,6 +844,7 @@
                   <input type="number" id="tiempo-numero-input" class="form-control" placeholder="Ej. 50" onkeydown="window.buscarAutoPorNumero(event)" style="font-family: var(--font-mono); font-size: 18px; font-weight: bold; color: var(--live-green);">
                   <button class="btn-secondary" onclick="window.buscarAutoPorNumero({key:'Enter'})" style="padding: 0 16px; display:inline-flex; align-items:center;" aria-label="Buscar vehículo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
                 </div>
+                <div id="tiempo-ultimos" style="display:none; margin-top:8px;"></div>
               </div>
               <div class="form-group" id="tiempo-vuelta-group" style="display: none;">
                 <label class="form-label" id="tiempo-vuelta-label">Vuelta</label>
@@ -1216,6 +1217,8 @@
     };
 
     window.salirRally = function() {
+      const ultimos = document.getElementById('tiempo-ultimos');
+      if (ultimos) ultimos.style.display = 'none';
       window.adminCurrentRallyId = null;
       window.adminCurrentTipoEvento = null;
       document.getElementById('tiempos-workspace').style.display = 'none';
@@ -1494,6 +1497,45 @@
       }
     };
 
+    // Últimos 3 tiempos GUARDADOS en la PE elegida (de la base, no de la
+    // memoria del navegador): sirve para ubicarse en la planilla de papel y
+    // de paso confirma que el guardado llegó. Tocar uno lo vuelve a abrir.
+    window.cargarUltimosNumeros = async function() {
+      const cont = document.getElementById('tiempo-ultimos');
+      if (!cont) return;
+      const recId = document.getElementById('tiempo-recorrido-select').value;
+      if (!recId) { cont.style.display = 'none'; return; }
+      const pedido = (window._ultimosPedido = (window._ultimosPedido || 0) + 1);
+      const { data, error } = await supabase.schema('rally').from('tiempos')
+        .select('updated_at, vuelta, estado, inscripcion:inscripciones(numero, categoria:categorias(nombre))')
+        .eq('recorrido_id', recId).is('deleted_at', null)
+        .order('updated_at', { ascending: false }).limit(3);
+      if (pedido !== window._ultimosPedido) return;
+      if (error || !data || data.length === 0) {
+        cont.style.display = 'block';
+        cont.innerHTML = '<span style="font-size:12px; color:var(--text-muted);">Todavía no cargaste tiempos en esta PE.</span>';
+        return;
+      }
+      const recData = (tiemposRecorridosCache || []).find(r => r.id === recId);
+      const conVuelta = !!(recData && recData.numero_vueltas);
+      const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const chips = data.map((t, i) => {
+        const num = t.inscripcion?.numero ?? '?';
+        const hora = new Date(t.updated_at).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+        const extra = [t.inscripcion?.categoria?.nombre, conVuelta ? `V${t.vuelta || 1}` : null, t.estado && t.estado !== 'valido' ? t.estado.replace('_', ' ') : null].filter(Boolean).join(' · ');
+        return `<button type="button" onclick="document.getElementById('tiempo-numero-input').value='${esc(num)}'; window.buscarAutoPorNumero({key:'Enter'});"
+          title="Abrir #${esc(num)}"
+          style="display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px; padding:6px 10px; border-radius:8px; cursor:pointer;
+                 background:${i === 0 ? 'rgba(0,245,160,0.10)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${i === 0 ? 'rgba(0,245,160,0.45)' : 'var(--border-subtle)'}; color:var(--text-main);">
+          <span style="font-family:var(--font-mono); font-size:16px; font-weight:800; color:${i === 0 ? 'var(--live-green)' : 'var(--text-main)'};">#${esc(num)}</span>
+          <span style="font-size:10px; color:var(--text-muted);">${esc(extra ? extra + ' · ' : '')}${esc(hora)}</span>
+        </button>`;
+      }).join('');
+      cont.style.display = 'block';
+      cont.innerHTML = `<div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">Últimos cargados en esta PE</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">${chips}</div>`;
+    };
+
     window.limpiarFormTiemposParcial = function() {
       ['sal-hh','sal-mm','sal-ss','sal-cc','lle-hh','lle-mm','lle-ss','lle-cc','emp-hh','emp-mm','emp-ss','emp-cc'].forEach(id => document.getElementById(id).value = '');
       window.tiempoModoIngreso = null;
@@ -1542,6 +1584,7 @@
       }
 
       window.cargarPuntosControl(recId);
+      window.cargarUltimosNumeros();
 
       if (recId) {
         window.cargarClasificacion();
@@ -2326,6 +2369,7 @@
         document.getElementById('tiempo-piloto-info').innerText = 'Guardado. Ingresa el siguiente N° de vehículo.';
         document.getElementById('tiempo-piloto-info').style.color = 'var(--live-green)';
         window.toast('Tiempo guardado.', 'ok');
+        window.cargarUltimosNumeros();
 
         await window.cargarClasificacion();
 

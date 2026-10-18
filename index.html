@@ -2486,6 +2486,147 @@
       display: none;
     }
 
+    /* Franja de anuncios al pie de Tiempos / Estadísticas */
+    .ad-banner {
+      flex-shrink: 0;
+      margin-top: 12px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-base);
+    }
+
+    #modal-stats .ad-banner {
+      margin: auto 0 0;
+      border-radius: 0;
+      border-width: 1px 0 0;
+    }
+
+    .ad-slot {
+      position: relative;
+      height: 76px;
+    }
+
+    .ad-slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      overflow: hidden;
+    }
+
+    .ad-slide.active {
+      opacity: 1;
+      z-index: 1;
+    }
+
+    /* Fondo difuminado de la misma imagen: rellena los costados cuando el
+       anuncio no es apaisado, en vez de dejar franjas negras. */
+    .ad-slide::before {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      background: var(--ad-bg) center / cover no-repeat;
+      filter: blur(18px) brightness(0.45);
+    }
+
+    .ad-slide img {
+      position: relative;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .ad-tag {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      z-index: 2;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.75);
+      background: rgba(0, 0, 0, 0.55);
+      padding: 1px 6px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    .ad-ticker {
+      display: flex;
+      align-items: center;
+      height: 30px;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+    }
+
+    .ad-slot+.ad-ticker {
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .ad-ticker:first-child {
+      border-top: 0;
+    }
+
+    .ad-ticker-tag {
+      flex-shrink: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      background: var(--accent-primary);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .ad-ticker-vp {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      height: 100%;
+    }
+
+    .ad-ticker-track {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      height: 100%;
+      white-space: nowrap;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-main);
+      animation: adTicker 20s linear infinite;
+    }
+
+    .ad-ticker-track span {
+      padding: 0 32px;
+    }
+
+    @keyframes adTicker {
+      from {
+        transform: translateX(0);
+      }
+
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    @media print {
+      .ad-banner {
+        display: none !important;
+      }
+    }
+
     .clase-badge {
       display: inline-block;
       padding: 2px 8px;
@@ -2531,6 +2672,30 @@
       #tiempos-accordion {
         overflow: visible !important;
         padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      }
+
+      /* Pegada al pie mientras se hace scroll, como el banner de una app;
+         al ser el último elemento, al llegar al final no tapa ninguna fila. */
+      #modal-tiempos .modal-content {
+        padding-bottom: 0 !important;
+      }
+
+      #modal-tiempos .ad-banner {
+        position: sticky;
+        bottom: 0;
+        z-index: 14;
+        margin: 0 calc(-1 * var(--modal-pad, 16px));
+        border-radius: 0;
+        border-width: 1px 0 0;
+        box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.55);
+      }
+
+      .ad-banner {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+
+      .ad-slot {
+        height: 60px;
       }
 
       /* Navegante debajo del piloto en vez de una columna más, y el nombre
@@ -3587,6 +3752,18 @@
       allRallies = data.map(r => ({ ...r, estado: estadoSegunFechas(r) }));
       updateStatusStrip();
       renderRallies();
+      abrirDesdeEnlace();
+    }
+
+    // index.html?rally=<id>&ver=tiempos|pilotos|stats abre directo esa
+    // ventana (lo usan los botones de la página de Info).
+    function abrirDesdeEnlace() {
+      const params = new URLSearchParams(location.search);
+      const id = params.get('rally');
+      const abrir = { tiempos: window.openTiempos, pilotos: window.openPilotos, stats: window.openStats }[params.get('ver')];
+      if (!id || !abrir || !allRallies.some(r => r.id === id)) return;
+      history.replaceState(null, '', location.pathname);
+      abrir(id);
     }
 
     function renderStatusBadge(estado) {
@@ -5589,8 +5766,70 @@
       window.filtrarAccordionTiempos();
     }
 
+    // Anuncios del rally (los mismos del carrusel/ticker de Info) en una
+    // franja al pie de Tiempos y Estadísticas, como el banner de una app:
+    // va DESPUÉS del contenido, así nunca tapa nada que no se pueda ver
+    // haciendo scroll.
+    const anunciosCache = {};
+    const anuncioTimers = {};
+    async function cargarAnuncios(rallyId) {
+      if (!anunciosCache[rallyId]) {
+        anunciosCache[rallyId] = Promise.all([
+          supabase.schema('rally').from('anuncios_imagenes').select('url_imagen, orden').eq('rally_id', rallyId).is('deleted_at', null).order('orden'),
+          supabase.schema('rally').from('anuncios_ticker').select('texto, orden').eq('rally_id', rallyId).is('deleted_at', null).order('orden'),
+        ]).then(([img, txt]) => ({ imagenes: img.data || [], textos: txt.data || [] }))
+          .catch(() => { delete anunciosCache[rallyId]; return { imagenes: [], textos: [] }; });
+      }
+      return anunciosCache[rallyId];
+    }
+
+    async function mostrarAnunciosEnModal(modalId, rallyId) {
+      const content = document.querySelector(`#${modalId} .modal-content`);
+      if (!content) return;
+      let banner = content.querySelector(':scope > .ad-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.className = 'ad-banner';
+        content.appendChild(banner);
+      }
+      banner.style.display = 'none';
+      clearInterval(anuncioTimers[modalId]);
+
+      const { imagenes, textos } = await cargarAnuncios(rallyId);
+      if (imagenes.length === 0 && textos.length === 0) return;
+
+      const slides = imagenes.map((a, i) => {
+        const src = escPrintText(siteDriveImageUrl(a.url_imagen));
+        const alt = escPrintText(siteDriveImageUrlFallback(a.url_imagen));
+        return `<a class="ad-slide ${i === 0 ? 'active' : ''}" href="${src}" target="_blank" rel="noopener" style="--ad-bg:url('${src}')">
+            <img src="${src}" onerror="this.onerror=null; this.src='${alt}';" alt="Anuncio ${i + 1}" loading="lazy">
+          </a>`;
+      }).join('');
+      const textosHtml = textos.map(t => `<span>${escPrintText(t.texto)}</span>`).join('');
+
+      banner.innerHTML = `
+        ${imagenes.length ? `<div class="ad-slot">${slides}<span class="ad-tag">Publicidad</span></div>` : ''}
+        ${textos.length ? `<div class="ad-ticker"><span class="ad-ticker-tag">Anuncios</span><div class="ad-ticker-vp"><div class="ad-ticker-track">${textosHtml}${textosHtml}</div></div></div>` : ''}`;
+      banner.style.display = '';
+
+      if (imagenes.length > 1) {
+        const els = [...banner.querySelectorAll('.ad-slide')];
+        let actual = 0;
+        anuncioTimers[modalId] = setInterval(() => {
+          els[actual].classList.remove('active');
+          actual = (actual + 1) % els.length;
+          els[actual].classList.add('active');
+        }, 5000);
+      }
+      const track = banner.querySelector('.ad-ticker-track');
+      if (track) requestAnimationFrame(() => {
+        track.style.animationDuration = Math.max(14, (track.scrollWidth / 2) / 55) + 's';
+      });
+    }
+
     window.openTiempos = async function (rallyId) {
       window.openModalWithHistory('modal-tiempos');
+      mostrarAnunciosEnModal('modal-tiempos', rallyId);
       const container = document.getElementById('tiempos-accordion');
       container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
       document.getElementById('tiempos-cat-filter').innerHTML = '<option value="ALL">Todas las Clases</option>';
@@ -5840,6 +6079,7 @@
 
     window.openStats = async function (rallyId) {
       window.openModalWithHistory('modal-stats');
+      mostrarAnunciosEnModal('modal-stats', rallyId);
       document.getElementById('stats-content').style.display = 'none';
       document.getElementById('btn-stats-pdf').style.display = 'none';
       document.getElementById('stats-clasif-section').style.display = 'none';
