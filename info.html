@@ -400,6 +400,18 @@
     }
     function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
+    // Mismo criterio que index.html: el estado se ajusta según las fechas.
+    function estadoSegunFechas(r) {
+      const manual = r.estado;
+      if (manual === 'finalizado' || manual === 'cancelado' || manual === 'pospuesto') return manual;
+      const d = new Date();
+      const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const fin = r.fecha_fin || r.fecha_inicio;
+      if (fin && hoy > fin) return 'finalizado';
+      if (r.fecha_inicio && hoy >= r.fecha_inicio) return 'en_curso';
+      return manual;
+    }
+
     function renderStatusBadge(estado) {
       if (estado === 'en_curso') return `<div class="badge" style="color:var(--live-green); border-color:rgba(0,245,160,0.3);">● VIVO</div>`;
       if (estado === 'finalizado') return `<div class="badge" style="color:var(--status-finished); border-color:rgba(255,209,102,0.3);">FINALIZÓ</div>`;
@@ -472,7 +484,7 @@
       }
 
       const { data: rally, error } = await supabase.schema('rally').from('rallies')
-        .select('id, nombre, descripcion, ciudad, pais, fecha_inicio, imagen_url, tipo_evento, estado')
+        .select('id, nombre, descripcion, ciudad, pais, fecha_inicio, fecha_fin, imagen_url, tipo_evento, estado')
         .eq('id', rallyId).is('deleted_at', null).maybeSingle();
 
       if (error || !rally) {
@@ -519,7 +531,7 @@
           <div class="info-hero-content">
             <div class="info-hero-badges">
               <div class="badge">${rally.tipo_evento === 'circuito' ? 'CIRCUITO' : 'RALLY'}</div>
-              ${renderStatusBadge(rally.estado)}
+              ${renderStatusBadge(estadoSegunFechas(rally))}
             </div>
             <h1 class="info-hero-title">${esc(rally.nombre)}</h1>
             <div class="info-hero-sub">${esc(rally.ciudad || '')}${rally.ciudad && rally.pais ? ', ' : ''}${esc(rally.pais || '')} · ${esc(rally.fecha_inicio || '')}</div>
@@ -694,51 +706,89 @@
     // -----------------------------------------------------------------
     // Recorrido (GPX/KMZ) sobre mapa Leaflet
     // -----------------------------------------------------------------
+    // Cada parser devuelve una lista de TRAMOS (cada uno una lista de [lat, lon]),
+    // no una sola lista de puntos: si se juntaran todos en una línea, los
+    // tramos separados (varios <trkseg>/<trk>, varios LineString) y los
+    // marcadores sueltos quedarían unidos por rectas que no son camino.
+    const esNumero = p => !isNaN(p[0]) && !isNaN(p[1]) && Math.abs(p[0]) <= 90 && Math.abs(p[1]) <= 180;
+    const porNombre = (raiz, nombre) => [...raiz.getElementsByTagNameNS('*', nombre)];
+    function leerXml(xmlText) {
+      const dom = new DOMParser().parseFromString(xmlText.trim(), 'application/xml');
+      if (dom.getElementsByTagName('parsererror').length) throw new Error('XML inválido');
+      return dom;
+    }
+    function sinPuntosRepetidos(pts) {
+      return pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
+    }
+    function sinTramosDuplicados(tramos) {
+      const vistos = new Set();
+      return tramos.filter(t => {
+        const clave = t.map(p => p.join(',')).join(';');
+        if (vistos.has(clave)) return false;
+        vistos.add(clave);
+        return true;
+      });
+    }
+    function limpiarTramos(tramos) {
+      return sinTramosDuplicados(tramos.map(t => sinPuntosRepetidos(t.filter(esNumero))).filter(t => t.length >= 2));
+    }
     function parseGPX(xmlText) {
-      const dom = new DOMParser().parseFromString(xmlText, 'application/xml');
-      let pts = [...dom.getElementsByTagName('trkpt')].map(p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]);
-      if (pts.length === 0) pts = [...dom.getElementsByTagName('rtept')].map(p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]);
-      return pts.filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+      const dom = leerXml(xmlText);
+      const latLon = p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))];
+      // Pistas grabadas (trk > trkseg); si no hay, rutas planificadas (rte).
+      // Los waypoints sueltos (wpt) son marcadores, no camino.
+      let tramos = porNombre(dom, 'trkseg').map(seg => porNombre(seg, 'trkpt').map(latLon));
+      if (!limpiarTramos(tramos).length) tramos = porNombre(dom, 'rte').map(rte => porNombre(rte, 'rtept').map(latLon));
+      return limpiarTramos(tramos);
     }
     function parseKML(xmlText) {
-      const dom = new DOMParser().parseFromString(xmlText, 'application/xml');
-      const pts = [];
-      [...dom.getElementsByTagName('coordinates')].forEach(el => {
-        el.textContent.trim().split(/\s+/).forEach(tuple => {
-          const parts = tuple.split(',');
-          if (parts.length >= 2) {
-            const lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
-            if (!isNaN(lat) && !isNaN(lon)) pts.push([lat, lon]);
-          }
+      const dom = leerXml(xmlText);
+      const tramos = [];
+      // LineString = el trazado. Se ignoran Point (marcadores) y Polygon
+      // (áreas), que eran las "líneas de más" al unirse con el recorrido.
+      porNombre(dom, 'LineString').forEach(ls => {
+        porNombre(ls, 'coordinates').forEach(c => {
+          tramos.push(c.textContent.trim().split(/\s+/).map(tuple => {
+            const [lon, lat] = tuple.split(',').map(parseFloat);
+            return [lat, lon];
+          }));
         });
       });
-      return pts;
+      // Pistas de Google Earth (gx:Track): <gx:coord>lon lat alt</gx:coord>
+      porNombre(dom, 'Track').forEach(tr => {
+        tramos.push(porNombre(tr, 'coord').map(c => {
+          const [lon, lat] = c.textContent.trim().split(/\s+/).map(parseFloat);
+          return [lat, lon];
+        }));
+      });
+      return limpiarTramos(tramos);
     }
-    function trackDistanceKm(pts) {
+    function trackDistanceKm(tramos) {
       const R = 6371;
       let d = 0;
-      for (let i = 1; i < pts.length; i++) {
-        const [lat1, lon1] = pts[i - 1], [lat2, lon2] = pts[i];
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-        d += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      }
+      tramos.forEach(pts => {
+        for (let i = 1; i < pts.length; i++) {
+          const [lat1, lon1] = pts[i - 1], [lat2, lon2] = pts[i];
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+          d += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+      });
       return d;
     }
     async function loadTrackPoints(track) {
       const { data } = supabase.storage.from('recorridos-gpx').getPublicUrl(track.storage_path);
-      const publicUrl = data.publicUrl;
-      if (track.formato === 'gpx') {
-        const resp = await fetch(publicUrl);
-        return parseGPX(await resp.text());
-      }
-      const resp = await fetch(publicUrl);
-      const blob = await resp.blob();
-      const zip = await JSZip.loadAsync(blob);
-      const kmlName = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
-      if (!kmlName) return [];
-      return parseKML(await zip.files[kmlName].async('text'));
+      const resp = await fetch(data.publicUrl);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      if (track.formato === 'gpx') return parseGPX(await resp.text());
+      if (track.formato === 'kml') return parseKML(await resp.text());
+      // KMZ: zip con el KML adentro (normalmente doc.kml en la raíz).
+      const zip = await JSZip.loadAsync(await resp.blob());
+      const kmls = Object.keys(zip.files).filter(f => f.toLowerCase().endsWith('.kml') && !zip.files[f].dir);
+      if (kmls.length === 0) return [];
+      const principal = kmls.find(f => f.toLowerCase() === 'doc.kml') || kmls.sort((a, b) => a.split('/').length - b.split('/').length)[0];
+      return parseKML(await zip.files[principal].async('text'));
     }
 
     let leafletMap = null;
@@ -746,32 +796,37 @@
 
     async function drawTrack(track, container) {
       container.innerHTML = `<div class="info-empty">Cargando trazado…</div>`;
-      let pts;
+      let tramos;
       try {
-        pts = await loadTrackPoints(track);
+        tramos = await loadTrackPoints(track);
       } catch (e) {
         container.innerHTML = `<div class="info-empty">No se pudo leer el archivo ${track.formato.toUpperCase()}.</div>`;
         return;
       }
-      if (!pts || pts.length === 0) {
-        container.innerHTML = `<div class="info-empty">El archivo no contiene puntos de ruta válidos.</div>`;
+      if (!tramos || tramos.length === 0) {
+        container.innerHTML = `<div class="info-empty">El archivo no contiene un trazado válido.</div>`;
         return;
       }
+      const totalPuntos = tramos.reduce((n, t) => n + t.length, 0);
+      const inicio = tramos[0][0];
+      const ultimo = tramos[tramos.length - 1];
+      const fin = ultimo[ultimo.length - 1];
 
       container.innerHTML = `<div id="recorrido-map"></div>
         <div class="recorrido-stats">
-          <div class="recorrido-stat">Distancia aprox.: <b>${trackDistanceKm(pts).toFixed(2)} km</b></div>
-          <div class="recorrido-stat">Puntos: <b>${pts.length}</b></div>
+          <div class="recorrido-stat">Distancia aprox.: <b>${trackDistanceKm(tramos).toFixed(2)} km</b></div>
+          <div class="recorrido-stat">Puntos: <b>${totalPuntos}</b></div>
+          ${tramos.length > 1 ? `<div class="recorrido-stat">Tramos: <b>${tramos.length}</b></div>` : ''}
         </div>`;
 
       if (leafletMap) { leafletMap.remove(); leafletMap = null; }
-      leafletMap = L.map('recorrido-map', { scrollWheelZoom: false }).setView(pts[0], 13);
+      leafletMap = L.map('recorrido-map', { scrollWheelZoom: false }).setView(inicio, 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
       }).addTo(leafletMap);
-      leafletLayer = L.polyline(pts, { color: '#E63946', weight: 4, opacity: 0.9 }).addTo(leafletMap);
-      L.circleMarker(pts[0], { radius: 7, color: '#00F5A0', fillColor: '#00F5A0', fillOpacity: 1, weight: 2 }).addTo(leafletMap).bindTooltip('Salida');
-      L.circleMarker(pts[pts.length - 1], { radius: 7, color: '#FFD166', fillColor: '#FFD166', fillOpacity: 1, weight: 2 }).addTo(leafletMap).bindTooltip('Llegada');
+      leafletLayer = L.polyline(tramos, { color: '#E63946', weight: 4, opacity: 0.9 }).addTo(leafletMap);
+      L.circleMarker(inicio, { radius: 7, color: '#00F5A0', fillColor: '#00F5A0', fillOpacity: 1, weight: 2 }).addTo(leafletMap).bindTooltip('Salida');
+      L.circleMarker(fin, { radius: 7, color: '#FFD166', fillColor: '#FFD166', fillOpacity: 1, weight: 2 }).addTo(leafletMap).bindTooltip('Llegada');
       leafletMap.fitBounds(leafletLayer.getBounds(), { padding: [24, 24] });
     }
 

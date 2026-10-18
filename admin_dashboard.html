@@ -2178,15 +2178,15 @@
           <!-- RECORRIDO GPX/KMZ -->
           <div id="info-tab-recorrido" style="display:none;">
             <div class="card-panel" style="margin-bottom: 24px;">
-              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Subir Recorrido (GPX o KMZ)</h3>
+              <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Subir Recorrido (GPX, KML o KMZ)</h3>
               <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label">Nombre *</label>
                   <input type="text" id="info-gpx-nombre" class="form-control" placeholder="Ej: PE1, Recorrido General...">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Archivo (.gpx o .kmz) *</label>
-                  <input type="file" id="info-gpx-file" class="form-control" accept=".gpx,.kmz">
+                  <label class="form-label">Archivo (.gpx, .kml o .kmz) *</label>
+                  <input type="file" id="info-gpx-file" class="form-control" accept=".gpx,.kml,.kmz">
                 </div>
               </div>
               <button type="button" class="btn-primary" style="margin-top: 12px;" onclick="window.infoSubirRecorrido()">Subir Recorrido</button>
@@ -8092,7 +8092,16 @@
       if (!window.infoCurrentRallyId) { window.toast('Selecciona un rally primero.', 'warn'); return; }
       if (!nombre || !file) { window.toast('Completa el nombre y elige un archivo.', 'warn'); return; }
       const ext = file.name.split('.').pop().toLowerCase();
-      if (ext !== 'gpx' && ext !== 'kmz') { window.toast('Solo se aceptan archivos .gpx o .kmz.', 'warn'); return; }
+      if (!['gpx', 'kml', 'kmz'].includes(ext)) { window.toast('Solo se aceptan archivos .gpx, .kml o .kmz.', 'warn'); return; }
+      // Chequeo rápido antes de subir: que el archivo sea lo que dice ser.
+      if (ext === 'kmz') {
+        const firma = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+        if (firma[0] !== 0x50 || firma[1] !== 0x4B) { window.toast('El .kmz no es válido (no es un archivo comprimido KMZ).', 'warn'); return; }
+      } else {
+        const texto = await file.text();
+        const tieneTrazado = ext === 'gpx' ? /<(\w+:)?(trkpt|rtept)\b/.test(texto) : /<(\w+:)?(LineString|Track)\b/.test(texto);
+        if (!tieneTrazado) { window.toast(`El .${ext} no tiene un trazado (línea de recorrido) para dibujar.`, 'warn'); return; }
+      }
 
       const path = `${window.infoCurrentRallyId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       const { error: upErr } = await supabase.storage.from('recorridos-gpx').upload(path, file);
