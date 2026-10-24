@@ -21,6 +21,10 @@ try { sesion = sessionStorage.getItem('amd_sesion') || nuevoId(); sessionStorage
 const ua = navigator.userAgent;
 const esIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const esAndroid = /Android/i.test(ua);
+// Navegadores internos de WhatsApp/Facebook/Instagram/etc.: no permiten instalar.
+const esNavegadorInterno = /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|; wv\)/i.test(ua);
+const esSamsung = /SamsungBrowser/.test(ua);
+const esPcCompatible = !esIOS && !esAndroid && /Chrome\/|Edg\//.test(ua) && !/OPR\//.test(ua);
 const esInstalada = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const esRobot = navigator.webdriver || /bot|crawler|spider|lighthouse|headless/i.test(ua);
 
@@ -83,7 +87,7 @@ const ICONO = {
 };
 
 let eventoInstalar = null;
-const puedeInstalar = () => !esInstalada() && (eventoInstalar || esIOS);
+const puedeInstalar = () => !esInstalada() && !!(eventoInstalar || esIOS || esAndroid || esPcCompatible);
 
 function contenedorAcciones() {
   let c = document.getElementById('app-acciones');
@@ -167,17 +171,45 @@ async function instalar() {
     pintarBotones();
     return;
   }
-  if (esIOS) {
-    hoja(`
+  // El celular no ofreció el botón automático: se muestran los pasos para ese navegador.
+  const MENU = '<b style="font-size:20px; line-height:0; vertical-align:-2px;">⋮</b>';
+  const pasos = (titulo, lista, nota = 'Así recibís los avisos de largadas, boletines y resultados.') => hoja(`
       <img src="icons/icon-192.png" alt="" class="app-hoja-icono">
-      <h3>Instalá AMADESU en tu iPhone</h3>
-      <ol class="app-pasos">
-        <li><b>1</b><span>Abrí esta página en <b>Safari</b>.</span></li>
-        <li><b>2</b><span>Tocá el botón <b>Compartir</b> ${ICONO.compartir} (abajo en el centro, o arriba a la derecha en iPad).</span></li>
-        <li><b>3</b><span>Elegí <b>“Agregar a pantalla de inicio”</b> ${ICONO.mas} y tocá <b>Agregar</b>.</span></li>
-      </ol>
-      <p class="app-hoja-nota">Así recibís los avisos de largadas, boletines y resultados.</p>
+      <h3>${titulo}</h3>
+      <ol class="app-pasos">${lista.map((p, i) => `<li><b>${i + 1}</b><span>${p}</span></li>`).join('')}</ol>
+      <p class="app-hoja-nota">${nota}</p>
       <button type="button" class="app-btn-grande" data-cerrar>Entendido</button>`);
+
+  if (esNavegadorInterno) {
+    pasos('Abrí la página en tu navegador', [
+      `Tocá el menú ${MENU} o <b>···</b> (arriba a la derecha).`,
+      `Elegí <b>“Abrir en ${esIOS ? 'Safari' : 'Chrome'}”</b> (o “Abrir en el navegador”).`,
+      'Ahí te aparece el botón <b>Instalar la app</b>.',
+    ], 'Desde WhatsApp, Facebook o Instagram el celular no deja instalar apps.');
+  } else if (esIOS) {
+    pasos('Instalá AMADESU en tu iPhone', [
+      `Tocá el botón <b>Compartir</b> ${ICONO.compartir} (en Safari: abajo en el centro; en Chrome: arriba a la derecha).`,
+      `Elegí <b>“Agregar a pantalla de inicio”</b> ${ICONO.mas}. Si no lo ves, deslizá la lista hacia arriba.`,
+      'Tocá <b>Agregar</b>. ¡Listo, ya está en tu pantalla!',
+    ]);
+  } else if (esAndroid && esSamsung) {
+    pasos('Instalá AMADESU en tu Samsung', [
+      'Tocá el menú <b>☰</b> (abajo a la derecha).',
+      'Elegí <b>“Agregar página a”</b> → <b>“Pantalla de inicio”</b>.',
+      'Tocá <b>Agregar</b>. ¡Listo!',
+    ]);
+  } else if (esAndroid) {
+    pasos('Instalá AMADESU en tu celular', [
+      `Tocá el menú ${MENU} de Chrome (arriba a la derecha).`,
+      'Elegí <b>“Instalar aplicación”</b> (o <b>“Agregar a la pantalla principal”</b>).',
+      'Tocá <b>Instalar</b>. ¡Listo, ya está entre tus apps!',
+    ]);
+  } else {
+    pasos('Instalá AMADESU en tu computadora', [
+      'Buscá el ícono de <b>instalar</b> ⊕ a la derecha de la barra de direcciones y tocalo.',
+      `Si no aparece: menú ${MENU} → <b>“Transmitir, guardar y compartir”</b> → <b>“Instalar página como app”</b> (en Edge: <b>···</b> → Aplicaciones → Instalar este sitio).`,
+      'Confirmá con <b>Instalar</b>.',
+    ], 'Queda como un programa más, con su ícono en el escritorio.');
   }
 }
 
@@ -347,7 +379,7 @@ async function iniciar() {
     try { await navigator.serviceWorker.register('./sw.js'); } catch (e) { }
   }
   pintarBotones();
-  if (esIOS) programarInvitacion();
+  if (esIOS || esAndroid) programarInvitacion();
 
   registrar('visita', { rally_id: esUuid(rallyDeLaPagina) ? rallyDeLaPagina : null });
   if (esInstalada() && !almacen.get('amd_instalacion_registrada')) {
