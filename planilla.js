@@ -293,7 +293,27 @@ function cfg() {
     hora: c.hora_publicacion || '',
     logoIzq: c.logo_izq || '', logosDer: c.logos_der || [],
     firmas: (c.firmas && c.firmas.length ? c.firmas : [{ nombre: '', cargo: 'COMISIÓN CRONOMETRAJE' }, { nombre: '', cargo: 'DIRECTOR DE PRUEBA' }]),
+    formato: c.formato && c.formato.imagenes ? c.formato : null,
   };
+}
+
+// Zona de imágenes copiada del Excel: cada imagen en su lugar, a escala.
+function zonaImagenes(imgs) {
+  if (!imgs.length) return '';
+  // La zona arranca donde empieza la primera imagen (sin el espacio vacío de la izquierda).
+  const x0 = Math.min(...imgs.map(i => i.x)), y0 = Math.min(...imgs.map(i => i.y));
+  const W = Math.max(...imgs.map(i => i.x + i.w)) - x0, H = Math.max(...imgs.map(i => i.y + i.h)) - y0;
+  return `<div class="pl-zona" style="width:${Math.round(W)}px; aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};">${imgs.map(i => `<img src="${esc(i.url)}" alt="" style="left:${((i.x - x0) / W * 100).toFixed(2)}%; top:${((i.y - y0) / H * 100).toFixed(2)}%; width:${(i.w / W * 100).toFixed(2)}%; height:${(i.h / H * 100).toFixed(2)}%;">`).join('')}</div>`;
+}
+
+// A qué firma pertenece cada imagen del pie (la más cercana por columna).
+function imagenesDeFirma(c, k) {
+  if (!c.formato) return c.firmas[k]?.img ? [{ url: c.firmas[k].img }] : [];
+  const pos = c.formato.firmasPos || [];
+  return c.formato.imagenes.filter(i => i.zona === 'pie').filter(i => {
+    const dist = pos.map(p => Math.abs(i.colCentro - (p.col + p.colFin) / 2));
+    return dist.indexOf(Math.min(...dist)) === k;
+  });
 }
 
 function llenarFiltroClases() {
@@ -363,9 +383,13 @@ function dibujar() {
   $('pl-marco').innerHTML = `
     <div class="pl-hoja">
       <div class="pl-cab">
-        <div class="pl-cab-logos">${c.logoIzq ? `<img src="${esc(c.logoIzq)}" alt="">` : ''}</div>
+        ${c.formato
+          ? `<div class="pl-cab-logos">${zonaImagenes(c.formato.imagenes.filter(i => i.zona === 'cab' && !i.fin))}</div>`
+          : `<div class="pl-cab-logos">${c.logoIzq ? `<img src="${esc(c.logoIzq)}" alt="">` : ''}</div>`}
         <div class="pl-cab-titulos">${c.titulos.filter(Boolean).map(t => `<div>${esc(t)}</div>`).join('')}</div>
-        <div class="pl-cab-logos der">${c.logosDer.map(u => `<img src="${esc(u)}" alt="">`).join('')}</div>
+        ${c.formato
+          ? `<div class="pl-cab-logos der">${zonaImagenes(c.formato.imagenes.filter(i => i.zona === 'cab' && i.fin))}</div>`
+          : `<div class="pl-cab-logos der">${c.logosDer.map(u => `<img src="${esc(u)}" alt="">`).join('')}</div>`}
       </div>
       <div class="pl-cab-info">
         ${c.fecha ? `<b>${esc(c.fecha)}</b>` : ''}
@@ -373,7 +397,7 @@ function dibujar() {
         <span>Kilometraje total: <span class="pl-km">${kmTotal.toFixed(2)}</span></span>
       </div>
       <table class="pl-tabla"><thead>${cab}</thead><tbody>${cuerpo || `<tr><td colspan="${totalCols}" style="padding:30px;">Este rally todavía no tiene pilotos inscritos.</td></tr>`}</tbody></table>
-      <div class="pl-firmas">${c.firmas.map(fi => `<div class="pl-firma">${fi.img ? `<img src="${esc(fi.img)}" alt="">` : '<div style="height:60px"></div>'}<div class="linea">${esc(fi.nombre || ' ')}</div><b>${esc(fi.cargo || '')}</b></div>`).join('')}</div>
+      <div class="pl-firmas">${c.firmas.map((fi, k) => { const ims = imagenesDeFirma(c, k); return `<div class="pl-firma">${ims.length ? ims.map(i => `<img src="${esc(i.url)}" alt="">`).join('') : '<div style="height:60px"></div>'}<div class="linea">${esc(fi.nombre || ' ')}</div><b>${esc(fi.cargo || '')}</b></div>`; }).join('')}</div>
     </div>`;
   $('pl-marco').scrollLeft = scroll.x; $('pl-marco').scrollTop = scroll.y;
   if (estado.activa) {
@@ -604,21 +628,137 @@ function abrirPenales(insId) {
 // ------------------------------------------------------------------
 // Encabezado, logos y firmas (solo administradores)
 // ------------------------------------------------------------------
-async function subirImagen(archivo) {
-  const ext = (archivo.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
+async function subirImagen(archivo, extension) {
+  const ext = (extension || archivo.name?.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
   const ruta = `planillas/${estado.rally.id}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from('logo-sitio').upload(ruta, archivo, { upsert: false, contentType: archivo.type });
+  const tipo = archivo.type || (ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`);
+  const { error } = await supabase.storage.from('logo-sitio').upload(ruta, archivo, { upsert: false, contentType: tipo });
   if (error) throw error;
   return supabase.storage.from('logo-sitio').getPublicUrl(ruta).data.publicUrl;
 }
 
+// ------------------------------------------------------------------
+// Copiar el formato de la planilla Excel del evento: títulos, fecha, hora,
+// firmas y TODAS las imágenes con su celda de inicio/fin exacta. Así la
+// pantalla y el Excel descargado quedan iguales al original.
+// ------------------------------------------------------------------
+const EMU = 9525;
+const anchoColPx = w => Math.round((w || 8.43) * 7 + 5);
+const altoFilaPx = h => Math.round((h || 15) * 96 / 72);
+
+function textoDe(v) {
+  if (v == null) return '';
+  if (v instanceof Date) return v;
+  if (typeof v === 'object') {
+    if (v.richText) return v.richText.map(t => t.text).join('');
+    if (v.result !== undefined) return textoDe(v.result);
+    if (v.text !== undefined) return String(v.text);
+    return '';
+  }
+  return String(v);
+}
+const horaDeExcel = v => {
+  if (v instanceof Date) return `${pad(v.getUTCHours())}:${pad(v.getUTCMinutes())}`;
+  if (typeof v === 'number') { const ms = Math.round(v * DIA); return `${pad(Math.floor(ms / 3600000) % 24)}:${pad(Math.floor(ms / 60000) % 60)}`; }
+  return String(v || '').trim();
+};
+
+async function leerFormatoExcel(archivo) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await archivo.arrayBuffer());
+  const ws = wb.worksheets[0];
+  if (!ws) throw new Error('El archivo no tiene hojas.');
+
+  // Fila de encabezados de la tabla (la que dice Nº COCHE y PILOTO)
+  let filaCab = null, colCoche = null, N = 0;
+  for (let r = 1; r <= Math.min(ws.rowCount, 40) && !filaCab; r++) {
+    const fila = ws.getRow(r);
+    let tieneCoche = false, tienePiloto = false;
+    fila.eachCell((cel, c) => {
+      const t = String(textoDe(cel.value)).toUpperCase();
+      if (t.includes('COCHE')) { tieneCoche = true; colCoche = c; }
+      if (t.includes('PILOTO')) tienePiloto = true;
+    });
+    if (tieneCoche && tienePiloto) { filaCab = r; fila.eachCell((_, c) => { N = Math.max(N, c); }); }
+  }
+  if (!filaCab) throw new Error('No encontré la fila de encabezados (la que dice "Nº COCHE" y "PILOTO").');
+
+  // Última fila con un auto y filas de las firmas (nombres y cargos)
+  let ultimaDatos = filaCab;
+  for (let r = filaCab + 1; r <= ws.rowCount; r++) if (String(textoDe(ws.getRow(r).getCell(colCoche).value)).trim()) ultimaDatos = r;
+  const textosFila = r => { const out = []; ws.getRow(r).eachCell((cel, c) => { const t = textoDe(cel.value); if (typeof t === 'string' && t.trim()) out.push({ c, t: t.trim() }); }); return out; };
+  let filaNombres = null;
+  for (let r = ultimaDatos + 1; r <= ws.rowCount; r++) if (textosFila(r).length) { filaNombres = r; break; }
+  const merges = (ws.model.merges || []).map(m => { const [a, b] = m.split(':'); const ca = ws.getCell(a), cb = ws.getCell(b || a); return { r1: ca.row, c1: ca.col, r2: cb.row, c2: cb.col }; });
+  const finMerge = (r, c) => (merges.find(m => m.r1 === r && m.c1 === c)?.c2) || c;
+  const firmas = [];
+  if (filaNombres) {
+    const roles = textosFila(filaNombres + 1);
+    for (const n of textosFila(filaNombres).slice(0, 2)) {
+      const fin = finMerge(filaNombres, n.c);
+      const rol = roles.find(x => x.c >= n.c && x.c <= fin) || roles.find(x => Math.abs(x.c - n.c) <= 2);
+      firmas.push({ nombre: n.t, cargo: rol?.t || '', col: n.c - 1, colFin: fin - 1 });
+    }
+  }
+
+  // Títulos, fecha y hora de publicación (lo que está arriba de la tabla)
+  const titulos = [];
+  for (let r = 1; r <= filaCab - 3 && titulos.length < 4; r++) titulos.push(String(textoDe(ws.getRow(r).getCell(1).value) || '').trim());
+  const fecha = String(textoDe(ws.getRow(filaCab - 2).getCell(1).value) || '').trim();
+  let hora = '';
+  ws.getRow(filaCab - 1).eachCell((cel, c) => {
+    if (/publicaci/i.test(String(textoDe(cel.value)))) {
+      for (let k = c + 1; k <= c + 4 && !hora; k++) { const v = ws.getRow(filaCab - 1).getCell(k).value; if (v != null && v !== '') hora = horaDeExcel(v instanceof Object && !(v instanceof Date) ? v.result : v); }
+    }
+  });
+
+  // Medidas en píxeles (para dibujarlo igual en pantalla)
+  const anchos = Array.from({ length: N + 2 }, (_, i) => anchoColPx(ws.getColumn(i + 1).width));
+  const xDe = (col, off) => anchos.slice(0, col).reduce((a, b) => a + b, 0) + off / EMU;
+  const altoDe = r => altoFilaPx(ws.getRow(r + 1).height);
+  const yDe = (row, off, desde = 0) => { let y = 0; for (let r = desde; r < row; r++) y += altoDe(r); return y + off / EMU; };
+  const inicioDerecha = N - 5;
+
+  const imagenes = [];
+  for (const im of ws.getImages()) {
+    const datos = wb.getImage(Number(im.imageId));
+    if (!datos?.buffer) continue;
+    const tl = im.range.tl, br = im.range.br || im.range.tl;
+    const zona = tl.nativeRow >= ultimaDatos ? 'pie' : 'cab';
+    const fin = zona === 'cab' && tl.nativeCol >= inicioDerecha;
+    const ext = (datos.extension || 'png').replace('jpg', 'jpeg');
+    const url = await subirImagen(new Blob([datos.buffer], { type: `image/${ext}` }), ext);
+    const base = zona === 'pie' ? (filaNombres || ultimaDatos + 5) - 1 : 0;
+    const x0 = fin ? xDe(inicioDerecha, 0) : 0;
+    imagenes.push({
+      url, zona, fin,
+      tl: { c: fin ? tl.nativeCol - N : tl.nativeCol, co: tl.nativeColOff, r: tl.nativeRow - base, ro: tl.nativeRowOff },
+      br: { c: fin ? br.nativeCol - N : br.nativeCol, co: br.nativeColOff, r: br.nativeRow - base, ro: br.nativeRowOff },
+      x: xDe(tl.nativeCol, tl.nativeColOff) - x0, y: zona === 'pie' ? 0 : yDe(tl.nativeRow, tl.nativeRowOff),
+      w: Math.max(10, xDe(br.nativeCol, br.nativeColOff) - xDe(tl.nativeCol, tl.nativeColOff)),
+      h: Math.max(10, yDe(br.nativeRow, br.nativeRowOff) - yDe(tl.nativeRow, tl.nativeRowOff)),
+      colCentro: (tl.nativeCol + br.nativeCol) / 2,
+    });
+  }
+  return {
+    titulos, fecha, hora_publicacion: hora, firmas: firmas.map(({ nombre, cargo }) => ({ nombre, cargo })),
+    logo_izq: '', logos_der: [],
+    formato: { N, filaCab, separacionFirmas: filaNombres ? filaNombres - ultimaDatos : 5, firmasPos: firmas.map(({ col, colFin }) => ({ col, colFin })), imagenes, archivo: archivo.name },
+  };
+}
+
 function abrirConfig() {
   const c = cfg();
-  const borrador = JSON.parse(JSON.stringify({ titulos: c.titulos, fecha: c.fecha, hora_publicacion: c.hora, logo_izq: c.logoIzq, logos_der: c.logosDer, firmas: c.firmas.concat([{}, {}]).slice(0, 2) }));
+  const borrador = JSON.parse(JSON.stringify({ titulos: c.titulos, fecha: c.fecha, hora_publicacion: c.hora, logo_izq: c.logoIzq, logos_der: c.logosDer, firmas: c.firmas.concat([{}, {}]).slice(0, 2), formato: c.formato || null }));
   const prev = (urls, grupo) => urls.map((u, i) => `<span><img src="${esc(u)}" alt=""><button type="button" data-borrar-img="${grupo}" data-i="${i}">✕</button></span>`).join('');
   const d = dialogo(`
     <h3>Encabezado y firmas</h3>
     <p>Así sale arriba y abajo de la planilla, en pantalla y en el Excel.</p>
+    <div class="grupo"><b>📥 Copiar formato de mi Excel</b>
+      <p style="margin:6px 0 8px;">Elegí la planilla Excel del evento y se copian los títulos, la fecha, la hora, las firmas y <b>todos los logos en su misma posición y tamaño</b>.</p>
+      <input type="file" accept=".xlsx" id="pl-c-xlsx">
+      <div id="pl-c-formato">${borrador.formato ? `<div class="pl-formato-ok"><span>✓ Formato copiado de <b>${esc(borrador.formato.archivo || 'Excel')}</b> · ${borrador.formato.imagenes.length} imágenes</span><button type="button" class="pl-btn" id="pl-c-quitar-formato">Quitar</button></div>` : ''}</div>
+    </div>
     ${[0, 1, 2, 3].map(i => `<label>Título ${i + 1}</label><input type="text" data-titulo="${i}" value="${esc(borrador.titulos[i] || '')}">`).join('')}
     <div class="fila"><div><label>Fecha (texto)</label><input type="text" id="pl-c-fecha" value="${esc(borrador.fecha || '')}"></div>
     <div><label>Hora de publicación</label><input type="text" id="pl-c-hora" placeholder="22:00" value="${esc(borrador.hora_publicacion || '')}"></div></div>
@@ -641,6 +781,30 @@ function abrirConfig() {
     try { alListo(await subirImagen(f)); refrescar(); } catch (e) { toast('No se pudo subir la imagen: ' + e.message, true); }
     input.disabled = false; input.value = '';
   };
+  d.querySelector('#pl-c-xlsx').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    if (!window.ExcelJS) return toast('Todavía está cargando el lector de Excel, probá en un segundo.', true);
+    e.target.disabled = true;
+    d.querySelector('#pl-c-formato').innerHTML = '<p>Leyendo el Excel y subiendo los logos…</p>';
+    try {
+      const leido = await leerFormatoExcel(f);
+      Object.assign(borrador, leido);
+      leido.titulos.forEach((t, i) => { const inp = d.querySelector(`[data-titulo="${i}"]`); if (inp) inp.value = t; });
+      d.querySelector('#pl-c-fecha').value = leido.fecha;
+      d.querySelector('#pl-c-hora').value = leido.hora_publicacion;
+      leido.firmas.forEach((fi, i) => { borrador.firmas[i] = { ...fi }; d.querySelectorAll(`[data-firma="${i}"]`).forEach(inp => { inp.value = fi[inp.dataset.k] || ''; }); });
+      d.querySelector('#pl-c-formato').innerHTML = `<div class="pl-formato-ok"><span>✓ Copiado: ${leido.formato.imagenes.length} imágenes, ${leido.titulos.filter(Boolean).length} títulos y ${leido.firmas.length} firmas. Tocá <b>Guardar</b>.</span></div>`;
+      refrescar();
+    } catch (err) {
+      d.querySelector('#pl-c-formato').innerHTML = `<p style="color:#ff6b6b;">No se pudo leer: ${esc(err.message || err)}</p>`;
+    }
+    e.target.disabled = false;
+  };
+  d.addEventListener('click', e => {
+    if (!e.target.closest('#pl-c-quitar-formato')) return;
+    borrador.formato = null;
+    d.querySelector('#pl-c-formato').innerHTML = '<p>Formato copiado quitado. Tocá Guardar para confirmar.</p>';
+  });
   d.querySelector('#pl-c-izq-f').onchange = e => subir(e.target, u => { borrador.logo_izq = u; });
   d.querySelector('#pl-c-der-f').onchange = e => subir(e.target, u => { borrador.logos_der.push(u); });
   d.querySelectorAll('[data-firma-img]').forEach(inp => inp.onchange = e => subir(e.target, u => { borrador.firmas[+inp.dataset.firmaImg].img = u; }));
@@ -796,31 +960,45 @@ async function descargarExcel() {
       if (ci < clases.length - 1) { ws.getRow(r).height = 15; r++; }
     });
 
-    // Firmas
-    const filaFirma = r + 4;
-    const lugares = [5, Math.min(N - 6, 12)];
+    // Firmas e imágenes: si se copió el formato del Excel del evento, cada
+    // cosa va en su misma celda; si no, en un lugar estándar.
+    const F0 = c.formato;
+    const ultimaFila = r - 1;
+    const filaFirma = F0 ? ultimaFila + (F0.separacionFirmas || 5) : r + 4;
+    const colDe = col0 => (F0 && col0 >= F0.N - 5 ? N - (F0.N - col0) : col0); // 0-based
+    const lugares = F0 && F0.firmasPos && F0.firmasPos.length
+      ? F0.firmasPos.map(p => ({ c1: colDe(p.col) + 1, c2: colDe(p.colFin) + 1 }))
+      : [{ c1: 5, c2: 5 }, { c1: Math.min(N - 6, 12), c2: Math.min(N - 6, 12) + 6 }];
     c.firmas.slice(0, 2).forEach((fi, k) => {
-      const col = lugares[k];
-      const ancho = k === 0 ? 0 : 6;
-      if (ancho) ws.mergeCells(filaFirma, col, filaFirma, col + ancho);
-      if (ancho) ws.mergeCells(filaFirma + 1, col, filaFirma + 1, col + ancho);
-      const n = ws.getCell(filaFirma, col), cg = ws.getCell(filaFirma + 1, col);
+      const lug = lugares[k] || lugares[lugares.length - 1];
+      if (lug.c2 > lug.c1) { ws.mergeCells(filaFirma, lug.c1, filaFirma, lug.c2); ws.mergeCells(filaFirma + 1, lug.c1, filaFirma + 1, lug.c2); }
+      const n = ws.getCell(filaFirma, lug.c1), cg = ws.getCell(filaFirma + 1, lug.c1);
       n.value = fi.nombre || null; n.font = { name: 'Calibri', size: 12 }; n.alignment = { horizontal: 'center' };
       n.border = { top: { style: 'thin' } };
       cg.value = fi.cargo || null; cg.font = { name: 'Calibri', size: 11, bold: true }; cg.alignment = { horizontal: 'center', vertical: 'top' };
     });
 
-    // Imágenes
-    const ponerImagen = async (url, col, fila, altoPx) => {
-      const im = await imagenParaExcel(wb, url);
-      if (!im) return;
-      const alto = altoPx, ancho = Math.round(im.w * (alto / im.h));
-      ws.addImage(im.id, { tl: { col, row: fila }, ext: { width: ancho, height: alto }, editAs: 'oneCell' });
-    };
-    if (c.logoIzq) await ponerImagen(c.logoIzq, 0.2, 0.1, 130);
-    let colDer = N - 1.2;
-    for (const u of [...c.logosDer].reverse()) { await ponerImagen(u, Math.max(6, colDer), 0.2, 80); colDer -= 2.2; }
-    for (const [k, fi] of c.firmas.slice(0, 2).entries()) if (fi.img) await ponerImagen(fi.img, lugares[k] - (k === 0 ? 0.6 : -1.5), filaFirma - 4, 90);
+    if (F0) {
+      for (const img of F0.imagenes) {
+        const im = await imagenParaExcel(wb, img.url);
+        if (!im) continue;
+        const ancla = p => ({
+          nativeCol: img.zona === 'cab' && img.fin ? N + p.c : p.c, nativeColOff: p.co,
+          nativeRow: img.zona === 'pie' ? filaFirma - 1 + p.r : p.r, nativeRowOff: p.ro,
+        });
+        ws.addImage(im.id, { tl: ancla(img.tl), br: ancla(img.br), editAs: 'twoCell' });
+      }
+    } else {
+      const ponerImagen = async (url, col, fila, altoPx) => {
+        const im = await imagenParaExcel(wb, url);
+        if (!im) return;
+        ws.addImage(im.id, { tl: { col, row: fila }, ext: { width: Math.round(im.w * (altoPx / im.h)), height: altoPx }, editAs: 'oneCell' });
+      };
+      if (c.logoIzq) await ponerImagen(c.logoIzq, 0.2, 0.1, 130);
+      let colDer = N - 1.2;
+      for (const u of [...c.logosDer].reverse()) { await ponerImagen(u, Math.max(6, colDer), 0.2, 80); colDer -= 2.2; }
+      for (const [k, fi] of c.firmas.slice(0, 2).entries()) if (fi.img) await ponerImagen(fi.img, (lugares[k].c1 - 1) + 0.3, filaFirma - 4, 90);
+    }
 
     ws.pageSetup.printArea = `A1:${letra(N)}${filaFirma + 2}`;
     const buf = await wb.xlsx.writeBuffer();
