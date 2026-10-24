@@ -382,6 +382,8 @@
 
     @media (max-width: 720px) {
       .topbar { padding: 0 16px; height: 64px; }
+      .btn-volver { padding: 9px 11px; }
+      .btn-volver-txt { display: none; }
       .brand-text { font-size: 21px; }
       .info-nav { top: 64px; }
       .info-wrap { padding: var(--sp-6) 16px var(--sp-12); }
@@ -401,6 +403,15 @@
       .lightbox-body iframe { height: 70vh; }
     }
   </style>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#060c24" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="AMADESU" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="app.css" />
+  <script type="module" src="app.js"></script>
 </head>
 
 <body>
@@ -418,10 +429,13 @@
       </div>
       <div class="brand-text">AMADESU<span>RALLY SYSTEM</span></div>
     </a>
-    <a href="index.html" class="btn-volver">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-      Volver
-    </a>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div class="app-acciones" id="app-acciones"></div>
+      <a href="index.html" class="btn-volver">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        <span class="btn-volver-txt">Volver</span>
+      </a>
+    </div>
   </header>
 
   <main id="main-content">

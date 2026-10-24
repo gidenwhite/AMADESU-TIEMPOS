@@ -1,0 +1,24 @@
+{
+  "name": "AMADESU RALLYS — Cronometraje en vivo",
+  "short_name": "AMADESU",
+  "description": "Tiempos en vivo, clasificaciones, boletines y recorridos de los rallies y circuitos de AMADESU.",
+  "id": "./",
+  "start_url": "./index.html?fuente=app",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#030303",
+  "theme_color": "#060c24",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["sports", "news"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Carreras", "short_name": "Carreras", "url": "./index.html?fuente=app", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

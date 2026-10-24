@@ -748,6 +748,8 @@
       margin: 0 4px;
     }
   </style>
+  <link rel="stylesheet" href="admin_app.css" />
+  <script type="module" src="admin_app.js"></script>
 </head>
 
 <body>
@@ -799,6 +801,11 @@
       <a href="#" class="nav-item" data-target="section-info-rally">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
         Información (Web)
+      </a>
+
+      <a href="#" class="nav-item" data-target="section-app-visitas">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+        App y Visitas
       </a>
 
       <div class="nav-label">Configuración</div>
@@ -2191,7 +2198,7 @@
                 </div>
               </div>
               <button type="button" class="btn-primary" style="margin-top: 12px;" onclick="window.infoSubirRecorrido()">Subir Recorrido</button>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">El archivo se guarda en el servidor (Supabase) y se dibuja como un mapa interactivo en la página pública. Puedes subir varios (uno por Prueba Especial) y en la web se podrá elegir cuál ver.</p>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">El archivo se guarda en el servidor y se dibuja como un mapa interactivo en la página pública. Puedes subir varios (uno por Prueba Especial) y en la web se podrá elegir cuál ver.</p>
             </div>
             <div class="card-panel">
               <h3 style="color: var(--pe-cyan); margin-bottom: 16px;">Recorridos subidos</h3>
@@ -2267,7 +2274,7 @@
             </div>
             <div style="flex:1; min-width:220px;">
               <input type="file" id="sw-logo-file" class="form-control" accept="image/*">
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Se sube directo a Supabase (no hace falta Google Drive). Reemplaza el ícono por defecto en la barra superior de la página pública, del panel admin y de la página de Información.</p>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Se sube directo al servidor del sitio (no hace falta Google Drive). Reemplaza el ícono por defecto en la barra superior de la página pública, del panel admin y de la página de Información.</p>
             </div>
             <button type="button" class="btn-secondary" id="sw-logo-quitar-btn" style="display:none; color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.quitarLogoSitio()">Quitar logo</button>
           </div>
@@ -2297,6 +2304,13 @@
         </div>
 
         <button type="button" class="btn-primary" onclick="window.guardarSitioWeb()">Guardar Cambios</button>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- APP Y VISITAS: instalaciones, visitas y avisos (admin_app.js) -->
+      <!-- ========================================================= -->
+      <section id="section-app-visitas" class="admin-section">
+        <div id="av-raiz"><p style="color: var(--text-muted);">Cargando...</p></div>
       </section>
 
     </div>
@@ -2429,6 +2443,9 @@
           }
           if (targetId === 'section-sitio-web') {
             window.initSitioWebSection();
+          }
+          if (targetId === 'section-app-visitas') {
+            window.initAppVisitasSection?.();
           }
         }
         closeSidebar();
@@ -3099,7 +3116,7 @@
       
       if(error) {
         select.innerHTML = '<option value="">Error al cargar rallies (Revisa consola)</option>';
-        window.toast('Hubo un error cargando los circuitos. Asegúrate de haber ejecutado el script 12_cronograma_schema.sql en Supabase.', 'error');
+        window.toast('Hubo un error cargando los circuitos. Asegúrate de haber ejecutado el script 12_cronograma_schema.sql en la base de datos.', 'error');
         return console.error(error);
       }
       

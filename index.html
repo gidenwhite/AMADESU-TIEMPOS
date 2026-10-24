@@ -3033,6 +3033,15 @@
       }
     }
   </style>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#060c24" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="AMADESU" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="app.css" />
+  <script type="module" src="app.js"></script>
 </head>
 
 <body>
@@ -3061,6 +3070,7 @@
         <option value="PROXIMO">PRÓXIMAS</option>
       </select>
     </div>
+    <div class="app-acciones" id="app-acciones"></div>
   </header>
 
   <!-- INICIO (bloque de bienvenida configurable desde el panel admin) -->
@@ -3123,7 +3133,7 @@
   <footer class="site-footer">
     <div class="brand-text">AMADESU<span>RALLY SYSTEM</span></div>
     <div class="footer-meta">
-      <div class="pulse-dot"></div> Datos en vivo vía Supabase
+      <div class="pulse-dot"></div> Datos en vivo
     </div>
   </footer>
 
@@ -4095,6 +4105,7 @@
 
     window.openPilotos = async function (rallyId) {
       window.openModalWithHistory('modal-pilotos');
+      window.appRegistrarVista?.('pilotos', rallyId);
       const grid = document.getElementById('pilotos-grid');
       const filter = document.getElementById('pilotos-filter');
 
@@ -5892,6 +5903,7 @@
 
     window.openTiempos = async function (rallyId) {
       window.openModalWithHistory('modal-tiempos');
+      window.appRegistrarVista?.('tiempos', rallyId);
       mostrarAnunciosEnModal('modal-tiempos', rallyId);
       const container = document.getElementById('tiempos-accordion');
       container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:24px;">Cargando...</p>';
@@ -6142,6 +6154,7 @@
 
     window.openStats = async function (rallyId) {
       window.openModalWithHistory('modal-stats');
+      window.appRegistrarVista?.('stats', rallyId);
       mostrarAnunciosEnModal('modal-stats', rallyId);
       document.getElementById('stats-content').style.display = 'none';
       document.getElementById('btn-stats-pdf').style.display = 'none';
