@@ -3,7 +3,7 @@
 import { supabase } from './supabase_config.js';
 
 const VAPID_PUBLICA = 'BNfdgY8XAeBA8JkVOTGYDzZoMNQo3yV6fzbuyZ9UK2Oti7CRWS8Fx4vSOx8ym-ATYqV3C5Y4GfG8A9imKomIz8k';
-const DIAS_SIN_INSISTIR = 5;
+const DIAS_SIN_INSISTIR = 3;
 
 const db = () => supabase.schema('rally');
 const almacen = {
@@ -185,23 +185,40 @@ function programarInvitacion() {
   if (esInstalada() || document.getElementById('app-invitacion')) return;
   const cerrada = parseInt(almacen.get('amd_invitacion_cerrada') || '0', 10);
   if (cerrada && Date.now() - cerrada < DIAS_SIN_INSISTIR * 86400000) return;
-  setTimeout(() => {
+  setTimeout(function mostrar() {
     if (!puedeInstalar() || document.getElementById('app-invitacion')) return;
+    // No interrumpe si está mirando Tiempos/Pilotos/Stats: espera a que cierre.
+    if (document.querySelector('.modal-overlay.active, .lightbox-overlay.active, .app-hoja-fondo')) { setTimeout(mostrar, 8000); return; }
     const d = document.createElement('div');
-    d.className = 'app-invitacion'; d.id = 'app-invitacion';
+    d.className = 'app-invitacion-fondo'; d.id = 'app-invitacion';
     d.innerHTML = `
-      <img src="icons/icon-192.png" alt="" class="app-invitacion-icono">
-      <div class="app-invitacion-txt">
-        <b>Instalá la app AMADESU</b>
-        <span>Tiempos en vivo a un toque y avisos de cada largada.</span>
-      </div>
-      <button type="button" class="app-btn app-btn-instalar" data-accion="instalar">Instalar</button>
-      <button type="button" class="app-invitacion-x" aria-label="Ahora no" data-accion="cerrar">✕</button>`;
+      <div class="app-invitacion" role="dialog" aria-modal="true" aria-labelledby="app-inv-titulo">
+        <div class="app-invitacion-cabeza">
+          <img src="icons/icon-192.png" alt="" class="app-invitacion-icono">
+          <div>
+            <div class="app-invitacion-marca">APP OFICIAL · GRATIS</div>
+            <h3 id="app-inv-titulo">Llevá AMADESU en tu celular</h3>
+          </div>
+        </div>
+        <ul class="app-beneficios">
+          <li><span>⏱️</span><div><b>Tiempos en vivo a un toque</b><small>Se abre al instante, a pantalla completa.</small></div></li>
+          <li><span>🔔</span><div><b>Avisos de cada largada</b><small>Etapas, PE, mangas, boletines y resultados.</small></div></li>
+          <li><span>📲</span><div><b>Liviana y sin tiendas</b><small>No ocupa espacio ni pide cuenta. Se instala en 2 segundos.</small></div></li>
+        </ul>
+        <button type="button" class="app-btn-grande app-btn-instalar-grande" data-accion="instalar">${ICONO.instalar}<span>Instalar la app gratis</span></button>
+        <button type="button" class="app-btn-link" data-accion="cerrar">Seguir en el navegador</button>
+      </div>`;
+    const cerrar = () => {
+      almacen.set('amd_invitacion_cerrada', String(Date.now()));
+      d.classList.remove('visible');
+      setTimeout(() => d.remove(), 300);
+    };
     d.addEventListener('click', e => {
       const a = e.target.closest('[data-accion]')?.dataset.accion;
       if (a === 'instalar') instalar();
-      if (a === 'cerrar') { almacen.set('amd_invitacion_cerrada', String(Date.now())); d.classList.remove('visible'); setTimeout(() => d.remove(), 300); }
+      if (a === 'cerrar' || e.target === d) cerrar();
     });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape' && document.getElementById('app-invitacion')) { cerrar(); document.removeEventListener('keydown', esc); } });
     document.body.appendChild(d);
     requestAnimationFrame(() => d.classList.add('visible'));
   }, 2500);
