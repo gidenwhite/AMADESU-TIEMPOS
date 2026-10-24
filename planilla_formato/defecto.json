@@ -1,0 +1,172 @@
+{
+ "titulos": [
+  "SEXTA FECHA DEL CAMPEONATO MUNICIPAL DE AUTOMOVILISMO DEPORTIVO AMADESU 2.026",
+  "CAMPEONATO \"CLUB CORDOVA\"",
+  "",
+  "RALLY SPRINT  \"SUCRE CAPITAL\""
+ ],
+ "fecha": "Fecha: Domingo, 25 de octubre",
+ "hora_publicacion": "22:00",
+ "firmas": [
+  {
+   "nombre": "Sr. Andy Hurtado",
+   "cargo": "COMISION CRONOMETRAJE"
+  },
+  {
+   "nombre": "Sr. Pedro Vladislavic",
+   "cargo": "DIRECTOR DE PRUEBA"
+  }
+ ],
+ "logo_izq": "",
+ "logos_der": [],
+ "formato": {
+  "N": 34,
+  "filaCab": 7,
+  "separacionFirmas": 5,
+  "firmasPos": [
+   {
+    "col": 4,
+    "colFin": 4
+   },
+   {
+    "col": 11,
+    "colFin": 17
+   }
+  ],
+  "imagenes": [
+   {
+    "url": "planilla_formato/logo1.jpg",
+    "zona": "cab",
+    "fin": true,
+    "tl": {
+     "c": -3,
+     "co": 397137,
+     "r": 3,
+     "ro": 81280
+    },
+    "br": {
+     "c": -1,
+     "co": 326017,
+     "r": 4,
+     "ro": 298241
+    },
+    "x": 267.69417322834624,
+    "y": 98.53333333333333,
+    "w": 158.53333333333376,
+    "h": 52.77805774278215,
+    "colCentro": 32
+   },
+   {
+    "url": "planilla_formato/logo3.png",
+    "zona": "cab",
+    "fin": false,
+    "tl": {
+     "c": 4,
+     "co": 107825,
+     "r": 2,
+     "ro": 233230
+    },
+    "br": {
+     "c": 4,
+     "co": 846965,
+     "r": 3,
+     "ro": 219260
+    },
+    "x": 291.32020997375326,
+    "y": 84.48608923884515,
+    "w": 77.60000000000002,
+    "h": 28.53333333333333,
+    "colCentro": 4
+   },
+   {
+    "url": "planilla_formato/logo4.jpg",
+    "zona": "cab",
+    "fin": false,
+    "tl": {
+     "c": 4,
+     "co": 34411,
+     "r": 1,
+     "ro": 81404
+    },
+    "br": {
+     "c": 4,
+     "co": 864991,
+     "r": 2,
+     "ro": 59814
+    },
+    "x": 283.6127034120735,
+    "y": 38.546351706036745,
+    "w": 87.19999999999999,
+    "h": 27.733333333333334,
+    "colCentro": 4
+   },
+   {
+    "url": "planilla_formato/logo5.png",
+    "zona": "cab",
+    "fin": true,
+    "tl": {
+     "c": -3,
+     "co": 505296,
+     "r": 1,
+     "ro": 17536
+    },
+    "br": {
+     "c": -2,
+     "co": 469736,
+     "r": 2,
+     "ro": 195336
+    },
+    "x": 279.0494488188974,
+    "y": 31.841049868766405,
+    "w": 83.26666666666688,
+    "h": 48.66666666666667,
+    "colCentro": 31.5
+   },
+   {
+    "url": "planilla_formato/logo6.png",
+    "zona": "cab",
+    "fin": true,
+    "tl": {
+     "c": -1,
+     "co": 11633,
+     "r": 0,
+     "ro": 223520
+    },
+    "br": {
+     "c": -1,
+     "co": 522173,
+     "r": 2,
+     "ro": 182880
+    },
+    "x": 393.2213123359579,
+    "y": 23.466666666666665,
+    "w": 53.59999999999991,
+    "h": 55.733333333333334,
+    "colCentro": 33
+   },
+   {
+    "url": "planilla_formato/logo8.png",
+    "zona": "cab",
+    "fin": false,
+    "tl": {
+     "c": 0,
+     "co": 0,
+     "r": 0,
+     "ro": 0
+    },
+    "br": {
+     "c": 3,
+     "co": 1003300,
+     "r": 4,
+     "ro": 52395
+    },
+    "x": 0,
+    "y": 0,
+    "w": 262.3333333333333,
+    "h": 125.5007874015748,
+    "colCentro": 1.5
+   }
+  ],
+  "archivo": "formato de fábrica (PLANILLA.xlsx)"
+ }
+}

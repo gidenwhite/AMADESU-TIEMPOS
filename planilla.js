@@ -179,6 +179,7 @@ async function cargarRally(rallyId) {
     estado.pes = estado.etapas.flatMap(e => e.recorridos.map(r => ({ ...r, etapaId: e.id, km: parseFloat(r.distancia_km) || 0 })));
     estado.inscritos = inscritos;
     estado.config = cfg.data?.config || {};
+    estado.defecto = await cargarDefecto();
     await traerTiemposYPenales(true);
     llenarFiltroClases();
     dibujar();
@@ -187,6 +188,20 @@ async function cargarRally(rallyId) {
   } catch (e) {
     $('pl-marco').innerHTML = `<div class="pl-vacio">No se pudo cargar la planilla: ${esc(e.message || e)}</div>`;
   }
+}
+
+// Formato por defecto: el guardado desde ⚙ (en la base) o, si no hay, el de
+// fábrica que viene con el sitio (sacado de la PLANILLA.xlsx oficial).
+async function cargarDefecto() {
+  try {
+    const { data, error } = await db().from('planilla_formato').select('config').eq('clave', 'defecto').maybeSingle();
+    if (!error && data?.config && Object.keys(data.config).length) return { ...data.config, _origen: 'guardado' };
+  } catch (e) { }
+  try {
+    const r = await fetch('planilla_formato/defecto.json', { cache: 'no-cache' });
+    if (r.ok) return { ...(await r.json()), _origen: 'fabrica' };
+  } catch (e) { }
+  return null;
 }
 
 async function traerTiemposYPenales(completo) {
@@ -284,8 +299,17 @@ function clasificar() {
 // ------------------------------------------------------------------
 // Dibujo de la hoja
 // ------------------------------------------------------------------
+const tieneFormatoPropio = () => !!(estado.config && Object.keys(estado.config).length);
+function adaptarDefecto(d) {
+  if (!d) return {};
+  const titulos = [...(d.titulos || [])];
+  while (titulos.length < 4) titulos.push('');
+  titulos[3] = estado.rally.nombre.toUpperCase();
+  return { ...d, titulos, fecha: undefined, hora_publicacion: '' };
+}
+
 function cfg() {
-  const c = estado.config || {};
+  const c = tieneFormatoPropio() ? estado.config : adaptarDefecto(estado.defecto);
   const fecha = estado.rally.fecha_inicio ? new Date(estado.rally.fecha_inicio + 'T12:00:00').toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
   return {
     titulos: (c.titulos && c.titulos.length ? c.titulos : ['', '', '', estado.rally.nombre.toUpperCase()]).concat(['', '', '', '']).slice(0, 4),
@@ -754,6 +778,9 @@ function abrirConfig() {
   const d = dialogo(`
     <h3>Encabezado y firmas</h3>
     <p>Así sale arriba y abajo de la planilla, en pantalla y en el Excel.</p>
+    <div class="pl-formato-ok" style="margin-top:0;">${tieneFormatoPropio()
+      ? '<span>Este rally tiene un <b>formato propio</b>.</span>'
+      : `<span>Este rally usa el <b>formato por defecto</b>${estado.defecto?._origen === 'fabrica' ? ' (el de fábrica, de tu PLANILLA.xlsx)' : ''}. El nombre y la fecha se ponen solos.</span>`}</div>
     <div class="grupo"><b>📥 Copiar formato de mi Excel</b>
       <p style="margin:6px 0 8px;">Elegí la planilla Excel del evento y se copian los títulos, la fecha, la hora, las firmas y <b>todos los logos en su misma posición y tamaño</b>.</p>
       <input type="file" accept=".xlsx" id="pl-c-xlsx">
@@ -769,7 +796,12 @@ function abrirConfig() {
       <div><label>Cargo</label><input type="text" data-firma="${i}" data-k="cargo" value="${esc(borrador.firmas[i].cargo || '')}"></div></div>
       <label>Imagen de la firma (opcional)</label><div class="pl-img-prev" id="pl-c-f${i}">${borrador.firmas[i].img ? prev([borrador.firmas[i].img], 'f' + i) : ''}</div><input type="file" accept="image/*" data-firma-img="${i}"></div>`).join('')}
     <p style="margin-top:12px;">Las imágenes se guardan en el servidor con un enlace imposible de adivinar, pero quien tenga el enlace puede verlas. Si preferís, dejá la firma sin imagen y firmá a mano al imprimir.</p>
-    <div class="acciones"><button type="button" class="pl-btn" data-cerrar>Cancelar</button><button type="button" class="pl-btn primario" id="pl-c-guardar">Guardar</button></div>`);
+    <div class="acciones">
+      <button type="button" class="pl-btn" data-cerrar>Cancelar</button>
+      ${tieneFormatoPropio() ? '<button type="button" class="pl-btn" id="pl-c-volver">Volver al formato por defecto</button>' : ''}
+      <button type="button" class="pl-btn" id="pl-c-defecto" title="Lo usan todos los rallies que no tengan formato propio">Guardar como formato por defecto</button>
+      <button type="button" class="pl-btn primario" id="pl-c-guardar">Guardar solo para este rally</button>
+    </div>`);
   const refrescar = () => {
     d.querySelector('#pl-c-izq').innerHTML = borrador.logo_izq ? prev([borrador.logo_izq], 'izq') : '';
     d.querySelector('#pl-c-der').innerHTML = prev(borrador.logos_der, 'der');
@@ -816,18 +848,40 @@ function abrirConfig() {
     else borrador.firmas[+g.slice(1)].img = '';
     refrescar();
   });
-  d.querySelector('#pl-c-guardar').onclick = async () => {
+  const juntar = () => {
     d.querySelectorAll('[data-titulo]').forEach(i => { borrador.titulos[+i.dataset.titulo] = i.value.trim(); });
     d.querySelectorAll('[data-firma]').forEach(i => { borrador.firmas[+i.dataset.firma][i.dataset.k] = i.value.trim(); });
     borrador.fecha = d.querySelector('#pl-c-fecha').value.trim();
     borrador.hora_publicacion = d.querySelector('#pl-c-hora').value.trim();
-    const { error } = await db().from('planillas').upsert({ rally_id: estado.rally.id, config: borrador, updated_at: new Date().toISOString() });
-    if (error) return toast('No se pudo guardar: ' + error.message + (/planillas/.test(error.message) ? ' (¿corriste el script 65?)' : ''), true);
-    estado.config = borrador;
-    d.remove();
-    dibujar();
-    toast('Encabezado guardado.');
+    return borrador;
   };
+  d.querySelector('#pl-c-guardar').onclick = async () => {
+    const config = juntar();
+    const { error } = await db().from('planillas').upsert({ rally_id: estado.rally.id, config, updated_at: new Date().toISOString() });
+    if (error) return toast('No se pudo guardar: ' + error.message + (/planillas/.test(error.message) ? ' (¿corriste el script 65?)' : ''), true);
+    estado.config = config;
+    d.remove(); dibujar();
+    toast('Guardado solo para este rally.');
+  };
+  d.querySelector('#pl-c-defecto').onclick = async () => {
+    if (!confirm('¿Usar este encabezado, logos y firmas como formato por defecto de TODOS los rallies que no tengan formato propio?')) return;
+    const config = juntar();
+    const { error } = await db().from('planilla_formato').upsert({ clave: 'defecto', config, updated_at: new Date().toISOString() });
+    if (error) return toast('No se pudo guardar: ' + error.message + (/planilla_formato/.test(error.message) ? ' (¿corriste el script 66?)' : ''), true);
+    estado.defecto = { ...config, _origen: 'guardado' };
+    // Este rally pasa a usar el formato por defecto (si no tenía uno propio distinto).
+    if (tieneFormatoPropio()) await db().from('planillas').upsert({ rally_id: estado.rally.id, config: {}, updated_at: new Date().toISOString() });
+    estado.config = {};
+    d.remove(); dibujar();
+    toast('Formato por defecto guardado: lo usan todos los rallies.');
+  };
+  d.querySelector('#pl-c-volver')?.addEventListener('click', async () => {
+    const { error } = await db().from('planillas').upsert({ rally_id: estado.rally.id, config: {}, updated_at: new Date().toISOString() });
+    if (error) return toast('No se pudo cambiar: ' + error.message, true);
+    estado.config = {};
+    d.remove(); dibujar();
+    toast('Este rally vuelve a usar el formato por defecto.');
+  });
 }
 
 // ------------------------------------------------------------------
