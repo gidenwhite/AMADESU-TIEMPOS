@@ -5,7 +5,21 @@
 // - Cuando el equipo queda listo, lo avisa una vez: "✓ Listo para usar sin internet".
 (function () {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js').catch(function () { });
+  // App ya instalada: se busca la versión nueva en cada apertura (sin la copia
+  // del navegador) y, cuando entra, se recarga una vez para usarla ya.
+  var habiaVersion = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+    .then(function (reg) { return reg.update(); }).catch(function () { });
+  var recargado = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (recargado || !habiaVersion) return;
+    recargado = true;
+    var recargar = function () { location.reload(); };
+    var el = document.activeElement;
+    // Si se está escribiendo en una celda, se espera a que termine.
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) el.addEventListener('blur', function () { setTimeout(recargar, 300); }, { once: true });
+    else recargar();
+  });
 
   var LIBRERIAS = /(^|\.)(cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
 
@@ -44,7 +58,7 @@
           if (localStorage.getItem(clave)) return;
           localStorage.setItem(clave, '1');
         } catch (er) { return; }
-        aviso('✓ Este equipo ya está listo para usar sin internet');
+        aviso('✓ Este equipo ya está listo para usar sin internet (' + String(d.version).replace('amadesu-', '') + ')');
       };
       sw.postMessage({ tipo: 'guardar-recursos', urls: recursosUsados() }, [canal.port2]);
     }).catch(function () { });

@@ -1250,7 +1250,7 @@ $('pl-config').onclick = abrirConfig;
 $('pl-ayuda-x')?.addEventListener('click', () => { $('pl-ayuda').remove(); try { localStorage.setItem('pl_sin_ayuda', '1'); } catch (e) { } });
 window.addEventListener('beforeunload', e => { if ([...estado.guardando.values()].includes('guardando')) { e.preventDefault(); e.returnValue = ''; } });
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => { });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => { });
 // Que el celular / la compu no borre los datos guardados de la planilla por falta de espacio.
 try { navigator.storage?.persist?.(); } catch (e) { }
 iniciar();

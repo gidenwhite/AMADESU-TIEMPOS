@@ -402,7 +402,7 @@ async function actualizarCampana() {
 // ------------------------------------------------------------------
 async function iniciar() {
   if ('serviceWorker' in navigator) {
-    try { await navigator.serviceWorker.register('./sw.js'); } catch (e) { }
+    try { await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }); } catch (e) { }
   }
   pintarBotones();
   if (esIOS || esAndroid) programarInvitacion();
