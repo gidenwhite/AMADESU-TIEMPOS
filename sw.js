@@ -4,7 +4,7 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v3';
+const VERSION = 'amadesu-v4';
 const BASICOS = ['./', './index.html', './info.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {

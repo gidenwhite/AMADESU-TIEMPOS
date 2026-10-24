@@ -286,19 +286,33 @@ async function guardarSuscripcion(sub) {
   if (error) throw error;
 }
 
+// Suscribe este celular (el permiso ya tiene que estar dado). Cada paso
+// avisa su propio error, así se sabe exactamente dónde falló.
+async function suscribir() {
+  let reg;
+  try { reg = await swListo(); } catch (e) { throw new Error('La app no terminó de cargar. Cerrala, abrila de nuevo y volvé a intentar.'); }
+  let sub;
+  try {
+    sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveBinaria(VAPID_PUBLICA) });
+  } catch (e) { throw new Error('El celular no permitió crear la suscripción (' + (e.message || e.name) + ').'); }
+  try { await guardarSuscripcion(sub); } catch (e) { throw new Error('No se pudo guardar en el servidor (' + (e.message || 'sin conexión') + ').'); }
+  return sub;
+}
+
 async function activarAvisos() {
   try {
     const permiso = await Notification.requestPermission();
     if (permiso !== 'granted') { actualizarCampana(); abrirAvisos(); return; }
-    const reg = await swListo();
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveBinaria(VAPID_PUBLICA) });
-    await guardarSuscripcion(sub);
+    await suscribir();
     registrar('avisos_activados');
     cerrarHoja();
     avisoCorto('🔔 Avisos activados. Te vamos a avisar de cada novedad.');
   } catch (e) {
-    avisoCorto('No se pudieron activar los avisos. Probá de nuevo en un momento.');
+    cerrarHoja();
+    hoja(`<h3>No se pudieron activar los avisos</h3><p>${(e.message || 'Error desconocido').replace(/</g, '&lt;')}</p>
+      <button type="button" class="app-btn-grande" id="app-reintentar">Intentar de nuevo</button>`);
+    document.getElementById('app-reintentar').onclick = activarAvisos;
   }
   actualizarCampana();
 }
@@ -393,11 +407,37 @@ async function iniciar() {
     if (sub && Notification.permission === 'granted') guardarSuscripcion(sub).catch(() => { });
   } catch (e) { }
 
-  // Primera vez que abre la app instalada: invitarlo a activar los avisos.
-  if (esInstalada() && soportaAvisos() && Notification.permission === 'default' && !almacen.get('amd_oferta_avisos')) {
-    almacen.set('amd_oferta_avisos', '1');
-    setTimeout(abrirAvisos, 1500);
+  pedirAvisosAlEntrar();
+}
+
+// Pedir los avisos apenas se entra:
+//  - en la app instalada: cada vez que se abre, hasta que los active;
+//  - en el navegador: cada 3 días, sin pisar la tarjeta de "Instalar".
+async function pedirAvisosAlEntrar() {
+  if (!soportaAvisos()) return;
+  let sub = null;
+  try { sub = await suscripcionActual(); } catch (e) { }
+  if (sub) return;
+
+  // Ya dio el permiso pero no quedó suscrito (reinstaló, borró datos...): se arregla solo.
+  if (Notification.permission === 'granted') { try { await suscribir(); actualizarCampana(); } catch (e) { } return; }
+
+  const ocupado = () => document.querySelector('#app-invitacion, #app-hoja, .modal-overlay.active, .lightbox-overlay.active');
+  if (esInstalada()) {
+    let mostrada = false;
+    try { mostrada = sessionStorage.getItem('amd_avisos_pedidos') === '1'; sessionStorage.setItem('amd_avisos_pedidos', '1'); } catch (e) { }
+    if (mostrada) return;
+    setTimeout(function intentar() { if (ocupado()) return setTimeout(intentar, 5000); abrirAvisos(); }, 1200);
+    return;
   }
+  if (Notification.permission !== 'default') return;
+  const ultima = parseInt(almacen.get('amd_oferta_avisos') || '0', 10);
+  if (ultima && Date.now() - ultima < DIAS_SIN_INSISTIR * 86400000) return;
+  setTimeout(function intentar() {
+    if (ocupado()) return setTimeout(intentar, 8000);
+    almacen.set('amd_oferta_avisos', String(Date.now()));
+    abrirAvisos();
+  }, 7000);
 }
 
 window.addEventListener('pageshow', () => actualizarCampana());
