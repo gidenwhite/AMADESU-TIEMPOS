@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sin internet — AMADESU RALLYS</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#060c24" />
+  <link rel="icon" href="icons/favicon-32.png" />
+  <style>
+    :root { --bg: #030303; --sup: #131313; --borde: rgba(255, 255, 255, 0.12); --txt: #F8F9FA; --muted: #8E9BAE; --rojo: #E63946; --verde: #00F5A0; --naranja: #ffb547; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--txt); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: flex-start; justify-content: center; padding: 32px 16px; }
+    .caja { width: min(560px, 100%); }
+    .marca { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .marca img { width: 48px; height: 48px; border-radius: 12px; background: #fff; }
+    .marca b { font-size: 22px; letter-spacing: 0.02em; }
+    .aviso { background: rgba(255, 181, 71, 0.1); border: 1px solid rgba(255, 181, 71, 0.4); border-radius: 14px; padding: 16px 18px; margin-bottom: 20px; }
+    .aviso h1 { margin: 0 0 6px; font-size: 22px; }
+    .aviso p { margin: 0; color: #e8d3ad; font-size: 14px; line-height: 1.5; }
+    h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 24px 0 10px; }
+    .lista { display: flex; flex-direction: column; gap: 10px; }
+    .planilla { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--sup); border: 1px solid var(--borde); text-decoration: none; color: var(--txt); }
+    .planilla:active { transform: scale(0.99); }
+    .planilla b { display: block; font-size: 16px; }
+    .planilla small { color: var(--muted); font-size: 12px; }
+    .planilla .ir { flex-shrink: 0; background: var(--rojo); color: #fff; border-radius: 10px; padding: 9px 14px; font-weight: 700; font-size: 14px; }
+    .pend { color: var(--naranja); font-weight: 600; }
+    .vacio { color: var(--muted); font-size: 14px; line-height: 1.6; background: var(--sup); border: 1px dashed var(--borde); border-radius: 14px; padding: 16px; }
+    .acciones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+    .btn { flex: 1; text-align: center; padding: 13px; border-radius: 12px; border: 1px solid var(--borde); background: var(--sup); color: var(--txt); font-weight: 700; font-size: 14px; text-decoration: none; cursor: pointer; font-family: inherit; }
+    .nota { margin-top: 22px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .online { display: none; background: rgba(0, 245, 160, 0.1); border: 1px solid rgba(0, 245, 160, 0.4); color: #b8ffe3; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
+  </style>
+</head>
+
+<body>
+  <div class="caja">
+    <div class="marca"><img src="icons/icon-192.png" alt=""><b>AMADESU RALLYS</b></div>
+    <div class="online" id="online">✓ Volvió internet. <a href="#" id="reintentar" style="color:#00F5A0; font-weight:700;">Abrir de nuevo la página</a></div>
+    <div class="aviso">
+      <h1>📴 Sin internet</h1>
+      <p>Esta parte del sistema necesita conexión. Pero <b>la Planilla de Tiempos funciona sin internet</b>: podés abrirla y seguir cargando; lo que cargues queda guardado en este equipo y se sube solo cuando vuelva la conexión.</p>
+    </div>
+
+    <h2>Planillas guardadas en este equipo</h2>
+    <div class="lista" id="lista"></div>
+
+    <div class="acciones">
+      <a class="btn" href="index.html">Ir a la portada</a>
+      <button type="button" class="btn" id="recargar">Reintentar</button>
+    </div>
+
+    <p class="nota">Cada equipo guarda sus propios datos. Lo que se cargó sin internet en <b>otro</b> celular o computadora aparece acá recién cuando ese equipo vuelva a tener internet y lo suba.</p>
+  </div>
+
+  <script>
+    (function () {
+      var pend = {};
+      try { pend = JSON.parse(localStorage.getItem('pl_pendientes_v1') || '{}'); } catch (e) { }
+      var planillas = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k || k.indexOf('pl_copia_') !== 0) continue;
+        try {
+          var c = JSON.parse(localStorage.getItem(k));
+          if (c && c.rally) planillas.push(c);
+        } catch (e) { }
+      }
+      planillas.sort(function (a, b) { return b.ts - a.ts; });
+      var esc = function (s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
+      var lista = document.getElementById('lista');
+      if (!planillas.length) {
+        lista.innerHTML = '<div class="vacio">Este equipo todavía no tiene ninguna planilla guardada. Abrí la Planilla de Tiempos <b>una vez con internet</b> (desde el panel → Control de Tiempos → Planilla) y después va a funcionar sin conexión.</div>';
+      } else {
+        lista.innerHTML = planillas.map(function (c) {
+          var n = Object.keys(pend).filter(function (x) { return pend[x].rally === c.rally.id; }).length;
+          var cuando = new Date(c.ts).toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+          return '<a class="planilla" href="planilla.html?rally=' + encodeURIComponent(c.rally.id) + '"><div><b>' + esc(c.rally.nombre) + '</b>' +
+            '<small>Datos guardados el ' + cuando + (n ? ' · <span class="pend">' + n + ' cambio' + (n > 1 ? 's' : '') + ' sin subir</span>' : '') + '</small></div>' +
+            '<span class="ir">Abrir planilla</span></a>';
+        }).join('');
+      }
+      var volver = function () { location.reload(); };
+      document.getElementById('recargar').onclick = volver;
+      document.getElementById('reintentar').onclick = function (e) { e.preventDefault(); volver(); };
+      var mostrarOnline = function () { document.getElementById('online').style.display = navigator.onLine ? 'block' : 'none'; };
+      window.addEventListener('online', mostrarOnline); window.addEventListener('offline', mostrarOnline); mostrarOnline();
+    })();
+  </script>
+</body>
+
+</html>

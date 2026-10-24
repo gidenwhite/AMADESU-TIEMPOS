@@ -4,8 +4,8 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v5';
-const BASICOS = ['./', './index.html', './info.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
+const VERSION = 'amadesu-v6';
+const BASICOS = ['./', './index.html', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
   // Planilla de Tiempos: se abre y se carga sin internet (los datos van en cola)
   './planilla.html', './planilla.js', './planilla.css', './supabase_config.js',
   './planilla_formato/defecto.json', './planilla_formato/fia.png', './planilla_formato/febad.jpg', './planilla_formato/amadesu.jpg'];
@@ -36,8 +36,15 @@ self.addEventListener('fetch', (event) => {
   const esLibreria = /(^|\.)(cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname);
   if (!mismoSitio && !esLibreria) return;
 
-  // Los paneles de admin/operador siempre van directo a la red.
-  if (mismoSitio && /(admin_|operador_)/.test(url.pathname)) return;
+  // Los paneles de admin/operador siempre van directo a la red (nunca se guardan).
+  // Si no hay internet, en vez del error del navegador se muestra la pantalla
+  // propia con las planillas guardadas en este equipo.
+  if (mismoSitio && /(admin_|operador_)/.test(url.pathname)) {
+    if (req.mode !== 'navigate') return;
+    event.respondWith(fetch(req).catch(async () =>
+      (await caches.match('./sin_internet.html')) || Response.error()));
+    return;
+  }
 
   if (esLibreria) {
     event.respondWith((async () => {
@@ -60,7 +67,7 @@ self.addEventListener('fetch', (event) => {
     } catch (e) {
       const guardado = await cache.match(req, { ignoreSearch: req.mode === 'navigate' });
       if (guardado) return guardado;
-      if (req.mode === 'navigate') return (await cache.match('./index.html')) || Response.error();
+      if (req.mode === 'navigate') return (await cache.match('./sin_internet.html')) || (await cache.match('./index.html')) || Response.error();
       throw e;
     }
   })());

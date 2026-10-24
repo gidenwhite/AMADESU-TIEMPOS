@@ -3786,9 +3786,35 @@
 
     // 1. Fetch Rallies
     async function fetchRallies() {
-      const { data, error } = await supabase.schema('rally').from('rallies').select('*').is('deleted_at', null).order('fecha_inicio', { ascending: false });
+      // Sin red conocida no se espera a la conexión (reintenta y tarda): va directo a la copia.
+      let { data, error } = navigator.onLine
+        ? await supabase.schema('rally').from('rallies').select('*').is('deleted_at', null).order('fecha_inicio', { ascending: false })
+        : { data: null, error: { message: 'sin conexión' } };
+      // Sin internet: se muestran las últimas carreras guardadas en este equipo.
+      let aviso = document.getElementById('aviso-sin-red');
+      if (error) {
+        let copia = null;
+        try { copia = JSON.parse(localStorage.getItem('idx_rallies_v1')); } catch (e) { }
+        if (copia && Array.isArray(copia.data)) {
+          data = copia.data; error = null;
+          if (!aviso) {
+            aviso = document.createElement('div');
+            aviso.id = 'aviso-sin-red';
+            aviso.style.cssText = 'margin:0 0 16px;padding:12px 14px;border-radius:12px;background:rgba(255,181,71,.1);border:1px solid rgba(255,181,71,.4);color:#e8d3ad;font-size:14px;line-height:1.45;';
+            gridContainer.parentNode.insertBefore(aviso, gridContainer);
+          }
+          const cuando = new Date(copia.ts).toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+          aviso.innerHTML = '📴 <b>Sin internet.</b> Mostrando lo último guardado en este equipo (' + cuando + '). Los tiempos en vivo se ven cuando vuelva la conexión.' +
+            (localStorage.getItem('pl_usuario') ? ' <a href="sin_internet.html" style="color:#ffb547;font-weight:700;">Abrir planillas guardadas</a>' : '');
+          window.addEventListener('online', () => fetchRallies(), { once: true });
+        }
+      } else {
+        try { localStorage.setItem('idx_rallies_v1', JSON.stringify({ ts: Date.now(), data })); } catch (e) { }
+        if (aviso) aviso.remove();
+      }
       if (error) {
         console.error("Error fetching rallies:", error);
+        window.addEventListener('online', () => fetchRallies(), { once: true });
         gridContainer.innerHTML = `<div class="no-results"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg><span>No se pudo conectar con el servidor. Intenta recargar la página.</span></div>`;
         return;
       }
@@ -3850,7 +3876,7 @@
                 <div class="badge badge-date">${rally.fecha_inicio}</div>
                 ${flagHtml ? `<div class="badge badge-flag">${flagHtml} ${rally.pais}</div>` : ''}
               </div>
-              <img src="${img}" alt="${rally.nombre}" onerror="this.src='https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=800';">
+              <img src="${img}" alt="${rally.nombre}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1541447237128-f4cac6138fbe?auto=format&fit=crop&q=80&w=800';">
             </div>
 
             <div class="card-content">

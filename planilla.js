@@ -320,7 +320,7 @@ async function cargarRally(rallyId) {
   } catch (e) {
     const copia = leerCopiaLocal(rallyId);
     if (!copia) {
-      $('pl-marco').innerHTML = `<div class="pl-vacio">${esErrorDeRed(e) ? '📴 Sin conexión y este equipo todavía no tiene guardada esta planilla. Abrila una vez con internet y después va a funcionar sin conexión.' : 'No se pudo cargar la planilla: ' + esc(e.message || e)}</div>`;
+      $('pl-marco').innerHTML = `<div class="pl-vacio">${esErrorDeRed(e) ? '📴 Sin conexión y este equipo todavía no tiene guardada esta planilla. Abrila una vez con internet y después va a funcionar sin conexión.<br><br><a href="sin_internet.html" style="color:#ffb547;font-weight:700;">Ver las planillas que sí están guardadas en este equipo</a>' : 'No se pudo cargar la planilla: ' + esc(e.message || e)}</div>`;
       return;
     }
     estado.rally = copia.rally; estado.etapas = copia.etapas; estado.inscritos = copia.inscritos;
