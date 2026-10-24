@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planilla de Tiempos — AMADESU RALLYS</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="icons/favicon-32.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="planilla.css" />
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" defer></script>
+  <script type="module" src="planilla.js"></script>
+</head>
+
+<body>
+  <header class="pl-barra">
+    <a href="admin_dashboard.html" class="pl-volver" id="pl-volver" title="Volver al panel">←</a>
+    <div class="pl-barra-titulo">
+      <b>Planilla de Tiempos</b>
+      <span id="pl-sub">Cargando…</span>
+    </div>
+    <select id="pl-rally" class="pl-control" aria-label="Rally" hidden></select>
+    <div class="pl-herr">
+      <label class="pl-buscar"><span>Ir al Nº</span><input id="pl-ir" class="pl-control" inputmode="numeric" placeholder="Ej. 22" autocomplete="off"></label>
+      <select id="pl-clase" class="pl-control" aria-label="Filtrar clase"><option value="">Todas las clases</option></select>
+      <div class="pl-orden" role="group" aria-label="Orden">
+        <button type="button" data-orden="numero" class="activo">Por Nº</button>
+        <button type="button" data-orden="resultado">Por resultado</button>
+      </div>
+      <button type="button" class="pl-btn" id="pl-config" hidden>⚙ Encabezado y firmas</button>
+      <button type="button" class="pl-btn primario" id="pl-excel">⬇ Descargar Excel</button>
+    </div>
+    <div class="pl-estado" id="pl-estado" aria-live="polite"></div>
+  </header>
+
+  <div class="pl-ayuda" id="pl-ayuda">
+    <b>Cómo cargar:</b> tocá una celda de <b>Hr. Salida</b> o <b>Hr. Paso</b> y escribí la hora
+    (<code>0801</code> = 08:01 · <code>080527</code> = 08:05:27 · <code>0805277</code> = 08:05:27.7).
+    <b>Enter</b> guarda y baja · <b>Tab</b> pasa a la derecha · flechas para moverte ·
+    <b>AB</b> = abandono · <b>NL</b> = no largó · <b>Supr</b> borra.
+    <button type="button" id="pl-ayuda-x" aria-label="Ocultar ayuda">✕</button>
+  </div>
+
+  <main class="pl-marco" id="pl-marco">
+    <div class="pl-cargando">Cargando planilla…</div>
+  </main>
+
+  <div class="pl-teclas" id="pl-teclas" hidden>
+    <button type="button" data-especial="abandono">Abandono</button>
+    <button type="button" data-especial="no_presentado">No largó</button>
+    <button type="button" data-especial="borrar">Borrar</button>
+    <button type="button" data-especial="listo" class="primario">Listo ✓</button>
+  </div>
+
+  <div class="pl-toast" id="pl-toast"></div>
+</body>
+
+</html>
