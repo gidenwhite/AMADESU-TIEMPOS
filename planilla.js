@@ -138,6 +138,50 @@ function leerCopiaLocal(rallyId) {
   try { return JSON.parse(localStorage.getItem('pl_copia_' + rallyId) || 'null'); } catch (e) { return null; }
 }
 
+// Las demás planillas guardadas en este equipo (otros rallies que se abrieron
+// acá) también se mantienen al día mientras hay internet, así cualquiera de
+// ellas abre con lo último aunque después se corte la conexión.
+async function refrescarOtrasCopias() {
+  if (!navigator.onLine) return;
+  const HACE_30_DIAS = Date.now() - 30 * 86400000;
+  const ids = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith('pl_copia_')) continue;
+    const id = k.slice(9);
+    if (id === estado.rally?.id) continue;
+    const c = leerCopiaLocal(id);
+    if (!c || c.ts < HACE_30_DIAS) { localStorage.removeItem(k); continue; }
+    if (Date.now() - c.ts > 5 * 60000) ids.push(id);
+  }
+  for (const id of ids.slice(0, 5)) {
+    try {
+      const c = leerCopiaLocal(id);
+      const recIds = c.etapas.flatMap(e => e.recorridos.map(r => r.id));
+      if (!recIds.length) continue;
+      const [filas, pen, ins] = await Promise.all([
+        todo(() => db().from('tiempos').select('id, inscripcion_id, recorrido_id, vuelta, hora_salida, hora_llegada, tiempo_bruto, estado, updated_at').in('recorrido_id', recIds).is('deleted_at', null).order('updated_at')),
+        todo(() => db().from('penalizaciones').select('id, inscripcion_id, recorrido_id, tiempo_penalizacion, motivo, created_at').in('recorrido_id', recIds).eq('tipo', 'tiempo').is('deleted_at', null).order('created_at')),
+        todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre), asociacion:asociaciones(nombre)').eq('rally_id', id).is('deleted_at', null).order('numero')),
+      ]);
+      const tiempos = new Map(), penales = new Map();
+      let ultimo = null;
+      for (const f of filas) {
+        if ((f.vuelta || 1) !== 1) continue;
+        const pasoMs = msDesdeISO(f.hora_llegada), brutoMs = msDesdeIntervalo(f.tiempo_bruto);
+        tiempos.set(clave(f.inscripcion_id, f.recorrido_id), { id: f.id, salidaMs: msDesdeISO(f.hora_salida), pasoMs, brutoMs, estado: f.estado, brutoSinHoras: !!brutoMs && pasoMs == null });
+        if (!ultimo || f.updated_at > ultimo) ultimo = f.updated_at;
+      }
+      for (const p of pen) {
+        const k = clave(p.inscripcion_id, p.recorrido_id);
+        if (!penales.has(k)) penales.set(k, []);
+        penales.get(k).push({ id: p.id, ms: msDesdeIntervalo(p.tiempo_penalizacion) || 0, motivo: p.motivo });
+      }
+      localStorage.setItem('pl_copia_' + id, JSON.stringify({ ...c, inscritos: ins, tiempos: [...tiempos], penales: [...penales], ultimoSync: ultimo, ts: Date.now() }));
+    } catch (e) { /* se reintenta la próxima vez */ }
+  }
+}
+
 let sincronizando = false;
 async function sincronizar(avisar = true) {
   if (sincronizando || !estado.rally || !navigator.onLine) { estadoBarra(); return; }
@@ -265,6 +309,7 @@ async function cargarRally(rallyId) {
     llenarFiltroClases();
     dibujar();
     sincronizar();
+    setTimeout(refrescarOtrasCopias, 4000);
     clearInterval(estado.timerSync);
     estado.timerSync = setInterval(() => {
       if (document.hidden) return;
@@ -1176,4 +1221,6 @@ $('pl-ayuda-x')?.addEventListener('click', () => { $('pl-ayuda').remove(); try {
 window.addEventListener('beforeunload', e => { if ([...estado.guardando.values()].includes('guardando')) { e.preventDefault(); e.returnValue = ''; } });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => { });
+// Que el celular / la compu no borre los datos guardados de la planilla por falta de espacio.
+try { navigator.storage?.persist?.(); } catch (e) { }
 iniciar();
