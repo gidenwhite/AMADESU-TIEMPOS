@@ -160,7 +160,7 @@ async function iniciar() {
 async function cargarRally(rallyId) {
   $('pl-marco').innerHTML = '<div class="pl-cargando">Cargando planilla…</div>';
   try {
-    const { data: rally, error } = await db().from('rallies').select('id, nombre, fecha_inicio, fecha_fin, ciudad, tipo_evento').eq('id', rallyId).maybeSingle();
+    const { data: rally, error } = await db().from('rallies').select('id, nombre, fecha_inicio, fecha_fin, ciudad, tipo_evento, imagen_url').eq('id', rallyId).maybeSingle();
     if (error || !rally) throw error || new Error('No se encontró el rally.');
     estado.rally = rally;
     $('pl-sub').textContent = rally.nombre;
@@ -308,6 +308,16 @@ function adaptarDefecto(d) {
   return { ...d, titulos, fecha: undefined, hora_publicacion: '' };
 }
 
+// Logos que van SIEMPRE, a la derecha (como FIA / FEBAD en la planilla oficial).
+const LOGOS_FIJOS = { fia: 'planilla_formato/fia.png', amadesu: 'planilla_formato/amadesu.jpg', febad: 'planilla_formato/febad.jpg' };
+
+// Enlace de Google Drive -> imagen directa (o la URL tal cual si no es de Drive).
+function urlImagen(url) {
+  const u = String(url || '').trim();
+  const id = (u.match(/\/d\/([a-zA-Z0-9_-]{15,})/) || u.match(/[?&]id=([a-zA-Z0-9_-]{15,})/) || [])[1] || (/^[a-zA-Z0-9_-]{25,}$/.test(u) ? u : null);
+  return id ? `https://lh3.googleusercontent.com/d/${id}=w800` : u;
+}
+
 function cfg() {
   const c = tieneFormatoPropio() ? estado.config : adaptarDefecto(estado.defecto);
   const fecha = estado.rally.fecha_inicio ? new Date(estado.rally.fecha_inicio + 'T12:00:00').toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
@@ -315,29 +325,39 @@ function cfg() {
     titulos: (c.titulos && c.titulos.length ? c.titulos : ['', '', '', estado.rally.nombre.toUpperCase()]).concat(['', '', '', '']).slice(0, 4),
     fecha: c.fecha ?? (fecha ? `Fecha: ${fecha.charAt(0).toUpperCase() + fecha.slice(1)}` : ''),
     hora: c.hora_publicacion || '',
-    logoIzq: c.logo_izq || '', logosDer: c.logos_der || [],
+    logoEvento: estado.rally.imagen_url || '',
+    logosExtra: (c.logos_extra || []).filter(Boolean),
     firmas: (c.firmas && c.firmas.length ? c.firmas : [{ nombre: '', cargo: 'COMISIÓN CRONOMETRAJE' }, { nombre: '', cargo: 'DIRECTOR DE PRUEBA' }]),
-    formato: c.formato && c.formato.imagenes ? c.formato : null,
   };
 }
 
-// Zona de imágenes copiada del Excel: cada imagen en su lugar, a escala.
-function zonaImagenes(imgs) {
-  if (!imgs.length) return '';
-  // La zona arranca donde empieza la primera imagen (sin el espacio vacío de la izquierda).
-  const x0 = Math.min(...imgs.map(i => i.x)), y0 = Math.min(...imgs.map(i => i.y));
-  const W = Math.max(...imgs.map(i => i.x + i.w)) - x0, H = Math.max(...imgs.map(i => i.y + i.h)) - y0;
-  return `<div class="pl-zona" style="width:${Math.round(W)}px; aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};">${imgs.map(i => `<img src="${esc(i.url)}" alt="" style="left:${((i.x - x0) / W * 100).toFixed(2)}%; top:${((i.y - y0) / H * 100).toFixed(2)}%; width:${(i.w / W * 100).toFixed(2)}%; height:${(i.h / H * 100).toFixed(2)}%;">`).join('')}</div>`;
+// Distribución del encabezado, en píxeles, calcada de la planilla oficial:
+//  - evento: A1 → D5 (262 × 126)
+//  - extras: al lado, en la columna E (se reparten en grilla según cuántos sean)
+//  - fijos:  a la derecha (FIA y AMADESU arriba, FEBAD abajo)
+// Cada caja es el espacio máximo; la imagen se ajusta adentro sin deformarse.
+function disenoCabecera(c) {
+  const ev = c.logoEvento ? [{ url: c.logoEvento, x: 0, y: 0, w: 262, h: 126 }] : [];
+  const n = c.logosExtra.length;
+  const cols = n <= 2 ? 1 : n <= 4 ? 2 : n <= 6 ? 3 : 4;
+  const filas = Math.max(1, Math.ceil(n / cols));
+  const ZW = n <= 2 ? 120 : 230, ZH = 120;
+  const extras = c.logosExtra.map((u, i) => ({
+    url: urlImagen(u), x: (i % cols) * (ZW / cols), y: Math.floor(i / cols) * (ZH / filas), w: ZW / cols, h: ZH / filas,
+  }));
+  const fijos = [
+    { url: LOGOS_FIJOS.fia, x: 0, y: 0, w: 118, h: 72 },
+    { url: LOGOS_FIJOS.amadesu, x: 124, y: 0, w: 118, h: 72 },
+    { url: LOGOS_FIJOS.febad, x: 0, y: 78, w: 242, h: 70 },
+  ];
+  return { ev, extras, fijos, anchoExtras: ZW, altoExtras: ZH };
 }
 
-// A qué firma pertenece cada imagen del pie (la más cercana por columna).
-function imagenesDeFirma(c, k) {
-  if (!c.formato) return c.firmas[k]?.img ? [{ url: c.firmas[k].img }] : [];
-  const pos = c.formato.firmasPos || [];
-  return c.formato.imagenes.filter(i => i.zona === 'pie').filter(i => {
-    const dist = pos.map(p => Math.abs(i.colCentro - (p.col + p.colFin) / 2));
-    return dist.indexOf(Math.min(...dist)) === k;
-  });
+// Zona de logos en pantalla: cada uno en su caja, ajustado sin deformar.
+function zonaLogos(cajas, W, H) {
+  if (!cajas.length) return '';
+  W = W || Math.max(...cajas.map(i => i.x + i.w)); H = H || Math.max(...cajas.map(i => i.y + i.h));
+  return `<div class="pl-zona" style="width:${Math.round(W)}px; aspect-ratio:${W} / ${H};">${cajas.map(i => `<img src="${esc(i.url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" style="left:${(i.x / W * 100).toFixed(2)}%; top:${(i.y / H * 100).toFixed(2)}%; width:${(i.w / W * 100).toFixed(2)}%; height:${(i.h / H * 100).toFixed(2)}%;">`).join('')}</div>`;
 }
 
 function llenarFiltroClases() {
@@ -407,13 +427,10 @@ function dibujar() {
   $('pl-marco').innerHTML = `
     <div class="pl-hoja">
       <div class="pl-cab">
-        ${c.formato
-          ? `<div class="pl-cab-logos">${zonaImagenes(c.formato.imagenes.filter(i => i.zona === 'cab' && !i.fin))}</div>`
-          : `<div class="pl-cab-logos">${c.logoIzq ? `<img src="${esc(c.logoIzq)}" alt="">` : ''}</div>`}
+        ${(() => { const dz = disenoCabecera(c); return `
+        <div class="pl-cab-logos pl-cab-izq">${zonaLogos(dz.ev, 262, 126)}${zonaLogos(dz.extras, dz.anchoExtras, dz.altoExtras)}</div>
         <div class="pl-cab-titulos">${c.titulos.filter(Boolean).map(t => `<div>${esc(t)}</div>`).join('')}</div>
-        ${c.formato
-          ? `<div class="pl-cab-logos der">${zonaImagenes(c.formato.imagenes.filter(i => i.zona === 'cab' && i.fin))}</div>`
-          : `<div class="pl-cab-logos der">${c.logosDer.map(u => `<img src="${esc(u)}" alt="">`).join('')}</div>`}
+        <div class="pl-cab-logos der">${zonaLogos(dz.fijos, 242, 148)}</div>`; })()}
       </div>
       <div class="pl-cab-info">
         ${c.fecha ? `<b>${esc(c.fecha)}</b>` : ''}
@@ -421,7 +438,7 @@ function dibujar() {
         <span>Kilometraje total: <span class="pl-km">${kmTotal.toFixed(2)}</span></span>
       </div>
       <table class="pl-tabla"><thead>${cab}</thead><tbody>${cuerpo || `<tr><td colspan="${totalCols}" style="padding:30px;">Este rally todavía no tiene pilotos inscritos.</td></tr>`}</tbody></table>
-      <div class="pl-firmas">${c.firmas.map((fi, k) => { const ims = imagenesDeFirma(c, k); return `<div class="pl-firma">${ims.length ? ims.map(i => `<img src="${esc(i.url)}" alt="">`).join('') : '<div style="height:60px"></div>'}<div class="linea">${esc(fi.nombre || ' ')}</div><b>${esc(fi.cargo || '')}</b></div>`; }).join('')}</div>
+      <div class="pl-firmas">${c.firmas.map(fi => `<div class="pl-firma">${fi.img ? `<img src="${esc(urlImagen(fi.img))}" alt="">` : '<div style="height:60px"></div>'}<div class="linea">${esc(fi.nombre || ' ')}</div><b>${esc(fi.cargo || '')}</b></div>`).join('')}</div>
     </div>`;
   $('pl-marco').scrollLeft = scroll.x; $('pl-marco').scrollTop = scroll.y;
   if (estado.activa) {
@@ -661,141 +678,39 @@ async function subirImagen(archivo, extension) {
   return supabase.storage.from('logo-sitio').getPublicUrl(ruta).data.publicUrl;
 }
 
-// ------------------------------------------------------------------
-// Copiar el formato de la planilla Excel del evento: títulos, fecha, hora,
-// firmas y TODAS las imágenes con su celda de inicio/fin exacta. Así la
-// pantalla y el Excel descargado quedan iguales al original.
-// ------------------------------------------------------------------
-const EMU = 9525;
-const anchoColPx = w => Math.round((w || 8.43) * 7 + 5);
-const altoFilaPx = h => Math.round((h || 15) * 96 / 72);
-
-function textoDe(v) {
-  if (v == null) return '';
-  if (v instanceof Date) return v;
-  if (typeof v === 'object') {
-    if (v.richText) return v.richText.map(t => t.text).join('');
-    if (v.result !== undefined) return textoDe(v.result);
-    if (v.text !== undefined) return String(v.text);
-    return '';
-  }
-  return String(v);
-}
-const horaDeExcel = v => {
-  if (v instanceof Date) return `${pad(v.getUTCHours())}:${pad(v.getUTCMinutes())}`;
-  if (typeof v === 'number') { const ms = Math.round(v * DIA); return `${pad(Math.floor(ms / 3600000) % 24)}:${pad(Math.floor(ms / 60000) % 60)}`; }
-  return String(v || '').trim();
-};
-
-async function leerFormatoExcel(archivo) {
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(await archivo.arrayBuffer());
-  const ws = wb.worksheets[0];
-  if (!ws) throw new Error('El archivo no tiene hojas.');
-
-  // Fila de encabezados de la tabla (la que dice Nº COCHE y PILOTO)
-  let filaCab = null, colCoche = null, N = 0;
-  for (let r = 1; r <= Math.min(ws.rowCount, 40) && !filaCab; r++) {
-    const fila = ws.getRow(r);
-    let tieneCoche = false, tienePiloto = false;
-    fila.eachCell((cel, c) => {
-      const t = String(textoDe(cel.value)).toUpperCase();
-      if (t.includes('COCHE')) { tieneCoche = true; colCoche = c; }
-      if (t.includes('PILOTO')) tienePiloto = true;
-    });
-    if (tieneCoche && tienePiloto) { filaCab = r; fila.eachCell((_, c) => { N = Math.max(N, c); }); }
-  }
-  if (!filaCab) throw new Error('No encontré la fila de encabezados (la que dice "Nº COCHE" y "PILOTO").');
-
-  // Última fila con un auto y filas de las firmas (nombres y cargos)
-  let ultimaDatos = filaCab;
-  for (let r = filaCab + 1; r <= ws.rowCount; r++) if (String(textoDe(ws.getRow(r).getCell(colCoche).value)).trim()) ultimaDatos = r;
-  const textosFila = r => { const out = []; ws.getRow(r).eachCell((cel, c) => { const t = textoDe(cel.value); if (typeof t === 'string' && t.trim()) out.push({ c, t: t.trim() }); }); return out; };
-  let filaNombres = null;
-  for (let r = ultimaDatos + 1; r <= ws.rowCount; r++) if (textosFila(r).length) { filaNombres = r; break; }
-  const merges = (ws.model.merges || []).map(m => { const [a, b] = m.split(':'); const ca = ws.getCell(a), cb = ws.getCell(b || a); return { r1: ca.row, c1: ca.col, r2: cb.row, c2: cb.col }; });
-  const finMerge = (r, c) => (merges.find(m => m.r1 === r && m.c1 === c)?.c2) || c;
-  const firmas = [];
-  if (filaNombres) {
-    const roles = textosFila(filaNombres + 1);
-    for (const n of textosFila(filaNombres).slice(0, 2)) {
-      const fin = finMerge(filaNombres, n.c);
-      const rol = roles.find(x => x.c >= n.c && x.c <= fin) || roles.find(x => Math.abs(x.c - n.c) <= 2);
-      firmas.push({ nombre: n.t, cargo: rol?.t || '', col: n.c - 1, colFin: fin - 1 });
-    }
-  }
-
-  // Títulos, fecha y hora de publicación (lo que está arriba de la tabla)
-  const titulos = [];
-  for (let r = 1; r <= filaCab - 3 && titulos.length < 4; r++) titulos.push(String(textoDe(ws.getRow(r).getCell(1).value) || '').trim());
-  const fecha = String(textoDe(ws.getRow(filaCab - 2).getCell(1).value) || '').trim();
-  let hora = '';
-  ws.getRow(filaCab - 1).eachCell((cel, c) => {
-    if (/publicaci/i.test(String(textoDe(cel.value)))) {
-      for (let k = c + 1; k <= c + 4 && !hora; k++) { const v = ws.getRow(filaCab - 1).getCell(k).value; if (v != null && v !== '') hora = horaDeExcel(v instanceof Object && !(v instanceof Date) ? v.result : v); }
-    }
-  });
-
-  // Medidas en píxeles (para dibujarlo igual en pantalla)
-  const anchos = Array.from({ length: N + 2 }, (_, i) => anchoColPx(ws.getColumn(i + 1).width));
-  const xDe = (col, off) => anchos.slice(0, col).reduce((a, b) => a + b, 0) + off / EMU;
-  const altoDe = r => altoFilaPx(ws.getRow(r + 1).height);
-  const yDe = (row, off, desde = 0) => { let y = 0; for (let r = desde; r < row; r++) y += altoDe(r); return y + off / EMU; };
-  const inicioDerecha = N - 5;
-
-  const imagenes = [];
-  for (const im of ws.getImages()) {
-    const datos = wb.getImage(Number(im.imageId));
-    if (!datos?.buffer) continue;
-    const tl = im.range.tl, br = im.range.br || im.range.tl;
-    const zona = tl.nativeRow >= ultimaDatos ? 'pie' : 'cab';
-    const fin = zona === 'cab' && tl.nativeCol >= inicioDerecha;
-    const ext = (datos.extension || 'png').replace('jpg', 'jpeg');
-    const url = await subirImagen(new Blob([datos.buffer], { type: `image/${ext}` }), ext);
-    const base = zona === 'pie' ? (filaNombres || ultimaDatos + 5) - 1 : 0;
-    const x0 = fin ? xDe(inicioDerecha, 0) : 0;
-    imagenes.push({
-      url, zona, fin,
-      tl: { c: fin ? tl.nativeCol - N : tl.nativeCol, co: tl.nativeColOff, r: tl.nativeRow - base, ro: tl.nativeRowOff },
-      br: { c: fin ? br.nativeCol - N : br.nativeCol, co: br.nativeColOff, r: br.nativeRow - base, ro: br.nativeRowOff },
-      x: xDe(tl.nativeCol, tl.nativeColOff) - x0, y: zona === 'pie' ? 0 : yDe(tl.nativeRow, tl.nativeRowOff),
-      w: Math.max(10, xDe(br.nativeCol, br.nativeColOff) - xDe(tl.nativeCol, tl.nativeColOff)),
-      h: Math.max(10, yDe(br.nativeRow, br.nativeRowOff) - yDe(tl.nativeRow, tl.nativeRowOff)),
-      colCentro: (tl.nativeCol + br.nativeCol) / 2,
-    });
-  }
-  return {
-    titulos, fecha, hora_publicacion: hora, firmas: firmas.map(({ nombre, cargo }) => ({ nombre, cargo })),
-    logo_izq: '', logos_der: [],
-    formato: { N, filaCab, separacionFirmas: filaNombres ? filaNombres - ultimaDatos : 5, firmasPos: firmas.map(({ col, colFin }) => ({ col, colFin })), imagenes, archivo: archivo.name },
-  };
-}
-
 function abrirConfig() {
   const c = cfg();
-  const borrador = JSON.parse(JSON.stringify({ titulos: c.titulos, fecha: c.fecha, hora_publicacion: c.hora, logo_izq: c.logoIzq, logos_der: c.logosDer, firmas: c.firmas.concat([{}, {}]).slice(0, 2), formato: c.formato || null }));
-  const prev = (urls, grupo) => urls.map((u, i) => `<span><img src="${esc(u)}" alt=""><button type="button" data-borrar-img="${grupo}" data-i="${i}">✕</button></span>`).join('');
+  const borrador = JSON.parse(JSON.stringify({ titulos: c.titulos, fecha: c.fecha, hora_publicacion: c.hora, logos_extra: c.logosExtra, firmas: c.firmas.concat([{}, {}]).slice(0, 2) }));
+  const miniatura = (u, quitar) => `<span><img src="${esc(urlImagen(u))}" alt="" onerror="this.outerHTML='<em>no se ve: ¿es público?</em>'">${quitar ? `<button type="button" ${quitar}>✕</button>` : ''}</span>`;
   const d = dialogo(`
     <h3>Encabezado y firmas</h3>
     <p>Así sale arriba y abajo de la planilla, en pantalla y en el Excel.</p>
     <div class="pl-formato-ok" style="margin-top:0;">${tieneFormatoPropio()
       ? '<span>Este rally tiene un <b>formato propio</b>.</span>'
-      : `<span>Este rally usa el <b>formato por defecto</b>${estado.defecto?._origen === 'fabrica' ? ' (el de fábrica, de tu PLANILLA.xlsx)' : ''}. El nombre y la fecha se ponen solos.</span>`}</div>
-    <div class="grupo"><b>📥 Copiar formato de mi Excel</b>
-      <p style="margin:6px 0 8px;">Elegí la planilla Excel del evento y se copian los títulos, la fecha, la hora, las firmas y <b>todos los logos en su misma posición y tamaño</b>.</p>
-      <input type="file" accept=".xlsx" id="pl-c-xlsx">
-      <div id="pl-c-formato">${borrador.formato ? `<div class="pl-formato-ok"><span>✓ Formato copiado de <b>${esc(borrador.formato.archivo || 'Excel')}</b> · ${borrador.formato.imagenes.length} imágenes</span><button type="button" class="pl-btn" id="pl-c-quitar-formato">Quitar</button></div>` : ''}</div>
+      : '<span>Este rally usa el <b>formato por defecto</b>. El nombre y la fecha se ponen solos.</span>'}</div>
+
+    <div class="grupo"><b>Logo del evento (izquierda)</b>
+      <p style="margin:6px 0;">Es la <b>imagen principal del rally</b> (la que se sube al crear o editar el rally).</p>
+      <div class="pl-img-prev">${c.logoEvento ? miniatura(c.logoEvento) : '<em>Este rally no tiene imagen principal todavía.</em>'}</div>
     </div>
-    ${[0, 1, 2, 3].map(i => `<label>Título ${i + 1}</label><input type="text" data-titulo="${i}" value="${esc(borrador.titulos[i] || '')}">`).join('')}
+    <div class="grupo"><b>Logos fijos (derecha, siempre)</b>
+      <div class="pl-img-prev">${Object.values(LOGOS_FIJOS).map(u => miniatura(u)).join('')}</div>
+    </div>
+    <div class="grupo"><b>Logos extra (auspiciantes, clubes)</b>
+      <p style="margin:6px 0;">Pegá el enlace de <b>Google Drive</b> de cada logo (compartido como "Cualquier persona con el enlace"). Se acomodan solos al lado del logo del evento según cuántos sean.</p>
+      <div id="pl-c-extras"></div>
+      <div class="fila" style="margin-top:8px;"><input type="text" id="pl-c-extra-url" placeholder="https://drive.google.com/file/d/..."><button type="button" class="pl-btn" id="pl-c-extra-add" style="flex:0 0 auto;">+ Agregar</button></div>
+      <label>o subí la imagen</label><input type="file" accept="image/*" id="pl-c-extra-f">
+    </div>
+
+    ${[0, 1, 2, 3].map(i => `<label>Título ${i + 1}${i === 3 ? ' (nombre del rally)' : ''}</label><input type="text" data-titulo="${i}" value="${esc(borrador.titulos[i] || '')}">`).join('')}
     <div class="fila"><div><label>Fecha (texto)</label><input type="text" id="pl-c-fecha" value="${esc(borrador.fecha || '')}"></div>
     <div><label>Hora de publicación</label><input type="text" id="pl-c-hora" placeholder="22:00" value="${esc(borrador.hora_publicacion || '')}"></div></div>
-    <div class="grupo"><b>Logo izquierdo</b><div class="pl-img-prev" id="pl-c-izq">${borrador.logo_izq ? prev([borrador.logo_izq], 'izq') : ''}</div><input type="file" accept="image/*" id="pl-c-izq-f"></div>
-    <div class="grupo"><b>Logos derecha (federación, auspiciantes)</b><div class="pl-img-prev" id="pl-c-der">${prev(borrador.logos_der, 'der')}</div><input type="file" accept="image/*" id="pl-c-der-f"></div>
     ${[0, 1].map(i => `<div class="grupo"><b>Firma ${i + 1}</b>
       <div class="fila"><div><label>Nombre</label><input type="text" data-firma="${i}" data-k="nombre" value="${esc(borrador.firmas[i].nombre || '')}" placeholder="Sr. ..."></div>
       <div><label>Cargo</label><input type="text" data-firma="${i}" data-k="cargo" value="${esc(borrador.firmas[i].cargo || '')}"></div></div>
-      <label>Imagen de la firma (opcional)</label><div class="pl-img-prev" id="pl-c-f${i}">${borrador.firmas[i].img ? prev([borrador.firmas[i].img], 'f' + i) : ''}</div><input type="file" accept="image/*" data-firma-img="${i}"></div>`).join('')}
-    <p style="margin-top:12px;">Las imágenes se guardan en el servidor con un enlace imposible de adivinar, pero quien tenga el enlace puede verlas. Si preferís, dejá la firma sin imagen y firmá a mano al imprimir.</p>
+      <label>Imagen de la firma (opcional)</label><div class="pl-img-prev" id="pl-c-f${i}"></div><input type="file" accept="image/*" data-firma-img="${i}"></div>`).join('')}
+    <p style="margin-top:12px;">Las imágenes subidas se guardan con un enlace imposible de adivinar. Si preferís, dejá la firma sin imagen y firmá a mano al imprimir.</p>
     <div class="acciones">
       <button type="button" class="pl-btn" data-cerrar>Cancelar</button>
       ${tieneFormatoPropio() ? '<button type="button" class="pl-btn" id="pl-c-volver">Volver al formato por defecto</button>' : ''}
@@ -803,50 +718,30 @@ function abrirConfig() {
       <button type="button" class="pl-btn primario" id="pl-c-guardar">Guardar solo para este rally</button>
     </div>`);
   const refrescar = () => {
-    d.querySelector('#pl-c-izq').innerHTML = borrador.logo_izq ? prev([borrador.logo_izq], 'izq') : '';
-    d.querySelector('#pl-c-der').innerHTML = prev(borrador.logos_der, 'der');
-    [0, 1].forEach(i => { d.querySelector('#pl-c-f' + i).innerHTML = borrador.firmas[i].img ? prev([borrador.firmas[i].img], 'f' + i) : ''; });
+    d.querySelector('#pl-c-extras').innerHTML = borrador.logos_extra.length
+      ? `<div class="pl-img-prev">${borrador.logos_extra.map((u, i) => miniatura(u, `data-quitar-extra="${i}"`)).join('')}</div>`
+      : '<em>Sin logos extra.</em>';
+    [0, 1].forEach(i => { d.querySelector('#pl-c-f' + i).innerHTML = borrador.firmas[i].img ? miniatura(borrador.firmas[i].img, `data-quitar-firma="${i}"`) : ''; });
   };
+  refrescar();
   const subir = async (input, alListo) => {
     const f = input.files[0]; if (!f) return;
     input.disabled = true;
     try { alListo(await subirImagen(f)); refrescar(); } catch (e) { toast('No se pudo subir la imagen: ' + e.message, true); }
     input.disabled = false; input.value = '';
   };
-  d.querySelector('#pl-c-xlsx').onchange = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    if (!window.ExcelJS) return toast('Todavía está cargando el lector de Excel, probá en un segundo.', true);
-    e.target.disabled = true;
-    d.querySelector('#pl-c-formato').innerHTML = '<p>Leyendo el Excel y subiendo los logos…</p>';
-    try {
-      const leido = await leerFormatoExcel(f);
-      Object.assign(borrador, leido);
-      leido.titulos.forEach((t, i) => { const inp = d.querySelector(`[data-titulo="${i}"]`); if (inp) inp.value = t; });
-      d.querySelector('#pl-c-fecha').value = leido.fecha;
-      d.querySelector('#pl-c-hora').value = leido.hora_publicacion;
-      leido.firmas.forEach((fi, i) => { borrador.firmas[i] = { ...fi }; d.querySelectorAll(`[data-firma="${i}"]`).forEach(inp => { inp.value = fi[inp.dataset.k] || ''; }); });
-      d.querySelector('#pl-c-formato').innerHTML = `<div class="pl-formato-ok"><span>✓ Copiado: ${leido.formato.imagenes.length} imágenes, ${leido.titulos.filter(Boolean).length} títulos y ${leido.firmas.length} firmas. Tocá <b>Guardar</b>.</span></div>`;
-      refrescar();
-    } catch (err) {
-      d.querySelector('#pl-c-formato').innerHTML = `<p style="color:#ff6b6b;">No se pudo leer: ${esc(err.message || err)}</p>`;
-    }
-    e.target.disabled = false;
+  d.querySelector('#pl-c-extra-add').onclick = () => {
+    const inp = d.querySelector('#pl-c-extra-url'), v = inp.value.trim();
+    if (!v) return;
+    if (!/^https?:\/\//.test(v)) return toast('Pegá el enlace completo (empieza con https://).', true);
+    borrador.logos_extra.push(v); inp.value = ''; refrescar();
   };
-  d.addEventListener('click', e => {
-    if (!e.target.closest('#pl-c-quitar-formato')) return;
-    borrador.formato = null;
-    d.querySelector('#pl-c-formato').innerHTML = '<p>Formato copiado quitado. Tocá Guardar para confirmar.</p>';
-  });
-  d.querySelector('#pl-c-izq-f').onchange = e => subir(e.target, u => { borrador.logo_izq = u; });
-  d.querySelector('#pl-c-der-f').onchange = e => subir(e.target, u => { borrador.logos_der.push(u); });
+  d.querySelector('#pl-c-extra-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); d.querySelector('#pl-c-extra-add').click(); } });
+  d.querySelector('#pl-c-extra-f').onchange = e => subir(e.target, u => { borrador.logos_extra.push(u); });
   d.querySelectorAll('[data-firma-img]').forEach(inp => inp.onchange = e => subir(e.target, u => { borrador.firmas[+inp.dataset.firmaImg].img = u; }));
   d.addEventListener('click', e => {
-    const b = e.target.closest('[data-borrar-img]'); if (!b) return;
-    const g = b.dataset.borrarImg;
-    if (g === 'izq') borrador.logo_izq = '';
-    else if (g === 'der') borrador.logos_der.splice(+b.dataset.i, 1);
-    else borrador.firmas[+g.slice(1)].img = '';
-    refrescar();
+    const x = e.target.closest('[data-quitar-extra]'); if (x) { borrador.logos_extra.splice(+x.dataset.quitarExtra, 1); refrescar(); }
+    const fq = e.target.closest('[data-quitar-firma]'); if (fq) { borrador.firmas[+fq.dataset.quitarFirma].img = ''; refrescar(); }
   });
   const juntar = () => {
     d.querySelectorAll('[data-titulo]').forEach(i => { borrador.titulos[+i.dataset.titulo] = i.value.trim(); });
@@ -864,12 +759,11 @@ function abrirConfig() {
     toast('Guardado solo para este rally.');
   };
   d.querySelector('#pl-c-defecto').onclick = async () => {
-    if (!confirm('¿Usar este encabezado, logos y firmas como formato por defecto de TODOS los rallies que no tengan formato propio?')) return;
+    if (!confirm('¿Usar estos títulos, logos extra y firmas como formato por defecto de TODOS los rallies que no tengan formato propio?')) return;
     const config = juntar();
     const { error } = await db().from('planilla_formato').upsert({ clave: 'defecto', config, updated_at: new Date().toISOString() });
     if (error) return toast('No se pudo guardar: ' + error.message + (/planilla_formato/.test(error.message) ? ' (¿corriste el script 66?)' : ''), true);
     estado.defecto = { ...config, _origen: 'guardado' };
-    // Este rally pasa a usar el formato por defecto (si no tenía uno propio distinto).
     if (tieneFormatoPropio()) await db().from('planillas').upsert({ rally_id: estado.rally.id, config: {}, updated_at: new Date().toISOString() });
     estado.config = {};
     d.remove(); dibujar();
@@ -889,6 +783,7 @@ function abrirConfig() {
 // ------------------------------------------------------------------
 const letra = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
 const DIA = 86400000;
+const EMU = 9525;
 
 async function imagenParaExcel(wb, url) {
   try {
@@ -1014,17 +909,11 @@ async function descargarExcel() {
       if (ci < clases.length - 1) { ws.getRow(r).height = 15; r++; }
     });
 
-    // Firmas e imágenes: si se copió el formato del Excel del evento, cada
-    // cosa va en su misma celda; si no, en un lugar estándar.
-    const F0 = c.formato;
-    const ultimaFila = r - 1;
-    const filaFirma = F0 ? ultimaFila + (F0.separacionFirmas || 5) : r + 4;
-    const colDe = col0 => (F0 && col0 >= F0.N - 5 ? N - (F0.N - col0) : col0); // 0-based
-    const lugares = F0 && F0.firmasPos && F0.firmasPos.length
-      ? F0.firmasPos.map(p => ({ c1: colDe(p.col) + 1, c2: colDe(p.colFin) + 1 }))
-      : [{ c1: 5, c2: 5 }, { c1: Math.min(N - 6, 12), c2: Math.min(N - 6, 12) + 6 }];
+    // Firmas: como en la planilla oficial (columna E y L→R), 5 filas abajo del último auto.
+    const filaFirma = r + 4;
+    const lugares = [{ c1: 5, c2: 5 }, { c1: Math.min(N - 6, 12), c2: Math.min(N - 6, 12) + 6 }];
     c.firmas.slice(0, 2).forEach((fi, k) => {
-      const lug = lugares[k] || lugares[lugares.length - 1];
+      const lug = lugares[k];
       if (lug.c2 > lug.c1) { ws.mergeCells(filaFirma, lug.c1, filaFirma, lug.c2); ws.mergeCells(filaFirma + 1, lug.c1, filaFirma + 1, lug.c2); }
       const n = ws.getCell(filaFirma, lug.c1), cg = ws.getCell(filaFirma + 1, lug.c1);
       n.value = fi.nombre || null; n.font = { name: 'Calibri', size: 12 }; n.alignment = { horizontal: 'center' };
@@ -1032,27 +921,41 @@ async function descargarExcel() {
       cg.value = fi.cargo || null; cg.font = { name: 'Calibri', size: 11, bold: true }; cg.alignment = { horizontal: 'center', vertical: 'top' };
     });
 
-    if (F0) {
-      for (const img of F0.imagenes) {
-        const im = await imagenParaExcel(wb, img.url);
-        if (!im) continue;
-        const ancla = p => ({
-          nativeCol: img.zona === 'cab' && img.fin ? N + p.c : p.c, nativeColOff: p.co,
-          nativeRow: img.zona === 'pie' ? filaFirma - 1 + p.r : p.r, nativeRowOff: p.ro,
-        });
-        ws.addImage(im.id, { tl: ancla(img.tl), br: ancla(img.br), editAs: 'twoCell' });
-      }
-    } else {
-      const ponerImagen = async (url, col, fila, altoPx) => {
-        const im = await imagenParaExcel(wb, url);
-        if (!im) return;
-        ws.addImage(im.id, { tl: { col, row: fila }, ext: { width: Math.round(im.w * (altoPx / im.h)), height: altoPx }, editAs: 'oneCell' });
-      };
-      if (c.logoIzq) await ponerImagen(c.logoIzq, 0.2, 0.1, 130);
-      let colDer = N - 1.2;
-      for (const u of [...c.logosDer].reverse()) { await ponerImagen(u, Math.max(6, colDer), 0.2, 80); colDer -= 2.2; }
-      for (const [k, fi] of c.firmas.slice(0, 2).entries()) if (fi.img) await ponerImagen(fi.img, (lugares[k].c1 - 1) + 0.3, filaFirma - 4, 90);
+    // Logos: mismas cajas que en pantalla, convertidas a celda + desplazamiento.
+    const anchosPx = cols.map(x => Math.round(x.w * 7 + 5));
+    const altosPx = [22.8, 22.8, 22.8, 22.8, 28.8, 18].map(h => Math.round(h * 96 / 72));
+    const celdaX = px => { let col = 0; while (col < anchosPx.length - 1 && px >= anchosPx[col]) { px -= anchosPx[col]; col++; } return { col, off: px }; };
+    const celdaY = px => { let row = 0; while (row < altosPx.length - 1 && px >= altosPx[row]) { px -= altosPx[row]; row++; } return { row, off: px }; };
+    const totalAncho = anchosPx.reduce((a, b) => a + b, 0);
+    const xExtras = anchosPx.slice(0, 4).reduce((a, b) => a + b, 0) + 4;   // columna E
+    const xFijos = totalAncho - anchosPx.slice(-3).reduce((a, b) => a + b, 0) + 2; // últimas 3 columnas
+    const dz = disenoCabecera(c);
+    const fallaron = [];
+    const ponerEnCaja = async (caja, x0, y0) => {
+      const im = await imagenParaExcel(wb, caja.url);
+      if (!im) { fallaron.push(caja.url); return; }
+      const margen = 3, escala = Math.min((caja.w - 2 * margen) / im.w, (caja.h - 2 * margen) / im.h);
+      const w = Math.max(4, Math.round(im.w * escala)), h = Math.max(4, Math.round(im.h * escala));
+      const x1 = x0 + caja.x + (caja.w - w) / 2, y1 = y0 + caja.y + (caja.h - h) / 2;
+      const a = celdaX(x1), b = celdaY(y1), c2 = celdaX(x1 + w), d2 = celdaY(y1 + h);
+      // Celda de inicio y de fin, igual que en la planilla oficial.
+      ws.addImage(im.id, {
+        tl: { nativeCol: a.col, nativeColOff: Math.round(a.off * EMU), nativeRow: b.row, nativeRowOff: Math.round(b.off * EMU) },
+        br: { nativeCol: c2.col, nativeColOff: Math.round(c2.off * EMU), nativeRow: d2.row, nativeRowOff: Math.round(d2.off * EMU) },
+        editAs: 'oneCell',
+      });
+    };
+    for (const caja of dz.ev) await ponerEnCaja(caja, 0, 2);
+    for (const caja of dz.extras) await ponerEnCaja(caja, xExtras, 20);
+    for (const caja of dz.fijos) await ponerEnCaja(caja, xFijos, 4);
+    for (const [k, fi] of c.firmas.slice(0, 2).entries()) {
+      if (!fi.img) continue;
+      const im = await imagenParaExcel(wb, urlImagen(fi.img));
+      if (!im) { fallaron.push(fi.img); continue; }
+      const alto = 90, ancho = Math.round(im.w * (alto / im.h));
+      ws.addImage(im.id, { tl: { col: lugares[k].c1 - 1 + 0.3, row: filaFirma - 4 }, ext: { width: ancho, height: alto }, editAs: 'oneCell' });
     }
+    if (fallaron.length) setTimeout(() => toast(`${fallaron.length} logo(s) no se pudieron poner en el Excel: revisá que el enlace de Drive sea público, o subí la imagen.`, true), 1500);
 
     ws.pageSetup.printArea = `A1:${letra(N)}${filaFirma + 2}`;
     const buf = await wb.xlsx.writeBuffer();
