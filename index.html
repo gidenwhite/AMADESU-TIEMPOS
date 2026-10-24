@@ -3805,8 +3805,7 @@
             gridContainer.parentNode.insertBefore(aviso, gridContainer);
           }
           const cuando = new Date(copia.ts).toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-          aviso.innerHTML = '📴 <b>Sin internet.</b> Mostrando lo último guardado en este equipo (' + cuando + '). Los tiempos en vivo se ven cuando vuelva la conexión.' +
-            (localStorage.getItem('pl_usuario') ? ' <a href="sin_internet.html" style="color:#ffb547;font-weight:700;">Abrir planillas guardadas</a>' : '');
+          aviso.innerHTML = '📴 <b>Sin internet.</b> Mostrando lo último guardado en este equipo (' + cuando + '). Los tiempos en vivo se ven cuando vuelva la conexión.';
           window.addEventListener('online', () => fetchRallies(), { once: true });
         }
       } else {
@@ -3816,7 +3815,7 @@
       if (error) {
         console.error("Error fetching rallies:", error);
         window.addEventListener('online', () => fetchRallies(), { once: true });
-        gridContainer.innerHTML = `<div class="no-results"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg><span>${navigator.onLine ? 'No se pudo conectar con el servidor. Intenta recargar la página.' : '📴 Sin internet. Las carreras se muestran cuando vuelva la conexión.'}${localStorage.getItem('pl_usuario') ? ' <a href="sin_internet.html" style="color:#ffb547;font-weight:700;">Abrir planillas guardadas</a>' : ''}</span></div>`;
+        gridContainer.innerHTML = `<div class="no-results"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg><span>${navigator.onLine ? 'No se pudo conectar con el servidor. Intenta recargar la página.' : '📴 Sin internet. Las carreras se muestran cuando vuelva la conexión.'}</span></div>`;
         return;
       }
       allRallies = data.map(r => ({ ...r, estado: estadoSegunFechas(r) }));

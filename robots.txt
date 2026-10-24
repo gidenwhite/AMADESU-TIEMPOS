@@ -4,6 +4,10 @@ Allow: /$
 Disallow: /admin_login.html
 Disallow: /admin_dashboard.html
 Disallow: /operador_dashboard.html
+Disallow: /admin_
+Disallow: /operador_
+Disallow: /planilla
+Disallow: /sin_internet
 Disallow: /files/
 Disallow: /*.sql$
 Disallow: /*.js$

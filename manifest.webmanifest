@@ -50,17 +50,6 @@
           "sizes": "192x192"
         }
       ]
-    },
-    {
-      "name": "Planilla de Tiempos",
-      "short_name": "Planilla",
-      "url": "./planilla.html",
-      "icons": [
-        {
-          "src": "icons/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
     }
   ]
 }

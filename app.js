@@ -113,18 +113,6 @@ function pintarBotones() {
     b.onclick = instalar;
     c.appendChild(b);
   }
-  // En los equipos donde ya entró un operador o admin: acceso directo a la
-  // Planilla, que funciona aunque no haya internet (el panel no).
-  let staff = null;
-  try { staff = JSON.parse(almacen.get('pl_usuario') || 'null'); } catch (e) { }
-  if (staff) {
-    const a = document.createElement('a');
-    a.className = 'app-btn'; a.href = 'planilla.html' + (staff.rally_id ? '?rally=' + encodeURIComponent(staff.rally_id) : '');
-    a.title = 'Planilla de Tiempos (funciona sin internet)';
-    a.style.textDecoration = 'none';
-    a.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg><span class="app-btn-txt">Planilla</span>';
-    c.appendChild(a);
-  }
   if (soportaAvisos() || (esIOS && !esInstalada())) {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'app-btn app-btn-avisos'; b.id = 'app-btn-avisos';

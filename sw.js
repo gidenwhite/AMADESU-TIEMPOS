@@ -4,19 +4,42 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v8';
-const BASICOS = ['./', './index.html', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
+const VERSION = 'amadesu-v9';
+const BASICOS = ['./', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
   './app.js', './app.css', './offline.js',
   // Planilla de Tiempos: se abre y se carga sin internet (los datos van en cola)
   './planilla.html', './planilla.js', './planilla.css', './supabase_config.js',
   './planilla_formato/defecto.json', './planilla_formato/fia.png', './planilla_formato/febad.jpg', './planilla_formato/amadesu.jpg',
   'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'];
 // Sin estas, el equipo todavía no puede abrir la planilla sin internet.
-const IMPRESCINDIBLES = ['./index.html', './sin_internet.html', './planilla.html', './planilla.js', './supabase_config.js'];
+const IMPRESCINDIBLES = ['./', './sin_internet.html', './planilla.html', './planilla.js', './supabase_config.js'];
+
+// El hosting (Cloudflare) cambia "planilla.html" por "/planilla" e "index.html"
+// por "/" con una redirección. Las páginas se guardan siempre con un solo
+// nombre (sin ".html" y sin "?..."), así se encuentran con cualquiera de las dos formas.
+function clave(u) {
+  const url = new URL(u, self.registration.scope);
+  if (url.origin !== self.location.origin) return url.href;
+  const ultimo = url.pathname.split('/').pop();
+  if (ultimo && ultimo.includes('.') && !ultimo.endsWith('.html')) return url.href;
+  return url.origin + url.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
+}
+// Una respuesta que vino de una redirección no se puede mostrar como página:
+// se guarda una copia limpia.
+async function limpia(resp) {
+  if (!resp.redirected) return resp;
+  return new Response(await resp.blob(), { status: resp.status, statusText: resp.statusText, headers: resp.headers });
+}
+async function guardar(cache, u, resp) {
+  if (resp.ok) await cache.put(clave(u), await limpia(resp));
+}
+async function buscar(cache, u) {
+  return (await cache.match(clave(u), { ignoreSearch: true })) || (await cache.match(u));
+}
 
 self.addEventListener('install', (event) => {
   // Uno por uno: si falta un archivo en el servidor, los demás igual se guardan.
-  event.waitUntil(caches.open(VERSION).then(c => Promise.allSettled(BASICOS.map(u => c.add(u)))));
+  event.waitUntil(caches.open(VERSION).then(c => Promise.allSettled(BASICOS.map(async u => guardar(c, u, await fetch(u, { cache: 'no-cache' }))))));
   self.skipWaiting();
 });
 
@@ -32,11 +55,10 @@ self.addEventListener('message', (event) => {
       const url = new URL(u);
       if (/\.supabase\.co$/.test(url.hostname) || /(admin_|operador_)/.test(url.pathname)) return;
       if (url.origin !== self.location.origin && await cache.match(u)) return;
-      const resp = await fetch(u, { cache: 'no-cache' });
-      if (resp.ok) await cache.put(u, resp);
+      await guardar(cache, u, await fetch(u, { cache: 'no-cache' }));
     }));
     let listo = true;
-    for (const u of IMPRESCINDIBLES) if (!(await cache.match(u))) listo = false;
+    for (const u of IMPRESCINDIBLES) if (!(await buscar(cache, u))) listo = false;
     const claves = await cache.keys();
     if (!claves.some(r => r.url.includes('@supabase/supabase-js'))) listo = false;
     if (puerto) puerto.postMessage({ listo, version: VERSION });
@@ -50,6 +72,11 @@ self.addEventListener('activate', (event) => {
     await self.clients.claim();
   })());
 });
+
+async function pantallaSinInternet() {
+  const cache = await caches.open(VERSION);
+  return (await buscar(cache, './sin_internet.html')) || (await buscar(cache, './')) || Response.error();
+}
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -69,8 +96,7 @@ self.addEventListener('fetch', (event) => {
   // propia con las planillas guardadas en este equipo.
   if (mismoSitio && /(admin_|operador_)/.test(url.pathname)) {
     if (req.mode !== 'navigate') return;
-    event.respondWith(fetch(req).catch(async () =>
-      (await caches.match('./sin_internet.html')) || Response.error()));
+    event.respondWith(fetch(req).catch(pantallaSinInternet));
     return;
   }
 
@@ -90,12 +116,12 @@ self.addEventListener('fetch', (event) => {
     const cache = await caches.open(VERSION);
     try {
       const resp = await fetch(req);
-      if (resp.ok) cache.put(req, resp.clone());
+      if (resp.ok) guardar(cache, req.url, resp.clone()).catch(() => { });
       return resp;
     } catch (e) {
-      const guardado = await cache.match(req, { ignoreSearch: req.mode === 'navigate' });
+      const guardado = await buscar(cache, req.url);
       if (guardado) return guardado;
-      if (req.mode === 'navigate') return (await cache.match('./sin_internet.html')) || (await cache.match('./index.html')) || Response.error();
+      if (req.mode === 'navigate') return pantallaSinInternet();
       throw e;
     }
   })());
