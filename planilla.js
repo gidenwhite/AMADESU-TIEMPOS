@@ -123,7 +123,9 @@ function quitarPendiente(k, ts) {
 const pendientesDelRally = () => estado.rally ? Object.values(leerPend()).filter(x => x.rally === estado.rally.id) : [];
 const esPendiente = k => !!leerPend()[clavePend(k)];
 // Error de red (sin internet / servidor inalcanzable), distinto de un rechazo real del servidor.
-const esErrorDeRed = e => !navigator.onLine || e instanceof TypeError || /fetch|network|Load failed|conex/i.test(String(e && (e.message || e)));
+// Hay red de verdad: el navegador puede decir "conectado" con wifi sin internet.
+const enLinea = () => navigator.onLine && !estado.sinConexion;
+const esErrorDeRed = e => !enLinea() || e instanceof TypeError || /fetch|network|Load failed|conex/i.test(String(e && (e.message || e)));
 
 function guardarCopiaLocal() {
   if (!estado.rally) return;
@@ -142,7 +144,7 @@ function leerCopiaLocal(rallyId) {
 // acá) también se mantienen al día mientras hay internet, así cualquiera de
 // ellas abre con lo último aunque después se corte la conexión.
 async function refrescarOtrasCopias() {
-  if (!navigator.onLine) return;
+  if (!enLinea()) return;
   const HACE_30_DIAS = Date.now() - 30 * 86400000;
   const ids = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -184,7 +186,7 @@ async function refrescarOtrasCopias() {
 
 let sincronizando = false;
 async function sincronizar(avisar = true) {
-  if (sincronizando || !estado.rally || !navigator.onLine) { estadoBarra(); return; }
+  if (sincronizando || !estado.rally || !enLinea()) { estadoBarra(); return; }
   const lista = pendientesDelRally();
   if (!lista.length) { estadoBarra(); return; }
   sincronizando = true; estadoBarra();
@@ -193,7 +195,7 @@ async function sincronizar(avisar = true) {
     if (!estado.tiempos.has(x.k)) estado.tiempos.set(x.k, { ...x.t });
     const [ins, rec] = x.k.split('|');
     if (await guardar(ins, rec) === true) subidos++;
-    if (!navigator.onLine) break;
+    if (!enLinea()) break;
   }
   sincronizando = false;
   if (subidos && avisar) toast(`✓ Sincronizado: ${subidos} cambio${subidos > 1 ? 's' : ''} subido${subidos > 1 ? 's' : ''}.`);
@@ -241,15 +243,39 @@ async function todo(consulta) {
   }
 }
 
+// El navegador puede decir "hay red" con el wifi conectado pero sin internet:
+// se prueba de verdad contra el servidor (cualquier respuesta = hay internet).
+async function hayInternet() {
+  if (!navigator.onLine) return false;
+  try {
+    await fetch('https://wnkqjsjdwgjnpzognvhb.supabase.co/auth/v1/health', { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(5000) });
+    return true;
+  } catch (e) { return false; }
+}
+
+// Rallies con planilla guardada en este equipo (para la lista sin internet).
+function ralliesGuardados() {
+  const lista = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith('pl_copia_')) continue;
+    try { const c = JSON.parse(localStorage.getItem(k)); if (c && c.rally) lista.push(c.rally); } catch (e) { }
+  }
+  return lista;
+}
+
 async function iniciar() {
+  // Sin internet real no se espera al servidor: se abre con lo guardado en el equipo.
+  if (!(await hayInternet())) estado.sinConexion = true;
   let session = null;
-  try { session = (await supabase.auth.getSession()).data.session; } catch (e) { }
+  // Sin internet, renovar la sesión puede quedarse reintentando: se corta a los 6 s.
+  try { session = (await Promise.race([supabase.auth.getSession(), new Promise(r => setTimeout(() => r({ data: {} }), 6000))])).data.session; } catch (e) { }
   // Sin internet y con la sesión vencida igual se abre (con lo guardado en el
   // equipo); la sesión se renueva sola cuando vuelve la conexión.
-  if (!session && !(!navigator.onLine && localStorage.getItem('pl_usuario'))) { location.href = 'admin_login.html'; return; }
+  if (!session && !(localStorage.getItem('pl_usuario') && estado.sinConexion)) { location.href = 'admin_login.html'; return; }
   let usuario = null;
   try {
-    if (!session) throw new Error('sin sesión');
+    if (!session || estado.sinConexion) throw new Error('sin sesión');
     const r = await db().from('usuarios').select('rol_id, rally_id').eq('id', session.user.id).maybeSingle();
     if (r.error) throw r.error;
     usuario = r.data;
@@ -268,7 +294,7 @@ async function iniciar() {
   if (!estado.esAdmin) rallyId = usuario?.rally_id || localStorage.getItem('operator_rally_id') || rallyId;
 
   if (estado.esAdmin) {
-    const { data: rallies } = await db().from('rallies').select('id, nombre, fecha_inicio, tipo_evento').is('deleted_at', null).order('fecha_inicio', { ascending: false }).then(r => r, () => ({ data: [] }));
+    const { data: rallies } = estado.sinConexion ? { data: ralliesGuardados() } : await db().from('rallies').select('id, nombre, fecha_inicio, tipo_evento').is('deleted_at', null).order('fecha_inicio', { ascending: false }).then(r => r, () => ({ data: [] }));
     const sel = $('pl-rally');
     sel.innerHTML = '<option value="">Elegí el rally…</option>' + (rallies || []).map(r => `<option value="${r.id}">${esc(r.nombre)}${r.tipo_evento === 'circuito' ? ' (circuito)' : ''}</option>`).join('');
     sel.hidden = false;
@@ -282,6 +308,7 @@ async function iniciar() {
 async function cargarRally(rallyId) {
   $('pl-marco').innerHTML = '<div class="pl-cargando">Cargando planilla…</div>';
   try {
+    if (estado.sinConexion) throw new TypeError('sin conexión');
     const { data: rally, error } = await db().from('rallies').select('id, nombre, fecha_inicio, fecha_fin, ciudad, tipo_evento, imagen_url').eq('id', rallyId).maybeSingle();
     if (error || !rally) throw error || new Error('No se encontró el rally.');
     estado.rally = rally;
@@ -315,7 +342,7 @@ async function cargarRally(rallyId) {
       if (document.hidden) return;
       if (pendientesDelRally().length) sincronizar();
       if (!navigator.onLine) return;
-      traerTiemposYPenales(false).then(() => { guardarCopiaLocal(); if (!estado.editando) dibujar(); }).catch(() => { estado.sinConexion = true; estadoBarra(); });
+      traerTiemposYPenales(false).then(() => { estado.sinConexion = false; guardarCopiaLocal(); if (!estado.editando) dibujar(); }).catch(() => { estado.sinConexion = true; estadoBarra(); });
     }, 20000);
   } catch (e) {
     const copia = leerCopiaLocal(rallyId);
@@ -335,7 +362,10 @@ async function cargarRally(rallyId) {
     dibujar();
     clearInterval(estado.timerSync);
     // Cuando vuelve internet, se recarga todo del servidor y se suben los cambios.
-    estado.timerSync = setInterval(() => { if (navigator.onLine) { clearInterval(estado.timerSync); estado.copiaDe = null; cargarRally(rallyId); } }, 8000);
+    estado.timerSync = setInterval(async () => {
+      if (!(await hayInternet()) || !estado.sinConexion) return;
+      clearInterval(estado.timerSync); estado.sinConexion = false; estado.copiaDe = null; cargarRally(rallyId);
+    }, 8000);
   }
 }
 
@@ -725,7 +755,7 @@ async function guardarAhora(insId, recId) {
   const t = estado.tiempos.get(k);
   if (!t) return;
   const tsPend = leerPend()[clavePend(k)]?.ts ?? Date.now();
-  if (!navigator.onLine) { estado.guardando.set(k, 'espera'); marcar(k, 'espera'); estadoBarra(); return false; }
+  if (!enLinea()) { estado.guardando.set(k, 'espera'); marcar(k, 'espera'); estadoBarra(); return false; }
   const pe = estado.pes.find(p => p.id === recId);
   const especial = ESPECIALES[t.estado] ? t.estado : null;
   const c = celdaPE(insId, pe);
@@ -804,7 +834,7 @@ function dialogo(html) {
 }
 
 function abrirPenales(insId) {
-  if (!navigator.onLine) return toast('Para cargar penalizaciones hace falta internet.', true);
+  if (!enLinea()) return toast('Para cargar penalizaciones hace falta internet.', true);
   const ins = estado.inscritos.find(i => i.id === insId);
   const pinta = () => {
     const items = estado.pes.flatMap(pe => (estado.penales.get(clave(insId, pe.id)) || []).map(p => ({ ...p, pe })));

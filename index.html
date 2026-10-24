@@ -3042,6 +3042,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="app.css" />
   <script type="module" src="app.js"></script>
+  <script src="offline.js" defer></script>
 </head>
 
 <body>
@@ -3815,7 +3816,7 @@
       if (error) {
         console.error("Error fetching rallies:", error);
         window.addEventListener('online', () => fetchRallies(), { once: true });
-        gridContainer.innerHTML = `<div class="no-results"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg><span>No se pudo conectar con el servidor. Intenta recargar la página.</span></div>`;
+        gridContainer.innerHTML = `<div class="no-results"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg><span>${navigator.onLine ? 'No se pudo conectar con el servidor. Intenta recargar la página.' : '📴 Sin internet. Las carreras se muestran cuando vuelva la conexión.'}${localStorage.getItem('pl_usuario') ? ' <a href="sin_internet.html" style="color:#ffb547;font-weight:700;">Abrir planillas guardadas</a>' : ''}</span></div>`;
         return;
       }
       allRallies = data.map(r => ({ ...r, estado: estadoSegunFechas(r) }));

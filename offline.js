@@ -1,0 +1,57 @@
+// Deja este equipo listo para usar el sistema sin internet.
+// - Activa el service worker (sw.js) en todas las páginas, también en los paneles.
+// - Apenas carga la página, le pide al service worker que guarde todo lo que
+//   esta usó (scripts, librerías, estilos), así sin internet abre a la primera.
+// - Cuando el equipo queda listo, lo avisa una vez: "✓ Listo para usar sin internet".
+(function () {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./sw.js').catch(function () { });
+
+  var LIBRERIAS = /(^|\.)(cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
+
+  function recursosUsados() {
+    var urls = [location.href.split('#')[0]];
+    (performance.getEntriesByType('resource') || []).forEach(function (r) {
+      try {
+        var u = new URL(r.name);
+        var propio = u.origin === location.origin && !/(admin_|operador_)/.test(u.pathname);
+        if (propio || LIBRERIAS.test(u.hostname)) urls.push(u.href);
+      } catch (e) { }
+    });
+    return urls.filter(function (u, i, a) { return a.indexOf(u) === i; });
+  }
+
+  function aviso(texto) {
+    var d = document.createElement('div');
+    d.textContent = texto;
+    d.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:99999;background:#0f2a1f;color:#b8ffe3;border:1px solid rgba(0,245,160,.45);' +
+      'padding:10px 14px;border-radius:12px;font:600 13px system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.5);max-width:calc(100% - 32px);';
+    document.body.appendChild(d);
+    setTimeout(function () { d.remove(); }, 6000);
+  }
+
+  function guardar() {
+    if (!navigator.onLine) return;
+    navigator.serviceWorker.ready.then(function (reg) {
+      var sw = reg.active;
+      if (!sw) return;
+      var canal = new MessageChannel();
+      canal.port1.onmessage = function (e) {
+        var d = e.data || {};
+        if (!d.listo) return;
+        var clave = 'amd_offline_listo_' + d.version;
+        try {
+          if (localStorage.getItem(clave)) return;
+          localStorage.setItem(clave, '1');
+        } catch (er) { return; }
+        aviso('✓ Este equipo ya está listo para usar sin internet');
+      };
+      sw.postMessage({ tipo: 'guardar-recursos', urls: recursosUsados() }, [canal.port2]);
+    }).catch(function () { });
+  }
+
+  // Se espera un poco tras la carga: las librerías importan otras partes después.
+  var programar = function () { setTimeout(guardar, 3000); };
+  if (document.readyState === 'complete') programar(); else window.addEventListener('load', programar);
+  window.addEventListener('online', programar);
+})();
