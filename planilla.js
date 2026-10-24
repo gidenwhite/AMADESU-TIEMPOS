@@ -100,6 +100,66 @@ function verTotal(ms) {
 const verPenal = ms => { if (!ms) return ''; const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${pad(s % 60)}`; };
 
 // ------------------------------------------------------------------
+// Sin internet: cada cambio se guarda PRIMERO en este equipo (localStorage,
+// sobrevive a un apagón o a cerrar el navegador) y se sube cuando hay conexión.
+// ------------------------------------------------------------------
+const CLAVE_PEND = 'pl_pendientes_v1';
+const leerPend = () => { try { return JSON.parse(localStorage.getItem(CLAVE_PEND) || '{}'); } catch (e) { return {}; } };
+function escribirPend(p) {
+  try { localStorage.setItem(CLAVE_PEND, JSON.stringify(p)); }
+  catch (e) { toast('La memoria de este equipo está llena: conectate a internet para subir los cambios.', true); }
+}
+const clavePend = k => `${estado.rally.id}|${k}`;
+function anotarPendiente(k) {
+  const p = leerPend();
+  p[clavePend(k)] = { rally: estado.rally.id, k, t: { ...estado.tiempos.get(k) }, ts: Date.now() };
+  escribirPend(p);
+  return p[clavePend(k)].ts;
+}
+function quitarPendiente(k, ts) {
+  const p = leerPend(), c = clavePend(k);
+  if (p[c] && p[c].ts <= ts) { delete p[c]; escribirPend(p); }
+}
+const pendientesDelRally = () => estado.rally ? Object.values(leerPend()).filter(x => x.rally === estado.rally.id) : [];
+const esPendiente = k => !!leerPend()[clavePend(k)];
+// Error de red (sin internet / servidor inalcanzable), distinto de un rechazo real del servidor.
+const esErrorDeRed = e => !navigator.onLine || e instanceof TypeError || /fetch|network|Load failed|conex/i.test(String(e && (e.message || e)));
+
+function guardarCopiaLocal() {
+  if (!estado.rally) return;
+  try {
+    localStorage.setItem('pl_copia_' + estado.rally.id, JSON.stringify({
+      rally: estado.rally, etapas: estado.etapas, inscritos: estado.inscritos, config: estado.config, defecto: estado.defecto,
+      tiempos: [...estado.tiempos], penales: [...estado.penales], ultimoSync: estado.ultimoSync, ts: Date.now(),
+    }));
+  } catch (e) { }
+}
+function leerCopiaLocal(rallyId) {
+  try { return JSON.parse(localStorage.getItem('pl_copia_' + rallyId) || 'null'); } catch (e) { return null; }
+}
+
+let sincronizando = false;
+async function sincronizar(avisar = true) {
+  if (sincronizando || !estado.rally || !navigator.onLine) { estadoBarra(); return; }
+  const lista = pendientesDelRally();
+  if (!lista.length) { estadoBarra(); return; }
+  sincronizando = true; estadoBarra();
+  let subidos = 0;
+  for (const x of lista) {
+    if (!estado.tiempos.has(x.k)) estado.tiempos.set(x.k, { ...x.t });
+    const [ins, rec] = x.k.split('|');
+    if (await guardar(ins, rec) === true) subidos++;
+    if (!navigator.onLine) break;
+  }
+  sincronizando = false;
+  if (subidos && avisar) toast(`✓ Sincronizado: ${subidos} cambio${subidos > 1 ? 's' : ''} subido${subidos > 1 ? 's' : ''}.`);
+  if (subidos) guardarCopiaLocal();
+  estadoBarra();
+}
+window.addEventListener('online', () => { estado.sinConexion = false; sincronizar(); });
+window.addEventListener('offline', () => { estado.sinConexion = true; estadoBarra(); });
+
+// ------------------------------------------------------------------
 // Avisos en pantalla
 // ------------------------------------------------------------------
 let timerToast;
@@ -111,11 +171,17 @@ function toast(texto, mal = false) {
 function estadoBarra() {
   const pend = [...estado.guardando.values()].filter(v => v === 'guardando').length;
   const err = [...estado.guardando.values()].filter(v => v === 'error').length;
+  const enEquipo = pendientesDelRally().length;
+  const offline = !navigator.onLine || estado.sinConexion;
   $('pl-estado').innerHTML = [
+    offline ? `<span class="sin-red">📴 Sin conexión${enEquipo ? ` · <b>${enEquipo} cambio${enEquipo > 1 ? 's' : ''} guardado${enEquipo > 1 ? 's' : ''} en este equipo</b> — se suben solos cuando vuelva internet` : ' · podés seguir cargando, todo se guarda en este equipo'}</span>` : '',
+    !offline && enEquipo && !pend ? `<span class="sin-red">⏳ ${enEquipo} cambio${enEquipo > 1 ? 's' : ''} por subir… <button type="button" class="pl-btn" id="pl-sync" style="padding:3px 10px;">Subir ahora</button></span>` : '',
     pend ? `<span>⏳ Guardando ${pend}…</span>` : '',
-    err ? `<span class="mal">⚠ ${err} celda(s) sin guardar — tocá la celda roja para reintentar</span>` : '',
-    !pend && !err && estado.ultimoGuardado ? `<span class="ok">✓ Todo guardado · ${estado.ultimoGuardado}</span>` : '',
+    err ? `<span class="mal">⚠ ${err} celda(s) rechazada(s) por el servidor — tocá la celda roja para ver el motivo y reintentar</span>` : '',
+    !offline && !pend && !err && !enEquipo && estado.ultimoGuardado ? `<span class="ok">✓ Sincronizado · ${estado.ultimoGuardado}</span>` : '',
+    estado.copiaDe ? `<span>Mostrando lo guardado en este equipo (${estado.copiaDe})</span>` : '',
   ].join('');
+  $('pl-sync')?.addEventListener('click', () => sincronizar());
 }
 
 // ------------------------------------------------------------------
@@ -132,9 +198,21 @@ async function todo(consulta) {
 }
 
 async function iniciar() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { location.href = 'admin_login.html'; return; }
-  const { data: usuario } = await db().from('usuarios').select('rol_id, rally_id').eq('id', session.user.id).maybeSingle();
+  let session = null;
+  try { session = (await supabase.auth.getSession()).data.session; } catch (e) { }
+  // Sin internet y con la sesión vencida igual se abre (con lo guardado en el
+  // equipo); la sesión se renueva sola cuando vuelve la conexión.
+  if (!session && !(!navigator.onLine && localStorage.getItem('pl_usuario'))) { location.href = 'admin_login.html'; return; }
+  let usuario = null;
+  try {
+    if (!session) throw new Error('sin sesión');
+    const r = await db().from('usuarios').select('rol_id, rally_id').eq('id', session.user.id).maybeSingle();
+    if (r.error) throw r.error;
+    usuario = r.data;
+    try { localStorage.setItem('pl_usuario', JSON.stringify(usuario || {})); } catch (e) { }
+  } catch (e) {
+    try { usuario = JSON.parse(localStorage.getItem('pl_usuario') || 'null'); } catch (e2) { }
+  }
   estado.esAdmin = !usuario || Number(usuario.rol_id) !== 3;
   $('pl-volver').href = estado.esAdmin ? 'admin_dashboard.html' : 'operador_dashboard.html';
   $('pl-config').hidden = !estado.esAdmin;
@@ -143,10 +221,10 @@ async function iniciar() {
   document.querySelectorAll('.pl-orden button').forEach(b => b.classList.toggle('activo', b.dataset.orden === estado.orden));
 
   let rallyId = new URLSearchParams(location.search).get('rally');
-  if (!estado.esAdmin) rallyId = usuario.rally_id || localStorage.getItem('operator_rally_id') || rallyId;
+  if (!estado.esAdmin) rallyId = usuario?.rally_id || localStorage.getItem('operator_rally_id') || rallyId;
 
   if (estado.esAdmin) {
-    const { data: rallies } = await db().from('rallies').select('id, nombre, fecha_inicio, tipo_evento').is('deleted_at', null).order('fecha_inicio', { ascending: false });
+    const { data: rallies } = await db().from('rallies').select('id, nombre, fecha_inicio, tipo_evento').is('deleted_at', null).order('fecha_inicio', { ascending: false }).then(r => r, () => ({ data: [] }));
     const sel = $('pl-rally');
     sel.innerHTML = '<option value="">Elegí el rally…</option>' + (rallies || []).map(r => `<option value="${r.id}">${esc(r.nombre)}${r.tipo_evento === 'circuito' ? ' (circuito)' : ''}</option>`).join('');
     sel.hidden = false;
@@ -181,13 +259,45 @@ async function cargarRally(rallyId) {
     estado.config = cfg.data?.config || {};
     estado.defecto = await cargarDefecto();
     await traerTiemposYPenales(true);
+    estado.sinConexion = false; estado.copiaDe = null;
+    aplicarPendientes();
+    guardarCopiaLocal();
+    llenarFiltroClases();
+    dibujar();
+    sincronizar();
+    clearInterval(estado.timerSync);
+    estado.timerSync = setInterval(() => {
+      if (document.hidden) return;
+      if (pendientesDelRally().length) sincronizar();
+      if (!navigator.onLine) return;
+      traerTiemposYPenales(false).then(() => { guardarCopiaLocal(); if (!estado.editando) dibujar(); }).catch(() => { estado.sinConexion = true; estadoBarra(); });
+    }, 20000);
+  } catch (e) {
+    const copia = leerCopiaLocal(rallyId);
+    if (!copia) {
+      $('pl-marco').innerHTML = `<div class="pl-vacio">${esErrorDeRed(e) ? '📴 Sin conexión y este equipo todavía no tiene guardada esta planilla. Abrila una vez con internet y después va a funcionar sin conexión.' : 'No se pudo cargar la planilla: ' + esc(e.message || e)}</div>`;
+      return;
+    }
+    estado.rally = copia.rally; estado.etapas = copia.etapas; estado.inscritos = copia.inscritos;
+    estado.config = copia.config || {}; estado.defecto = copia.defecto;
+    estado.pes = estado.etapas.flatMap(et => et.recorridos.map(r => ({ ...r, etapaId: et.id, km: parseFloat(r.distancia_km) || 0 })));
+    estado.tiempos = new Map(copia.tiempos); estado.penales = new Map(copia.penales); estado.ultimoSync = copia.ultimoSync;
+    estado.copiaDe = new Date(copia.ts).toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    estado.sinConexion = true;
+    $('pl-sub').textContent = estado.rally.nombre;
+    aplicarPendientes();
     llenarFiltroClases();
     dibujar();
     clearInterval(estado.timerSync);
-    estado.timerSync = setInterval(() => { if (!document.hidden) traerTiemposYPenales(false).then(() => { if (!estado.editando) dibujar(); }); }, 20000);
-  } catch (e) {
-    $('pl-marco').innerHTML = `<div class="pl-vacio">No se pudo cargar la planilla: ${esc(e.message || e)}</div>`;
+    // Cuando vuelve internet, se recarga todo del servidor y se suben los cambios.
+    estado.timerSync = setInterval(() => { if (navigator.onLine) { clearInterval(estado.timerSync); estado.copiaDe = null; cargarRally(rallyId); } }, 8000);
   }
+}
+
+// Cambios cargados en este equipo que todavía no llegaron al servidor: ganan
+// sobre lo que vino del servidor (son más nuevos) hasta que se suban.
+function aplicarPendientes() {
+  for (const x of pendientesDelRally()) estado.tiempos.set(x.k, { ...(estado.tiempos.get(x.k) || {}), ...x.t });
 }
 
 // Formato por defecto: el guardado desde ⚙ (en la base) o, si no hay, el de
@@ -218,7 +328,7 @@ async function traerTiemposYPenales(completo) {
   for (const f of filas) {
     if ((f.vuelta || 1) !== 1) continue;
     const k = clave(f.inscripcion_id, f.recorrido_id);
-    if (estado.editando === k || estado.guardando.get(k) === 'guardando') continue;
+    if (estado.editando === k || estado.guardando.get(k) === 'guardando' || esPendiente(k)) continue;
     const salidaMs = msDesdeISO(f.hora_salida), pasoMs = msDesdeISO(f.hora_llegada), brutoMs = msDesdeIntervalo(f.tiempo_bruto);
     estado.tiempos.set(k, { id: f.id, salidaMs, pasoMs, brutoMs, estado: f.estado, brutoSinHoras: !!brutoMs && pasoMs == null });
     if (!estado.ultimoSync || f.updated_at > estado.ultimoSync) estado.ultimoSync = f.updated_at;
@@ -398,13 +508,13 @@ function dibujar() {
       let tr = `<tr data-ins="${i.id}" data-num="${i.numero}">
         <td class="c-nro">${nro}</td><td class="c-psto">${f.psto ?? ''}</td>
         <td class="fijo c-num">${esc(i.numero)}</td><td class="c-clase">${esc(cl)}</td>
-        <td class="fijo c-pil">${esc(piloto)}${nav ? `<small>${esc(nav)}</small>` : ''}</td>
+        <td class="fijo c-pil" title="${esc(piloto)}${nav ? ' / ' + esc(nav) : ''}"><span class="nom">${esc(piloto)}</span>${nav ? `<small>${esc(nav)}</small>` : ''}</td>
         <td class="c-asoc">${esc(i.asociacion?.nombre || '')}</td>`;
       for (const et of estado.etapas) {
         for (const pe of et.recorridos) {
           const p = f.porPE[pe.id];
           const k = clave(i.id, pe.id);
-          const marca = estado.guardando.get(k) || '';
+          const marca = estado.guardando.get(k) || (esPendiente(k) ? 'espera' : '');
           const pasoTxt = p.especial ? ESPECIALES[p.especial] : verPaso(p.pasoMs);
           tr += `<td class="ed salida ${marca}" tabindex="-1" data-r="${pe.id}" data-c="s">${verSalida(p.salidaMs)}</td>`;
           tr += `<td class="ed paso ${marca} ${p.especial ? 'especial' : ''}" tabindex="-1" data-r="${pe.id}" data-c="p">${pasoTxt}</td>`;
@@ -443,7 +553,7 @@ function dibujar() {
   $('pl-marco').scrollLeft = scroll.x; $('pl-marco').scrollTop = scroll.y;
   if (estado.activa) {
     const td = celdaDe(estado.activa);
-    if (td) td.classList.add('activa');
+    if (td) { td.classList.add('activa'); marcarCruz(td); }
   }
   estadoBarra();
 }
@@ -454,10 +564,21 @@ function dibujar() {
 const idCelda = td => ({ ins: td.closest('tr').dataset.ins, rec: td.dataset.r, campo: td.dataset.c });
 const celdaDe = a => document.querySelector(`tr[data-ins="${a.ins}"] td.ed[data-r="${a.rec}"][data-c="${a.campo}"]`);
 
+function marcarCruz(td) {
+  document.querySelectorAll('.pl-tabla .fila-activa').forEach(x => x.classList.remove('fila-activa'));
+  document.querySelectorAll('.pl-tabla .col-activa').forEach(x => x.classList.remove('col-activa'));
+  if (!td) return;
+  const tr = td.closest('tr'), idx = td.cellIndex;
+  tr.classList.add('fila-activa');
+  document.querySelectorAll('.pl-tabla tbody tr[data-ins]').forEach(f => f.cells[idx]?.classList.add('col-activa'));
+  document.querySelector('.pl-tabla thead tr')?.cells[idx]?.classList.add('col-activa');
+}
+
 function seleccionar(td, enfocar = true) {
   document.querySelectorAll('td.ed.activa').forEach(x => x.classList.remove('activa'));
-  if (!td) { estado.activa = null; return; }
+  if (!td) { estado.activa = null; marcarCruz(null); return; }
   td.classList.add('activa');
+  marcarCruz(td);
   estado.activa = idCelda(td);
   if (enfocar) td.focus({ preventScroll: true });
   td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -536,9 +657,11 @@ async function confirmar(td, texto, especialForzado) {
     return false;
   }
   estado.tiempos.set(k, t);
+  anotarPendiente(k);
   estado.editando = null;
   $('pl-teclas').hidden = true;
   dibujar();
+  guardarCopiaLocal();
   guardar(a.ins, a.rec);
   return true;
 }
@@ -547,7 +670,7 @@ const cadenas = new Map();
 function guardar(insId, recId) {
   const k = clave(insId, recId);
   const anterior = cadenas.get(k) || Promise.resolve();
-  const p = anterior.then(() => guardarAhora(insId, recId)).catch(() => { });
+  const p = anterior.then(() => guardarAhora(insId, recId)).catch(() => false);
   cadenas.set(k, p);
   return p;
 }
@@ -556,12 +679,14 @@ async function guardarAhora(insId, recId) {
   const k = clave(insId, recId);
   const t = estado.tiempos.get(k);
   if (!t) return;
+  const tsPend = leerPend()[clavePend(k)]?.ts ?? Date.now();
+  if (!navigator.onLine) { estado.guardando.set(k, 'espera'); marcar(k, 'espera'); estadoBarra(); return false; }
   const pe = estado.pes.find(p => p.id === recId);
   const especial = ESPECIALES[t.estado] ? t.estado : null;
   const c = celdaPE(insId, pe);
   const bruto = especial ? null : c.brutoMs;
   const pen = penalPE(insId, recId);
-  if (!t.id && t.salidaMs == null && t.pasoMs == null && !especial && !t.brutoSinHoras) { estado.tiempos.delete(k); return; }
+  if (!t.id && t.salidaMs == null && t.pasoMs == null && !especial && !t.brutoSinHoras) { estado.tiempos.delete(k); quitarPendiente(k, tsPend); return true; }
   const datos = {
     hora_salida: t.salidaMs != null ? isoDesdeMs(t.salidaMs) : null,
     hora_llegada: !especial && t.pasoMs != null ? isoDesdeMs(t.pasoMs) : null,
@@ -590,14 +715,25 @@ async function guardarAhora(insId, recId) {
     }
     t.brutoMs = bruto;
     estado.guardando.delete(k);
+    quitarPendiente(k, tsPend);
     estado.ultimoGuardado = new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     marcar(k, 'ok');
+    estadoBarra();
+    return true;
   } catch (e) {
-    estado.guardando.set(k, 'error');
-    marcar(k, 'error', e.message);
-    toast('No se pudo guardar: ' + (e.message || e), true);
+    if (esErrorDeRed(e)) {
+      // Sin internet: el cambio queda guardado en el equipo y se sube después.
+      estado.sinConexion = true;
+      estado.guardando.set(k, 'espera');
+      marcar(k, 'espera');
+    } else {
+      estado.guardando.set(k, 'error');
+      marcar(k, 'error', e.message);
+      toast('No se pudo guardar: ' + (e.message || e), true);
+    }
   }
   estadoBarra();
+  return false;
 }
 
 function marcar(k, tipo, msg) {
@@ -606,7 +742,7 @@ function marcar(k, tipo, msg) {
     td.classList.remove('guardando', 'error', 'ok');
     void td.offsetWidth;
     td.classList.add(tipo);
-    td.title = tipo === 'error' ? 'No se guardó: ' + (msg || '') + ' — tocá para reintentar' : '';
+    td.title = tipo === 'error' ? 'No se guardó: ' + (msg || '') + ' — tocá para reintentar' : tipo === 'espera' ? 'Guardado en este equipo: se sube solo cuando vuelva internet' : '';
   });
 }
 
@@ -623,6 +759,7 @@ function dialogo(html) {
 }
 
 function abrirPenales(insId) {
+  if (!navigator.onLine) return toast('Para cargar penalizaciones hace falta internet.', true);
   const ins = estado.inscritos.find(i => i.id === insId);
   const pinta = () => {
     const items = estado.pes.flatMap(pe => (estado.penales.get(clave(insId, pe.id)) || []).map(p => ({ ...p, pe })));
@@ -808,7 +945,10 @@ async function descargarExcel() {
     wb.creator = 'AMADESU RALLYS';
     const ws = wb.addWorksheet('TIEMPOS', {
       views: [{ state: 'frozen', xSplit: 5, ySplit: 7 }],
-      pageSetup: { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 } },
+      // Hoja OFICIO (8,5 × 13 pulgadas = 216 × 330 mm, "Folio" en Excel), apaisada:
+      // todas las columnas entran a lo ancho (33 cm) y las páginas que hagan falta a lo largo.
+      pageSetup: { orientation: 'landscape', paperSize: 14, fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, margins: { left: 0.25, right: 0.25, top: 0.35, bottom: 0.45, header: 0.15, footer: 0.2 } },
+      headerFooter: { oddFooter: '&L&8AMADESU RALLYS — Planilla de Tiempos&R&8Página &P de &N' },
     });
     const F = (size, extra = {}) => ({ name: 'Cambria', size, ...extra });
     const borde = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -958,6 +1098,7 @@ async function descargarExcel() {
     if (fallaron.length) setTimeout(() => toast(`${fallaron.length} logo(s) no se pudieron poner en el Excel: revisá que el enlace de Drive sea público, o subí la imagen.`, true), 1500);
 
     ws.pageSetup.printArea = `A1:${letra(N)}${filaFirma + 2}`;
+    ws.pageSetup.printTitlesRow = '7:7'; // el encabezado negro se repite en cada hoja
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const a = document.createElement('a');
@@ -1034,4 +1175,5 @@ $('pl-config').onclick = abrirConfig;
 $('pl-ayuda-x')?.addEventListener('click', () => { $('pl-ayuda').remove(); try { localStorage.setItem('pl_sin_ayuda', '1'); } catch (e) { } });
 window.addEventListener('beforeunload', e => { if ([...estado.guardando.values()].includes('guardando')) { e.preventDefault(); e.returnValue = ''; } });
 
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => { });
 iniciar();

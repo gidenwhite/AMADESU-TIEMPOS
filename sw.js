@@ -4,8 +4,11 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v4';
-const BASICOS = ['./', './index.html', './info.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
+const VERSION = 'amadesu-v5';
+const BASICOS = ['./', './index.html', './info.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
+  // Planilla de Tiempos: se abre y se carga sin internet (los datos van en cola)
+  './planilla.html', './planilla.js', './planilla.css', './supabase_config.js',
+  './planilla_formato/defecto.json', './planilla_formato/fia.png', './planilla_formato/febad.jpg', './planilla_formato/amadesu.jpg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(VERSION).then(c => c.addAll(BASICOS)).catch(() => { }));
