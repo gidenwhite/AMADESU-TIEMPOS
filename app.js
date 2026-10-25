@@ -52,7 +52,7 @@ function tipoDispositivo() {
 }
 
 const params = new URLSearchParams(location.search);
-const pagina = /info\.html$/.test(location.pathname) ? 'info' : 'inicio';
+const pagina = /\/info(\.html)?$/.test(location.pathname) ? 'info' : 'inicio'; // Cloudflare la sirve como /info
 const rallyDeLaPagina = params.get('id') || params.get('rally') || null;
 const esUuid = v => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v || '');
 
@@ -73,8 +73,24 @@ async function registrar(evento, extra = {}) {
   } catch (e) { /* las estadísticas nunca deben romper la página */ }
 }
 
+// "En línea": mientras la página está a la vista, avisa cada minuto que sigue
+// abierta y qué se está mirando (se cuenta en el panel > App y Visitas).
+const mirando = { seccion: null, rally: esUuid(rallyDeLaPagina) ? rallyDeLaPagina : null };
+async function latido() {
+  if (esRobot || document.hidden) return;
+  try {
+    await db().rpc('app_latido', { p_visitante: visitante, p_pagina: pagina, p_seccion: mirando.seccion, p_rally_id: mirando.rally, p_instalada: esInstalada() });
+  } catch (e) { /* nunca rompe la página */ }
+}
+setInterval(latido, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) latido(); });
+
 // Las páginas avisan qué ventana se abrió (Tiempos, Pilotos, Estadísticas).
-window.appRegistrarVista = (seccion, rallyId) => registrar('vista', { seccion, rally_id: esUuid(rallyId) ? rallyId : null });
+window.appRegistrarVista = (seccion, rallyId) => {
+  mirando.seccion = seccion; mirando.rally = esUuid(rallyId) ? rallyId : mirando.rally;
+  latido();
+  return registrar('vista', { seccion, rally_id: esUuid(rallyId) ? rallyId : null });
+};
 
 // ------------------------------------------------------------------
 // Interfaz: botones en la barra, aviso inferior de instalación, hoja de diálogo
@@ -396,6 +412,7 @@ async function iniciar() {
   if (esIOS || esAndroid) programarInvitacion();
 
   registrar('visita', { rally_id: esUuid(rallyDeLaPagina) ? rallyDeLaPagina : null });
+  latido();
   if (esInstalada() && !almacen.get('amd_instalacion_registrada')) {
     almacen.set('amd_instalacion_registrada', '1');
     registrar('instalacion');

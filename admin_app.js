@@ -29,7 +29,9 @@ window.initAppVisitasSection = async function () {
   }
   await cargar();
   clearInterval(temporizador);
-  temporizador = setInterval(() => { if (seccionVisible() && !document.hidden) cargar(true); }, 60000);
+  // Se actualiza sola cada 30 s, salvo mientras se escribe un aviso (no se pierde lo escrito).
+  const escribiendo = () => { const f = document.getElementById('av-form'); return !!f && (f.contains(document.activeElement) || [...f.querySelectorAll('input, textarea')].some(i => i.value.trim())); };
+  temporizador = setInterval(() => { if (seccionVisible() && !document.hidden && !escribiendo()) cargar(true); }, 30000);
 };
 
 async function cargar(silencioso = false) {
@@ -43,7 +45,26 @@ async function cargar(silencioso = false) {
     return;
   }
   datos = data;
+  // En línea de verdad y alcance de los avisos (script 69). Si todavía no
+  // se corrió, queda lo de antes ("últimos 5 minutos").
+  try {
+    const { data: vivo, error: e2 } = await db().rpc('app_en_vivo');
+    if (!e2 && vivo) {
+      datos.vivo = vivo;
+      const alcance = new Map((vivo.avisos || []).map(a => [a.id, a]));
+      (datos.avisos || []).forEach(a => { const x = alcance.get(a.id); if (x) Object.assign(a, { recibidos: x.recibidos, abiertos: x.abiertos }); });
+    }
+  } catch (e) { }
   pintar();
+}
+
+// Qué está mirando la gente que está en línea.
+const QUE_MIRA = { tiempos: 'Tiempos', pilotos: 'Pilotos', stats: 'Estadísticas', inicio: 'Portada (lista de carreras)', info: 'Información de la carrera' };
+function enVivo(v) {
+  if (!v) return '';
+  const filas = (v.mirando || []).map(m => ({ nombre: (QUE_MIRA[m.que] || m.que) + (m.rally && m.que !== 'inicio' ? ` — ${m.rally}` : ''), n: m.n }));
+  return `<div class="card-panel av-ancho"><div class="av-titulo-graf"><h3>🟢 En línea ahora: qué están mirando</h3><span class="av-mini">se actualiza solo cada 30 segundos</span></div>
+    ${lista(filas, 'personas', 'Ahora mismo no hay nadie con la página abierta.')}</div>`;
 }
 
 // ------------------------------------------------------------------
@@ -79,7 +100,7 @@ function pintar() {
     </div>
 
     <div class="av-kpis">
-      ${kpi('En línea ahora', d.en_linea, 'últimos 5 minutos', 'vivo')}
+      ${d.vivo ? kpi('En línea ahora', d.vivo.en_linea, `con la página abierta · ${num(d.vivo.en_app)} desde la app`, 'vivo') : kpi('En línea ahora', d.en_linea, 'últimos 5 minutos', 'vivo')}
       ${kpi('Visitantes', d.visitantes, `${num(d.nuevos)} nuevos · ${periodoTxt()}`)}
       ${kpi('Visitas', d.visitas, `páginas abiertas · ${periodoTxt()}`)}
       ${kpi('Hoy', d.visitantes_hoy, `visitantes · ${num(d.visitas_hoy)} visitas`)}
@@ -93,6 +114,7 @@ function pintar() {
     </div>
 
     <div class="av-grilla">
+      ${enVivo(d.vivo)}
       <div class="card-panel"><h3>Horas con más visitas</h3>${graficoHoras(d.por_hora || [])}</div>
       <div class="card-panel"><h3>Qué miran</h3>${lista((d.secciones || []).map(s => ({ nombre: SECCIONES[s.nombre] || s.nombre, n: s.n, sub: `${num(s.personas)} personas` })), 'veces abierto', 'Todavía nadie abrió Tiempos, Pilotos ni Estadísticas.')}</div>
       <div class="card-panel"><h3>Dispositivos</h3>${lista(d.dispositivos, 'visitantes')}</div>
@@ -220,7 +242,7 @@ function seccionAvisos(d) {
         return `<div class="av-item">
           <div class="av-item-ico">${ICONO_TIPO[a.tipo] || '🔔'}</div>
           <div class="av-item-txt"><b>${esc(String(a.titulo || '').replace(/^\p{Extended_Pictographic}️?\s*/u, ''))}</b><span>${esc(a.cuerpo)}</span><small>${fecha}</small></div>
-          <div class="av-item-estado"><span class="av-estado ${tono}">${txt}${a.estado === 'enviado' ? ` a ${num(a.enviados)}` : ''}</span>${reintentar}</div>
+          <div class="av-item-estado"><span class="av-estado ${tono}">${txt}${a.estado === 'enviado' ? ` a ${num(a.enviados)}` : ''}</span>${a.recibidos != null && ['enviado', 'enviando'].includes(a.estado) ? `<small class="av-alcance" title="Recibido: llegó al celular · Abierto: la persona tocó el aviso">📥 Recibido por ${num(a.recibidos)} · 👆 Abierto por ${num(a.abiertos)}${a.enviados ? ` (${Math.round((a.abiertos || 0) / a.enviados * 100)}%)` : ''}</small>` : ''}${reintentar}</div>
         </div>`;
       }).join('')}</div>` : '<p class="av-vacio">Todavía no se mandó ningún aviso.</p>'}
     </div>`;

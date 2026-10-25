@@ -54,7 +54,7 @@
 .in-sug[hidden] { display: none; }
 .in-sug .t { padding: 7px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--borde); }
 .in-sug .op { padding: 9px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 1px; }
-.in-sug .op b { font-size: 14px; }
+.in-sug .op b { font-size: 14px; text-transform: uppercase; }
 .in-sug .op small { font-size: 12px; color: var(--muted); }
 .in-sug .op.activa, .in-sug .op:hover { background: rgba(0, 245, 160, 0.1); }
 

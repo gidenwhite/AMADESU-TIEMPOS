@@ -4,7 +4,7 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v10';
+const VERSION = 'amadesu-v11';
 const BASICOS = ['./', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
   './app.js', './app.css', './offline.js',
   // Planilla de Tiempos: se abre y se carga sin internet (los datos van en cola)
@@ -130,24 +130,42 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ---------- Notificaciones push ----------
+// Cada aviso trae su clave (tag): el celular anota "recibido" al llegar y
+// "abierto" al tocarlo, para que el panel muestre a cuántos les llegó.
+// La clave pública del sitio es la misma de supabase_config.js (no es secreta).
+const SUPA_URL = 'https://wnkqjsjdwgjnpzognvhb.supabase.co';
+const SUPA_CLAVE = 'sb_publishable_BURgei8arWiZwYz3tC-Zbw_g_cnJIm5';
+function anotarAviso(clave, evento) {
+  if (!clave) return Promise.resolve();
+  return fetch(`${SUPA_URL}/rest/v1/rpc/app_aviso_evento`, {
+    method: 'POST',
+    headers: { apikey: SUPA_CLAVE, Authorization: `Bearer ${SUPA_CLAVE}`, 'Content-Type': 'application/json', 'Content-Profile': 'rally' },
+    body: JSON.stringify({ p_clave: clave, p_evento: evento }),
+  }).catch(() => { });
+}
+
 self.addEventListener('push', (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch (e) { d = { cuerpo: event.data && event.data.text() }; }
   const titulo = d.titulo || 'AMADESU RALLYS';
-  event.waitUntil(self.registration.showNotification(titulo, {
-    body: d.cuerpo || '',
-    icon: './icons/icon-192.png',
-    badge: './icons/icon-192.png',
-    tag: d.tag || undefined,
-    renotify: !!d.tag,
-    data: { url: d.url || './index.html' },
-  }));
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(titulo, {
+      body: d.cuerpo || '',
+      icon: './icons/icon-192.png',
+      badge: './icons/icon-192.png',
+      tag: d.tag || undefined,
+      renotify: !!d.tag,
+      data: { url: d.url || './index.html', clave: d.tag || null },
+    }),
+    anotarAviso(d.tag, 'recibido'),
+  ]));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const destino = new URL(event.notification.data && event.notification.data.url || './index.html', self.registration.scope).href;
   event.waitUntil((async () => {
+    await anotarAviso(event.notification.data && event.notification.data.clave, 'abierto');
     const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const w of ventanas) {
       if (new URL(w.url).origin === self.location.origin && 'navigate' in w) {

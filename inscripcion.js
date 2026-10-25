@@ -110,7 +110,7 @@ function estadoBarra() {
 // ------------------------------------------------------------------
 // Filas
 // ------------------------------------------------------------------
-const nombreCompleto = p => p ? `${p.nombre || ''} ${p.apellido || ''}`.replace(/\s+/g, ' ').trim() : '';
+const nombreCompleto = p => p ? `${p.nombre || ''} ${p.apellido || ''}`.replace(/\s+/g, ' ').trim().toUpperCase() : '';
 const completa = f => !!(f && f.numero && f.cat && String(f.piloto || '').trim());
 const claseDe = f => estado.clases.find(c => c.id === f.cat);
 const codigoClase = f => { const c = claseDe(f); return c ? String(c.codigo || c.nombre).toUpperCase() : ''; };
@@ -626,8 +626,8 @@ async function confirmar(td, texto, elegido) {
     cambio.cat = c ? c.id : null;
   } else if (a.campo === 'pil' || a.campo === 'nav') {
     const p = elegido?.valor;
-    const nombre = p ? `${p.n} ${p.a}`.trim() : v;
-    const [n, ap] = p ? [p.n, p.a] : partir(v);
+    const nombre = mayus(p ? `${p.n} ${p.a}` : v);
+    const [n, ap] = p ? [mayus(p.n), mayus(p.a)] : partir(nombre);
     if (a.campo === 'pil') {
       if (!nombre && f && f.enServidor) return error('El piloto no puede quedar vacío. Para quitar la fila usá 🗑.');
       if (nombre && estado.filas.some(x => x.id !== a.id && completa(x) && normal(x.piloto) === normal(nombre))) return error(`${nombre} ya está inscrito en esta planilla.`);
@@ -1088,16 +1088,15 @@ function paisDesdeTexto(t) {
   return p ? p.toUpperCase() : '';
 }
 const marcado = (t, a) => { const n = normal(t); return !!n && (/^(x|si|s|1|ok|true|yes|✓|✔|☑)$/.test(n) || n === normal(a.codigo) || n === normal(a.nombre)); };
-// "LUIS SANDOVAL" -> "Luis Sandoval" (solo si viene todo en mayúsculas)
-const capitalizar = s => s === s.toUpperCase() ? s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : s;
+// Los nombres de personas van siempre en MAYÚSCULAS (igual que en la base, script 68).
+const mayus = s => String(s || '').replace(/\s+/g, ' ').trim().toUpperCase();
 function persona(t) {
-  const v = String(t || '').replace(/\s+/g, ' ').trim();
+  const v = mayus(t);
   if (!v) return { nombre: '', n: '', a: '' };
   const p = estado.personas.find(x => normal(`${x.n} ${x.a}`) === normal(v));
-  if (p) return { nombre: `${p.n} ${p.a}`.trim(), n: p.n, a: p.a, pais: p.pais };
-  const nombre = capitalizar(v);
-  const [n, a] = partir(nombre);
-  return { nombre, n, a };
+  if (p) return { nombre: mayus(`${p.n} ${p.a}`), n: mayus(p.n), a: mayus(p.a), pais: p.pais };
+  const [n, a] = partir(v);
+  return { nombre: v, n, a };
 }
 const textoCelda = v => {
   if (v == null) return '';
