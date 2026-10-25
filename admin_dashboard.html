@@ -8085,6 +8085,44 @@
       if (window[reloadFnName]) window[reloadFnName]();
     };
 
+    // --- Compartir: enlace directo a cada documento (info.html?id=...&doc=...) ---
+    // Al abrirlo, la página baja a ese boletín/comunicado/reglamento/recorrido y lo abre.
+    // "com:" solo sirve para el texto ("Comunicado"); en el enlace todo es "pub:".
+    window.infoEnlaceDoc = (doc) => new URL(`info.html?id=${encodeURIComponent(window.infoCurrentRallyId)}&doc=${encodeURIComponent(doc.replace(/^com:/, 'pub:')).replace('%3A', ':')}`, location.href).href;
+    window.infoCompartirDoc = function (doc, titulo, recienPublicado = false) {
+      const sel = document.getElementById('info-rally-select');
+      const rally = sel?.options[sel.selectedIndex]?.text || '';
+      const url = window.infoEnlaceDoc(doc);
+      const tipo = doc.startsWith('rpp:') ? '📘 Reglamento' : doc.startsWith('gpx:') ? '🗺️ Recorrido' : doc.startsWith('com:') ? '📢 Comunicado' : '📄 Boletín';
+      const texto = `${tipo}: ${titulo}${rally ? ' — ' + rally : ''}\n👉 ${url}`;
+      document.getElementById('info-compartir-fondo')?.remove();
+      const f = document.createElement('div');
+      f.id = 'info-compartir-fondo';
+      f.style.cssText = 'position:fixed; inset:0; z-index:5000; background:rgba(0,0,0,0.72); display:flex; align-items:center; justify-content:center; padding:16px;';
+      f.innerHTML = `<div class="card-panel" style="width:min(480px,100%); margin:0;">
+        <h3 style="margin:0 0 6px;">${recienPublicado ? '✓ Publicado — compartilo' : '🔗 Compartir'}</h3>
+        <p style="color:var(--text-muted); font-size:13px; margin:0 0 14px;">Con este enlace la gente entra a la página <b>directo a este documento</b> y lo ve abierto.</p>
+        <div style="font-weight:700; margin-bottom:8px;">${escapeHtml(titulo)}</div>
+        <input type="text" class="form-control" readonly value="${escapeHtml(url)}" id="info-compartir-url" style="margin-bottom:12px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <a class="btn-primary" style="background:#1fa855; border-color:#1fa855; text-align:center; text-decoration:none;" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(texto)}">WhatsApp</a>
+          <button type="button" class="btn-secondary" id="info-compartir-copiar">Copiar enlace</button>
+          <button type="button" class="btn-secondary" id="info-compartir-texto" style="grid-column:1 / -1;">Copiar mensaje con el enlace</button>
+          <a class="btn-secondary" style="grid-column:1 / -1; text-align:center; text-decoration:none;" href="${escapeHtml(url)}" target="_blank" rel="noopener">Ver cómo se abre</a>
+        </div>
+        <button type="button" class="btn-secondary" id="info-compartir-cerrar" style="width:100%; margin-top:12px; background:transparent;">Cerrar</button>
+      </div>`;
+      const copiar = async (valor, btn, ok) => {
+        try { await navigator.clipboard.writeText(valor); } catch (e) { const i = f.querySelector('#info-compartir-url'); i.value = valor; i.select(); document.execCommand('copy'); i.value = url; }
+        btn.textContent = ok;
+      };
+      f.addEventListener('click', e => { if (e.target === f || e.target.id === 'info-compartir-cerrar') f.remove(); });
+      f.querySelector('#info-compartir-copiar').onclick = e => copiar(url, e.target, '✓ Enlace copiado');
+      f.querySelector('#info-compartir-texto').onclick = e => copiar(texto, e.target, '✓ Mensaje copiado');
+      document.body.appendChild(f);
+    };
+    const infoBotonCompartir = (doc, titulo) => `<button class="btn-secondary" style="flex-shrink:0;" title="Enlace directo para WhatsApp" onclick='window.infoCompartirDoc(${JSON.stringify(doc)}, ${JSON.stringify(String(titulo || '')).replace(/'/g, '&#39;')})'>🔗 Compartir</button>`;
+
     // --- Boletines / Comunicados ---
     window.infoAgregarPublicacion = async function (tipo) {
       const prefix = tipo === 'boletin' ? 'bol' : 'com';
@@ -8093,10 +8131,11 @@
       const urlImagen = document.getElementById(`info-${prefix}-url`).value.trim();
       if (!window.infoCurrentRallyId) { window.toast('Selecciona un rally primero.', 'warn'); return; }
       if (!titulo || !urlImagen) { window.toast('Completa el título y el enlace.', 'warn'); return; }
-      const { error } = await supabase.schema('rally').from('publicaciones').insert({
+      const { data: nueva, error } = await supabase.schema('rally').from('publicaciones').insert({
         rally_id: window.infoCurrentRallyId, tipo, titulo, descripcion: descripcion || null, url_imagen: urlImagen
-      });
+      }).select('id').single();
       if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
+      if (nueva?.id) window.infoCompartirDoc((tipo === 'boletin' ? 'pub:' : 'com:') + nueva.id, titulo, true);
       document.getElementById(`info-${prefix}-titulo`).value = '';
       document.getElementById(`info-${prefix}-desc`).value = '';
       document.getElementById(`info-${prefix}-url`).value = '';
@@ -8112,6 +8151,7 @@
           ${p.descripcion ? `<div style="font-size:12px; color:var(--text-muted);">${escapeHtml(p.descripcion)}</div>` : ''}
           <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${new Date(p.created_at).toLocaleString('es-BO')}</div>
         </div>
+        ${infoBotonCompartir((p.tipo === 'comunicado' ? 'com:' : 'pub:') + p.id, p.titulo)}
         <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3); flex-shrink:0;" onclick="window.infoEliminarFila('publicaciones', '${p.id}', '${reloadFnName}')">Eliminar</button>
       </div>`;
     }
@@ -8138,8 +8178,9 @@
       const urlPdf = document.getElementById('info-rpp-url').value.trim();
       if (!window.infoCurrentRallyId) { window.toast('Selecciona un rally primero.', 'warn'); return; }
       if (!urlPdf) { window.toast('Pega el enlace del PDF.', 'warn'); return; }
-      const { error } = await supabase.schema('rally').from('documentos_rpp').insert({ rally_id: window.infoCurrentRallyId, nombre, url_pdf: urlPdf });
+      const { data: nuevo, error } = await supabase.schema('rally').from('documentos_rpp').insert({ rally_id: window.infoCurrentRallyId, nombre, url_pdf: urlPdf }).select('id').single();
       if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
+      if (nuevo?.id) window.infoCompartirDoc('rpp:' + nuevo.id, nombre, true);
       document.getElementById('info-rpp-nombre').value = '';
       document.getElementById('info-rpp-url').value = '';
       window.toast('Reglamento agregado.', 'ok');
@@ -8155,6 +8196,7 @@
         <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--border-subtle); border-radius:10px; margin-bottom:10px; flex-wrap:wrap;">
           <div><div style="font-weight:700;">${escapeHtml(r.nombre)}</div><div style="font-size:11px; color:var(--text-dim);">${new Date(r.created_at).toLocaleString('es-BO')}</div></div>
           <div style="display:flex; gap:8px;">
+            ${infoBotonCompartir('rpp:' + r.id, r.nombre)}
             <a href="${escapeHtml(r.url_pdf)}" target="_blank" rel="noopener" class="btn-secondary">Abrir enlace</a>
             <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.infoEliminarFila('documentos_rpp','${r.id}','infoCargarRpp')">Eliminar</button>
           </div>
@@ -8184,8 +8226,9 @@
       const { error: upErr } = await supabase.storage.from('recorridos-gpx').upload(path, file);
       if (upErr) { window.toast('Error al subir el archivo: ' + upErr.message, 'error'); return; }
 
-      const { error } = await supabase.schema('rally').from('recorridos_gpx').insert({ rally_id: window.infoCurrentRallyId, nombre, formato: ext, storage_path: path });
+      const { data: nuevo, error } = await supabase.schema('rally').from('recorridos_gpx').insert({ rally_id: window.infoCurrentRallyId, nombre, formato: ext, storage_path: path }).select('id').single();
       if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
+      if (nuevo?.id) window.infoCompartirDoc('gpx:' + nuevo.id, nombre, true);
       document.getElementById('info-gpx-nombre').value = '';
       fileInput.value = '';
       window.toast('Recorrido subido.', 'ok');
@@ -8200,7 +8243,10 @@
       container.innerHTML = data.map(r => `
         <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--border-subtle); border-radius:10px; margin-bottom:10px;">
           <div style="font-weight:700;">${escapeHtml(r.nombre)} <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(${r.formato.toUpperCase()})</span></div>
+          <div style="display:flex; gap:8px;">
+          ${infoBotonCompartir('gpx:' + r.id, r.nombre)}
           <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3);" onclick="window.infoEliminarFila('recorridos_gpx','${r.id}','infoCargarRecorridos')">Eliminar</button>
+          </div>
         </div>`).join('');
     };
 

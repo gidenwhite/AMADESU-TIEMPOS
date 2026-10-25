@@ -461,7 +461,24 @@
     </div>
   </div>
 
-  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+  <style>@keyframes spin { to { transform: rotate(360deg); } }
+    /* Enlace directo a un documento (?doc=...): se resalta al llegar */
+    .doc-destacado { outline: 3px solid var(--accent-primary, #E63946); outline-offset: 3px; animation: docLlegada 1.2s ease-out 2; }
+    @keyframes docLlegada { 0%, 100% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0); } 50% { box-shadow: 0 0 0 10px rgba(230, 57, 70, 0.25); } }
+    .btn-compartir { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 7px 12px; border-radius: 9px; border: 1px solid var(--border-strong, rgba(255,255,255,0.15)); background: rgba(255,255,255,0.05); color: var(--text-main, #fff); font: 700 12px var(--font-body, sans-serif); cursor: pointer; }
+    .btn-compartir:hover { border-color: var(--accent-primary, #E63946); }
+    .rpp-card .btn-compartir { margin-top: 0; }
+    .compartir-fondo { position: fixed; inset: 0; z-index: 4000; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; justify-content: center; }
+    .compartir-hoja { width: min(440px, 100vw); background: var(--bg-surface, #131313); border: 1px solid var(--border-strong, rgba(255,255,255,0.15)); border-radius: 18px 18px 0 0; padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px)); color: var(--text-main, #fff); font-family: var(--font-body, sans-serif); }
+    @media (min-width: 720px) { .compartir-fondo { align-items: center; } .compartir-hoja { border-radius: 18px; } }
+    .compartir-hoja h3 { margin: 0 0 4px; font-family: var(--font-display, sans-serif); font-size: 22px; }
+    .compartir-hoja p { margin: 0 0 14px; color: var(--text-muted, #8E9BAE); font-size: 13px; }
+    .compartir-hoja input { width: 100%; padding: 11px; border-radius: 10px; border: 1px solid var(--border-strong, rgba(255,255,255,0.15)); background: #0a0a0a; color: #fff; font-size: 13px; margin-bottom: 12px; }
+    .compartir-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .compartir-acciones a, .compartir-acciones button { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border-radius: 12px; border: 1px solid var(--border-strong, rgba(255,255,255,0.15)); background: rgba(255,255,255,0.06); color: #fff; font: 700 14px var(--font-body, sans-serif); text-decoration: none; cursor: pointer; }
+    .compartir-acciones .wa { background: #1fa855; border-color: #1fa855; }
+    .compartir-cerrar { width: 100%; margin-top: 10px; padding: 11px; background: transparent; border: none; color: var(--text-muted, #8E9BAE); font: 600 13px var(--font-body, sans-serif); cursor: pointer; }
+  </style>
 
   <script type="module">
     import { supabase } from './supabase_config.js';
@@ -772,12 +789,75 @@
         </div>
       `;
 
+      nombreRally = rally.nombre;
       renderCarrusel(anuncios, tickers);
       renderPublicaciones('boletines-container', boletines, 'boletín');
       renderPublicaciones('comunicados-container', comunicados, 'comunicado');
       renderRpp(rpps);
       renderRecorrido(gpxTracks);
+      irADocumento(params.get('doc'));
     }
+
+    // -----------------------------------------------------------------
+    // Enlace directo a un documento: info.html?id=<rally>&doc=pub:<id>
+    // (también rpp:<id> y gpx:<id>). Sirve para mandarlo por WhatsApp:
+    // la persona cae en la página, en ese documento, y sigue navegando.
+    // -----------------------------------------------------------------
+    let nombreRally = '';
+    const enlaceDoc = doc => new URL(`info.html?id=${encodeURIComponent(rallyId)}&doc=${encodeURIComponent(doc).replace('%3A', ':')}`, location.href).href;
+
+    function irADocumento(doc) {
+      if (!doc) return;
+      doc = doc.replace(/^com:/, 'pub:'); // los comunicados también son publicaciones
+      const el = document.querySelector(`[data-doc="${CSS.escape(doc)}"]`);
+      if (!el) return;
+      // Recorrido: se elige su pestaña y se muestra el mapa.
+      if (doc.startsWith('gpx:') && el.classList.contains('recorrido-tab')) el.click();
+      const destino = doc.startsWith('gpx:') ? document.getElementById('sec-recorrido') : el;
+      setTimeout(() => {
+        destino.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('doc-destacado');
+        setTimeout(() => el.classList.remove('doc-destacado'), 6000);
+        // Boletín/comunicado: se abre la imagen; reglamento: se abre el PDF.
+        if (doc.startsWith('pub:')) setTimeout(() => el.click(), 700);
+        if (doc.startsWith('rpp:')) setTimeout(() => el.querySelector('[data-url]')?.click(), 700);
+      }, 350);
+    }
+
+    function compartirDoc(doc, titulo) {
+      const url = enlaceDoc(doc);
+      const tipo = doc.startsWith('rpp:') ? '📘 Reglamento' : doc.startsWith('gpx:') ? '🗺️ Recorrido' : '📄';
+      const texto = `${tipo} ${titulo}${nombreRally ? ' — ' + nombreRally : ''}\n👉 ${url}`;
+      const f = document.createElement('div');
+      f.className = 'compartir-fondo';
+      f.innerHTML = `<div class="compartir-hoja" role="dialog" aria-modal="true">
+        <h3>Compartir</h3><p>${esc(titulo)}</p>
+        <input type="text" readonly value="${esc(url)}">
+        <div class="compartir-acciones">
+          <a class="wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(texto)}">WhatsApp</a>
+          <button type="button" data-copiar>Copiar enlace</button>
+          ${navigator.share ? '<button type="button" data-mas style="grid-column: 1 / -1;">Más opciones…</button>' : ''}
+        </div>
+        <button type="button" class="compartir-cerrar" data-cerrar>Cerrar</button></div>`;
+      f.addEventListener('click', async e => {
+        if (e.target === f || e.target.closest('[data-cerrar]')) return f.remove();
+        const copiar = e.target.closest('[data-copiar]');
+        if (copiar) {
+          try { await navigator.clipboard.writeText(url); } catch (er) { f.querySelector('input').select(); document.execCommand('copy'); }
+          copiar.textContent = '✓ Copiado';
+        }
+        if (e.target.closest('[data-mas]')) { try { await navigator.share({ title: titulo, text: texto.split('\n')[0], url }); f.remove(); } catch (er) { } }
+      });
+      document.body.appendChild(f);
+    }
+    document.addEventListener('click', e => {
+      const b = e.target.closest('[data-compartir]');
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      compartirDoc(b.dataset.compartir, b.dataset.titulo || '');
+    }, true);
+    const botonCompartir = (doc, titulo) => `<button type="button" class="btn-compartir" data-compartir="${esc(doc)}" data-titulo="${esc(titulo)}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg>Compartir</button>`;
 
     // -----------------------------------------------------------------
     // Carrusel de anuncios (rota cada 3s) + ticker de texto
@@ -841,7 +921,7 @@
         const imgFallback = driveImageUrlFallback(p.url_imagen);
         const payload = JSON.stringify({ url: imgUrl, fallback: imgFallback, titulo: p.titulo, desc: p.descripcion || '' }).replace(/'/g, '&#39;');
         return `
-        <div class="pub-card" data-payload='${payload}'>
+        <div class="pub-card" data-doc="pub:${p.id}" data-payload='${payload}'>
           <div class="pub-card-img">
             <img src="${imgUrl}" alt="${esc(p.titulo)}" loading="lazy"
               onerror="this.onerror=null; this.src='${imgFallback}';">
@@ -850,6 +930,7 @@
             <div class="pub-card-title">${esc(p.titulo)}</div>
             ${p.descripcion ? `<div class="pub-card-desc">${esc(p.descripcion)}</div>` : ''}
             <div class="pub-card-date">${fmtFecha(p.created_at)}</div>
+            ${botonCompartir('pub:' + p.id, p.titulo)}
           </div>
         </div>`;
       }).join('')}</div>`;
@@ -872,15 +953,18 @@
         return;
       }
       container.innerHTML = `<div class="rpp-list">${rpps.map(r => `
-        <div class="rpp-card">
+        <div class="rpp-card" data-doc="rpp:${r.id}">
           <div class="rpp-card-name">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
             ${esc(r.nombre)}
           </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          ${botonCompartir('rpp:' + r.id, r.nombre)}
           <button class="btn-primary" data-url="${esc(drivePdfPreviewUrl(r.url_pdf))}" data-nombre="${esc(r.nombre)}">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
             Ver Reglamento
           </button>
+          </div>
         </div>`).join('')}</div>`;
 
       container.querySelectorAll('.btn-primary').forEach(btn => {
@@ -1022,12 +1106,14 @@
         return;
       }
       const tabsHtml = tracks.length > 1
-        ? `<div class="recorrido-tabs">${tracks.map((t, i) => `<button class="recorrido-tab ${i === 0 ? 'active' : ''}" data-i="${i}">${esc(t.nombre)}</button>`).join('')}</div>`
+        ? `<div class="recorrido-tabs">${tracks.map((t, i) => `<button class="recorrido-tab ${i === 0 ? 'active' : ''}" data-i="${i}" data-doc="gpx:${t.id}">${esc(t.nombre)}</button>`).join('')}</div>`
         : '';
-      container.innerHTML = `${tabsHtml}<div id="recorrido-map-wrap"></div>`;
+      container.innerHTML = `${tabsHtml}<div id="recorrido-map-wrap" ${tracks.length === 1 ? `data-doc="gpx:${tracks[0].id}"` : ''}></div><div id="recorrido-compartir"></div>`;
 
       const mapWrap = document.getElementById('recorrido-map-wrap');
+      const pintarCompartir = t => { document.getElementById('recorrido-compartir').innerHTML = botonCompartir('gpx:' + t.id, t.nombre); };
       drawTrack(tracks[0], mapWrap);
+      pintarCompartir(tracks[0]);
 
       if (tracks.length > 1) {
         container.querySelectorAll('.recorrido-tab').forEach(tab => {
@@ -1035,6 +1121,7 @@
             container.querySelectorAll('.recorrido-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             drawTrack(tracks[parseInt(tab.dataset.i)], mapWrap);
+            pintarCompartir(tracks[parseInt(tab.dataset.i)]);
           });
         });
       }
