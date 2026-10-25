@@ -408,7 +408,6 @@ function celdas(f, psto, nro) {
     <td class="ed" tabindex="-1" data-c="cat">${esc(codigoClase(f))}</td>
     <td class="ed" tabindex="-1" data-c="pil">${esc(f.piloto || '')}</td>
     <td class="ed" tabindex="-1" data-c="nav">${esc(f.nav || '')}</td>
-    <td class="ed" tabindex="-1" data-c="pais">${esc(f.pais || '')}</td>
     ${c.mostrarCiudad ? `<td class="ed" tabindex="-1" data-c="ciu">${esc(f.ciudad || '')}</td>` : ''}
     ${estado.ambitos.map(a => `<td class="amb ${(f.amb || []).includes(a.id) ? 'si' : ''}" tabindex="-1" data-a="${a.id}"><span class="caja"></span></td>`).join('')}
     <td class="c-quitar"><button type="button" data-quitar="${f.id}" title="Borrar esta fila">🗑</button></td>
@@ -420,14 +419,20 @@ function dibujar() {
   const scroll = { x: $('pl-marco').scrollLeft, y: $('pl-marco').scrollTop };
   const c = cfg();
   const o = ordenadas();
-  const nCols = 7 + (c.mostrarCiudad ? 1 : 0) + estado.ambitos.length + 1;
+  const nCols = 6 + (c.mostrarCiudad ? 1 : 0) + estado.ambitos.length + 1;
   const validas = o.porClase;
-  let cab = `<tr><th>Psto.</th><th>Nº</th><th>Nº DE COCHE</th><th>CLASE</th><th class="pil">PILOTO</th><th class="pil">NAVEGANTE</th><th>PAÍS</th>${c.mostrarCiudad ? '<th>CIUDAD</th>' : ''}`;
-  cab += estado.ambitos.map(a => {
+  // Columnas: Puesto · N° (en la clase) · N° de coche · Clase · Piloto · Navegante · Ciudad · Campeonato.
+  // data-col = posición de la columna en el cuerpo (para resaltar fila y columna).
+  const doble = estado.ambitos.length > 0;
+  const rs = doble ? ' rowspan="2"' : '';
+  const fijas = ['Puesto', 'N°', 'N° de coche', 'Clase', 'Piloto', 'Navegante'].concat(c.mostrarCiudad ? ['Ciudad'] : []);
+  let cab = `<tr class="r1">${fijas.map((t, i) => `<th${rs} data-col="${i}" class="${i === 4 || i === 5 ? 'pil' : ''}">${t}</th>`).join('')}`;
+  if (doble) cab += `<th class="grupo" colspan="${estado.ambitos.length}">CAMPEONATO</th>`;
+  cab += `<th${rs} class="c-quitar"></th></tr>`;
+  if (doble) cab += `<tr class="r2">${estado.ambitos.map((a, j) => {
     const todos = validas.length && validas.every(f => (f.amb || []).includes(a.id));
-    return `<th class="amb-th" data-amb-todos="${a.id}" title="Tocá para ${todos ? 'desmarcar' : 'marcar'} ${esc(a.nombre)} a todos">${esc(a.codigo)}<small>${todos ? '☑ todos' : '☐ marcar todos'}</small></th>`;
-  }).join('');
-  cab += '<th class="c-quitar"></th></tr>';
+    return `<th class="amb-th" data-col="${fijas.length + j}" data-amb-todos="${a.id}" title="Tocá para ${todos ? 'desmarcar' : 'marcar'} ${esc(a.nombre)} a todos">${esc(a.codigo)}<small>${todos ? '☑ todos' : '☐ marcar todos'}</small></th>`;
+  }).join('')}</tr>`;
 
   let cuerpo = '', anterior = null;
   for (const f of o.lista) {
@@ -441,7 +446,7 @@ function dibujar() {
     cuerpo += o.borradores.map(f => celdas(f)).join('');
   }
   cuerpo += `<tr data-id="nueva" class="nueva"><td class="c-psto">＋</td><td class="c-nro"></td>
-    ${['num', 'cat', 'pil', 'nav', 'pais'].concat(c.mostrarCiudad ? ['ciu'] : []).map(k => `<td class="ed" tabindex="-1" data-c="${k}"></td>`).join('')}
+    ${['num', 'cat', 'pil', 'nav'].concat(c.mostrarCiudad ? ['ciu'] : []).map(k => `<td class="ed" tabindex="-1" data-c="${k}"></td>`).join('')}
     ${estado.ambitos.map(a => `<td class="amb" data-a="${a.id}"></td>`).join('')}<td class="c-quitar"></td></tr>`;
 
   const dz = disenoCabecera(c);
@@ -484,7 +489,7 @@ function marcarCruz(td) {
   const tr = td.closest('tr'), idx = td.cellIndex;
   tr.classList.add('fila-activa');
   document.querySelectorAll('.in-tabla tbody tr[data-id]').forEach(f => f.cells[idx]?.classList.add('col-activa'));
-  document.querySelector('.in-tabla thead tr')?.cells[idx]?.classList.add('col-activa');
+  document.querySelector(`.in-tabla thead th[data-col="${idx}"]`)?.classList.add('col-activa');
 }
 function seleccionar(td, enfocar = true, desplazar = true) {
   document.querySelectorAll('.in-tabla td.activa').forEach(x => x.classList.remove('activa'));
@@ -1065,7 +1070,7 @@ async function descargarExcel() {
 // Muchos de una vez: pegar desde Excel, plantilla para llenar y subir Excel
 // ------------------------------------------------------------------
 // Orden de las columnas de la hoja (para pegar "por posición", como en Excel).
-const columnasOrden = () => ['num', 'cat', 'pil', 'nav', 'pais'].concat(cfg().mostrarCiudad ? ['ciu'] : []).concat(estado.ambitos.map(a => 'amb:' + a.id));
+const columnasOrden = () => ['num', 'cat', 'pil', 'nav'].concat(cfg().mostrarCiudad ? ['ciu'] : []).concat(estado.ambitos.map(a => 'amb:' + a.id));
 const sinEspacios = s => normal(s).replace(/\s/g, '');
 function claseDesdeTexto(t) {
   const n = sinEspacios(t);
@@ -1286,7 +1291,11 @@ function pegar(texto, td) {
   } else {
     const a = td ? idCelda(td) : { id: 'nueva', campo: 'num' };
     const inicio = Math.max(0, columnasOrden().indexOf(a.campo));
-    crudas = filas.map(v => crudaPorPosicion(v, inicio));
+    // Filas copiadas completas de la lista (Puesto · N° · N° de coche · Clase…):
+    // Puesto y N° se calculan solos, así que esas dos primeras columnas se saltan.
+    const esNum = v => /^\d+$/.test(String(v || '').trim());
+    const traePuesto = a.campo === 'num' && filas.filter(v => v.some(Boolean)).every(v => esNum(v[0]) && esNum(v[1]) && esNum(v[2]) && claseDesdeTexto(v[3]));
+    crudas = filas.map(v => crudaPorPosicion(traePuesto ? v.slice(2) : v, inicio));
     // Pegado encima de filas existentes: se reemplazan hacia abajo, como en Excel.
     if (a.id !== 'nueva') {
       const visibles = [...document.querySelectorAll('.in-tabla tbody tr[data-id]')].map(tr => tr.dataset.id);
@@ -1331,13 +1340,13 @@ async function descargarPlantilla() {
   wb.creator = 'AMADESU RALLYS';
   const ws = wb.addWorksheet('INSCRIPCION', { views: [{ state: 'frozen', ySplit: 3 }] });
   const listas = wb.addWorksheet('LISTAS', { state: 'hidden' });
-  const cols = [['Nº DE COCHE', 13], ['CLASE', 16], ['PILOTO', 38], ['NAVEGANTE', 38], ['PAÍS', 18]].concat(c.mostrarCiudad ? [['CIUDAD', 18]] : []).concat(estado.ambitos.map(a => [a.codigo, 10]));
+  const cols = [['PUESTO', 9], ['N°', 7], ['N° DE COCHE', 13], ['CLASE', 16], ['PILOTO', 38], ['NAVEGANTE', 38]].concat(c.mostrarCiudad ? [['CIUDAD', 18]] : []).concat(estado.ambitos.map(a => [a.codigo, 10]));
   ws.columns = cols.map(([, w]) => ({ width: w }));
   ws.mergeCells(1, 1, 1, cols.length);
   ws.getCell('A1').value = `PLANILLA DE INSCRIPCIÓN — ${estado.rally.nombre.toUpperCase()}`;
   ws.getCell('A1').font = { name: 'Cambria', size: 16, bold: true }; ws.getCell('A1').alignment = { horizontal: 'center' };
   ws.mergeCells(2, 1, 2, cols.length);
-  ws.getCell('A2').value = 'Un auto por fila. Clase y país: elegí de la lista. Campeonatos: poné SI (o dejá vacío). Después: ⬆ Subir Excel en la planilla del sistema.';
+  ws.getCell('A2').value = 'Un auto por fila. Puesto y N° (número en la clase) se calculan solos. Clase: elegí de la lista. Campeonato: poné SI en cada uno que corre (o dejá vacío). Después: ⬆ Subir Excel en la planilla del sistema.';
   ws.getCell('A2').font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF555555' } }; ws.getCell('A2').alignment = { horizontal: 'center', wrapText: true };
   ws.getRow(2).height = 28; ws.getRow(3).height = 26;
   const borde = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -1348,20 +1357,20 @@ async function descargarPlantilla() {
   });
   // Listas para los desplegables
   listas.getCell('A1').value = 'CLASES'; estado.clases.forEach((cl, i) => { listas.getCell(i + 2, 1).value = cl.codigo; });
-  listas.getCell('B1').value = 'PAISES'; PAISES.forEach((p, i) => { listas.getCell(i + 2, 2).value = p.toUpperCase(); });
   const o = ordenadas();
-  const iPais = 5, iCiu = c.mostrarCiudad ? 6 : null, iAmb0 = c.mostrarCiudad ? 7 : 6;
+  const iClase = 4, iCiu = c.mostrarCiudad ? 7 : null, iAmb0 = c.mostrarCiudad ? 8 : 7;
   const FILAS = Math.max(300, o.porClase.length + 100);
+  const gris = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
   for (let r = 4; r < 4 + FILAS; r++) {
     const f = o.porClase[r - 4];
-    const vals = f ? [f.numero, codigoClase(f), f.piloto, f.nav || '', f.pais || ''].concat(c.mostrarCiudad ? [f.ciudad || ''] : []).concat(estado.ambitos.map(a => (f.amb || []).includes(a.id) ? 'SI' : '')) : [];
+    const vals = f ? [o.psto.get(f.id), o.nro.get(f.id), f.numero, codigoClase(f), f.piloto, f.nav || ''].concat(c.mostrarCiudad ? [f.ciudad || ''] : []).concat(estado.ambitos.map(a => (f.amb || []).includes(a.id) ? 'SI' : '')) : [];
     for (let k = 1; k <= cols.length; k++) {
       const cel = ws.getCell(r, k);
       if (vals[k - 1] !== undefined && vals[k - 1] !== '') cel.value = vals[k - 1];
       cel.border = borde; cel.font = { name: 'Calibri', size: 12 }; cel.alignment = { horizontal: 'center', vertical: 'middle' };
+      if (k <= 2) { cel.fill = gris; cel.font = { name: 'Cambria', size: 11, bold: true, color: { argb: 'FF777777' } }; }
     }
-    ws.getCell(r, 2).dataValidation = { type: 'list', allowBlank: true, formulae: [`LISTAS!$A$2:$A$${estado.clases.length + 1}`], showErrorMessage: true, errorTitle: 'Clase', error: 'Elegí una clase de la lista (son las habilitadas en este rally).' };
-    ws.getCell(r, iPais).dataValidation = { type: 'list', allowBlank: true, formulae: [`LISTAS!$B$2:$B$${PAISES.length + 1}`], showErrorMessage: true, errorStyle: 'warning', error: 'Elegí un país de la lista.' };
+    ws.getCell(r, iClase).dataValidation = { type: 'list', allowBlank: true, formulae: [`LISTAS!$A$2:$A$${estado.clases.length + 1}`], showErrorMessage: true, errorTitle: 'Clase', error: 'Elegí una clase de la lista (son las habilitadas en este rally).' };
     estado.ambitos.forEach((a, j) => { ws.getCell(r, iAmb0 + j).dataValidation = { type: 'list', allowBlank: true, formulae: ['"SI"'] }; });
     if (iCiu) ws.getCell(r, iCiu).font = { name: 'Calibri', size: 12, bold: true };
   }
