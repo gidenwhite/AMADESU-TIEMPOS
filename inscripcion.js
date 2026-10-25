@@ -1062,6 +1062,339 @@ async function descargarExcel() {
 }
 
 // ------------------------------------------------------------------
+// Muchos de una vez: pegar desde Excel, plantilla para llenar y subir Excel
+// ------------------------------------------------------------------
+// Orden de las columnas de la hoja (para pegar "por posición", como en Excel).
+const columnasOrden = () => ['num', 'cat', 'pil', 'nav', 'pais'].concat(cfg().mostrarCiudad ? ['ciu'] : []).concat(estado.ambitos.map(a => 'amb:' + a.id));
+const sinEspacios = s => normal(s).replace(/\s/g, '');
+function claseDesdeTexto(t) {
+  const n = sinEspacios(t);
+  if (!n) return null;
+  const exacta = estado.clases.find(c => sinEspacios(c.codigo) === n || sinEspacios(c.nombre) === n);
+  if (exacta) return exacta;
+  // "PROMO" -> PROMOCIONAL, "BUGUIE" -> BUGUIES (solo si hay una sola que empieza así)
+  const l = estado.clases.filter(c => sinEspacios(c.codigo).startsWith(n) || sinEspacios(c.nombre).startsWith(n));
+  return l.length === 1 ? l[0] : null;
+}
+function paisDesdeTexto(t) {
+  const n = normal(t);
+  if (!n) return '';
+  const p = PAISES.find(x => normal(x) === n) || (PAISES.filter(x => normal(x).startsWith(n)).length === 1 ? PAISES.find(x => normal(x).startsWith(n)) : null);
+  return p ? p.toUpperCase() : '';
+}
+const marcado = (t, a) => { const n = normal(t); return !!n && (/^(x|si|s|1|ok|true|yes|✓|✔|☑)$/.test(n) || n === normal(a.codigo) || n === normal(a.nombre)); };
+// "LUIS SANDOVAL" -> "Luis Sandoval" (solo si viene todo en mayúsculas)
+const capitalizar = s => s === s.toUpperCase() ? s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : s;
+function persona(t) {
+  const v = String(t || '').replace(/\s+/g, ' ').trim();
+  if (!v) return { nombre: '', n: '', a: '' };
+  const p = estado.personas.find(x => normal(`${x.n} ${x.a}`) === normal(v));
+  if (p) return { nombre: `${p.n} ${p.a}`.trim(), n: p.n, a: p.a, pais: p.pais };
+  const nombre = capitalizar(v);
+  const [n, a] = partir(nombre);
+  return { nombre, n, a };
+}
+const textoCelda = v => {
+  if (v == null) return '';
+  if (typeof v === 'object') {
+    if (v instanceof Date) return '';
+    if (v.richText) return v.richText.map(x => x.text).join('');
+    if (v.result != null) return String(v.result);
+    if (v.text != null) return String(v.text);
+    return '';
+  }
+  return String(v);
+};
+
+// Fila de títulos -> qué columna es cada cosa. Sirve para la plantilla y
+// para la lista de inscritos oficial ("PILOTO / NAVEGANTE" en una celda).
+function mapaTitulos(fila) {
+  const m = { amb: {} };
+  const limpio = t => normal(t).replace(/[.:º°#]/g, '').trim();
+  fila.forEach((t, i) => {
+    const h = limpio(t);
+    if (!h) return;
+    if (h.includes('piloto') && h.includes('naveg')) m.pn = i;
+    else if (h.includes('piloto')) m.pil = i;
+    else if (h.includes('naveg') || h.includes('copiloto')) m.nav = i;
+    else if (h.includes('coche') || h.includes('auto') || h.includes('vehic') || h === 'dorsal') m.num = i;
+    else if (h.includes('clase') || h.includes('categ')) m.cat = i;
+    else if (h.includes('pais')) m.pais = i;
+    else if (h.includes('ciudad') || h.includes('asoc')) m.ciu = i;
+    else { const a = estado.ambitos.find(x => h === normal(x.codigo) || h === normal(x.nombre)); if (a) m.amb[i] = a.id; }
+  });
+  if (m.num == null) fila.forEach((t, i) => { if (m.num == null && ['n', 'nro', 'numero', 'no'].includes(limpio(t))) m.num = i; });
+  const reconocidas = ['pil', 'pn', 'num', 'cat'].filter(k => m[k] != null).length;
+  return (m.pil != null || m.pn != null) && reconocidas >= 2 ? m : null;
+}
+function crudaPorTitulos(vals, m) {
+  const r = { campos: new Set() };
+  const put = (k, i) => { if (i != null) { r[k] = vals[i] ?? ''; r.campos.add(k); } };
+  put('num', m.num); put('cat', m.cat); put('pil', m.pil); put('nav', m.nav); put('pais', m.pais); put('ciu', m.ciu);
+  if (m.pn != null) {
+    const [p, n] = String(vals[m.pn] ?? '').split('//');
+    r.pil = p || ''; r.nav = n || ''; r.campos.add('pil'); r.campos.add('nav');
+  }
+  const ambs = Object.entries(m.amb);
+  if (ambs.length) { r.amb = {}; ambs.forEach(([i, id]) => { r.amb[id] = marcado(vals[i], estado.ambitos.find(a => a.id === id)); }); }
+  return r;
+}
+function crudaPorPosicion(vals, inicio) {
+  const orden = columnasOrden();
+  const r = { campos: new Set() };
+  let k = inicio;
+  for (const v of vals) {
+    const campo = orden[k];
+    if (!campo) break;
+    if (campo === 'pil' && String(v).includes('//')) {
+      const [p, n] = String(v).split('//');
+      r.pil = p; r.nav = n; r.campos.add('pil'); r.campos.add('nav'); k += 2; continue;
+    }
+    // Lo que cae en "País" pero no es un país (ej. SUCRE) es la ciudad, como en la lista oficial.
+    if (campo === 'pais' && String(v).trim() && !paisDesdeTexto(v) && orden[k + 1] === 'ciu') { r.ciu = v; r.campos.add('ciu'); k += 2; continue; }
+    if (campo.startsWith('amb:')) { const a = estado.ambitos.find(x => x.id === campo.slice(4)); (r.amb ||= {})[a.id] = marcado(v, a); }
+    else { r[campo] = v; r.campos.add(campo); }
+    k++;
+  }
+  return r;
+}
+
+// Datos crudos -> fila lista para la hoja (con lo que falte anotado).
+function convertir(r) {
+  const out = { campos: r.campos, problemas: [] };
+  if (r.campos.has('num')) {
+    const n = parseInt(String(r.num).replace(/[^\d.]/g, ''), 10);
+    out.numero = Number.isFinite(n) && n > 0 ? n : null;
+  }
+  if (r.campos.has('cat')) {
+    const c = claseDesdeTexto(r.cat);
+    out.cat = c ? c.id : null;
+    if (String(r.cat || '').trim() && !c) out.problemas.push(`la clase "${String(r.cat).trim()}" no está habilitada en este rally`);
+  }
+  if (r.campos.has('pil')) { const p = persona(r.pil); out.piloto = p.nombre; out.pN = p.n; out.pA = p.a; out.paisPersona = p.pais; }
+  if (r.campos.has('nav')) { const p = persona(r.nav); out.nav = p.nombre; out.nN = p.n; out.nA = p.a; }
+  if (r.campos.has('pais')) {
+    out.pais = paisDesdeTexto(r.pais);
+    if (String(r.pais || '').trim() && !out.pais) out.problemas.push(`país "${String(r.pais).trim()}" no reconocido (quedó vacío)`);
+  }
+  if (r.campos.has('ciu')) out.ciudad = String(r.ciu || '').replace(/\s+/g, ' ').trim().toUpperCase();
+  if (r.amb) out.amb = r.amb;
+  return out;
+}
+// Filas de separación, títulos repetidos y firmas no son inscritos.
+const esVacia = r => !r.numero && !r.piloto && !r.cat;
+
+// Arma el plan: qué filas se crean, cuáles se actualizan y cuáles no se pueden usar.
+function planificar(convertidas, destinos = []) {
+  const plan = [];
+  const usados = new Set();
+  convertidas.forEach((r, i) => {
+    // Separadores y firmas (un nombre suelto sin Nº ni clase) no son inscritos;
+    // pero sí vale pegar solo nombres encima de filas que ya existen.
+    const traeNumOClase = r.campos.has('num') || r.campos.has('cat');
+    if (esVacia(r) || (traeNumOClase && !r.numero && !r.cat && !destinos[i])) return;
+    let destino = destinos[i] ? estado.filas.find(f => f.id === destinos[i]) : null;
+    if (!destino && r.numero) destino = estado.filas.find(f => f.numero === r.numero);
+    const etiqueta = `Nº ${r.numero ?? '?'}${r.piloto ? ' · ' + r.piloto : ''}`;
+    if (r.numero && usados.has(r.numero)) { plan.push({ r, etiqueta, saltar: 'el Nº está repetido en lo que pegaste/subiste' }); return; }
+    if (r.numero) usados.add(r.numero);
+    const piloto = r.piloto ?? destino?.piloto;
+    const otro = piloto && estado.filas.find(f => f !== destino && completa(f) && normal(f.piloto) === normal(piloto));
+    if (otro) { plan.push({ r, etiqueta, saltar: `${piloto} ya está inscrito con el Nº ${otro.numero}` }); return; }
+    const faltan = [];
+    if (!(r.numero ?? destino?.numero)) faltan.push('Nº de coche');
+    if (!(r.cat ?? destino?.cat)) faltan.push('clase');
+    if (!piloto) faltan.push('piloto');
+    plan.push({ r, etiqueta, destino, faltan, problemas: r.problemas });
+  });
+  return plan;
+}
+
+function aplicarPlan(plan) {
+  const ultima = [...estado.filas].sort((x, y) => y.creado - x.creado)[0];
+  const ambDefecto = ultima ? [...(ultima.amb || [])] : estado.ambitos.map(x => x.id);
+  let t = Date.now(), nuevas = 0, cambiadas = 0;
+  for (const p of plan) {
+    if (p.saltar) continue;
+    const r = p.r;
+    let f = p.destino;
+    if (!f) { f = { id: nuevoId(), numero: null, cat: null, piloto: '', nav: '', pais: '', ciudad: '', amb: [...ambDefecto], creado: t++, enServidor: false }; estado.filas.push(f); nuevas++; }
+    else cambiadas++;
+    if (r.campos.has('num') && r.numero) f.numero = r.numero;
+    if (r.campos.has('cat') && r.cat) f.cat = r.cat;
+    if (r.campos.has('pil') && r.piloto) Object.assign(f, { piloto: r.piloto, pN: r.pN, pA: r.pA });
+    if (r.campos.has('nav')) Object.assign(f, { nav: r.nav, nN: r.nN, nA: r.nA });
+    if (r.campos.has('pais') && r.pais) f.pais = r.pais;
+    else if (!f.pais && r.paisPersona) f.pais = r.paisPersona;
+    if (r.campos.has('ciu')) f.ciudad = r.ciudad;
+    if (r.amb) {
+      const s = new Set(f.amb || []);
+      Object.entries(r.amb).forEach(([id, si]) => si ? s.add(id) : s.delete(id));
+      f.amb = [...s];
+    }
+    anotar(f.id, 'guardar');
+  }
+  guardarCopiaLocal();
+  estado.activa = null;
+  dibujar();
+  sincronizar();
+  return { nuevas, cambiadas };
+}
+
+// Resumen antes de importar: así se ve qué va a pasar con cada fila.
+function confirmarImportacion(plan, origen) {
+  const usar = plan.filter(p => !p.saltar);
+  const nuevas = usar.filter(p => !p.destino).length, actualiza = usar.length - nuevas;
+  const incompletas = usar.filter(p => p.faltan.length);
+  const avisos = usar.filter(p => p.problemas.length);
+  const saltadas = plan.filter(p => p.saltar);
+  if (!plan.length) { toast('No se encontraron inscritos en lo que ' + (origen === 'pegar' ? 'pegaste.' : 'subiste.'), true); return; }
+  const li = (lista, txt) => lista.length ? `<ul class="pl-lista-penal">${lista.slice(0, 40).map(p => `<li><span><b>${esc(p.etiqueta)}</b> · ${esc(txt(p))}</span></li>`).join('')}${lista.length > 40 ? `<li>… y ${lista.length - 40} más</li>` : ''}</ul>` : '';
+  const d = dialogo(`
+    <h3>${origen === 'pegar' ? 'Pegar desde Excel' : 'Subir Excel'}</h3>
+    <p>Se encontraron <b>${plan.length}</b> fila${plan.length > 1 ? 's' : ''} de inscritos.</p>
+    <div class="pl-formato-ok" style="margin-top:0; display:block;">
+      ${nuevas ? `✓ <b>${nuevas}</b> ${nuevas > 1 ? 'inscripciones nuevas' : 'inscripción nueva'}<br>` : ''}
+      ${actualiza ? `✓ <b>${actualiza}</b> ya estaba${actualiza > 1 ? 'n' : ''} (mismo Nº): se actualiza${actualiza > 1 ? 'n' : ''} con lo nuevo<br>` : ''}
+      ${!usar.length ? 'Ninguna fila se puede usar.' : ''}
+    </div>
+    ${incompletas.length ? `<div class="grupo"><b>⚠ ${incompletas.length} quedan incompletas (se agregan abajo para que las completes)</b>${li(incompletas, p => 'falta ' + p.faltan.join(', ') + (p.problemas.length ? ' — ' + p.problemas.join('; ') : ''))}</div>` : ''}
+    ${avisos.filter(p => !p.faltan.length).length ? `<div class="grupo"><b>Avisos</b>${li(avisos.filter(p => !p.faltan.length), p => p.problemas.join('; '))}</div>` : ''}
+    ${saltadas.length ? `<div class="grupo"><b>✕ ${saltadas.length} no se importan</b>${li(saltadas, p => p.saltar)}</div>` : ''}
+    <div class="acciones"><button type="button" class="pl-btn" data-cerrar>Cancelar</button>
+    ${usar.length ? `<button type="button" class="pl-btn primario" id="in-imp-ok">Importar ${usar.length} fila${usar.length > 1 ? 's' : ''}</button>` : ''}</div>`);
+  d.querySelector('#in-imp-ok')?.addEventListener('click', () => {
+    d.remove();
+    const { nuevas: n, cambiadas: c } = aplicarPlan(plan);
+    toast(`Listo: ${n} nueva${n === 1 ? '' : 's'}${c ? `, ${c} actualizada${c === 1 ? '' : 's'}` : ''}.${enLinea() ? ' Subiendo…' : ' Quedan en este equipo hasta que vuelva internet.'}`);
+  });
+}
+
+// Ctrl+V con filas copiadas de Excel (texto separado por tabulaciones).
+function pegar(texto, td) {
+  if (!estado.rally) return;
+  if (!estado.clases.length) return toast('Este rally no tiene clases habilitadas todavía.', true);
+  const filas = String(texto).replace(/\r/g, '').split('\n').map(l => l.split('\t').map(v => v.trim()));
+  while (filas.length && filas[filas.length - 1].every(v => !v)) filas.pop();
+  if (!filas.length) return;
+  // Si se copió con la fila de títulos, las columnas se reconocen por nombre.
+  const iTit = filas.slice(0, 15).findIndex(f => mapaTitulos(f));
+  let crudas, destinos = [];
+  if (iTit >= 0) {
+    const m = mapaTitulos(filas[iTit]);
+    crudas = filas.slice(iTit + 1).map(v => crudaPorTitulos(v, m));
+  } else {
+    const a = td ? idCelda(td) : { id: 'nueva', campo: 'num' };
+    const inicio = Math.max(0, columnasOrden().indexOf(a.campo));
+    crudas = filas.map(v => crudaPorPosicion(v, inicio));
+    // Pegado encima de filas existentes: se reemplazan hacia abajo, como en Excel.
+    if (a.id !== 'nueva') {
+      const visibles = [...document.querySelectorAll('.in-tabla tbody tr[data-id]')].map(tr => tr.dataset.id);
+      const desde = visibles.indexOf(a.id);
+      destinos = crudas.map((_, i) => visibles[desde + i] !== 'nueva' ? visibles[desde + i] : null);
+    }
+  }
+  confirmarImportacion(planificar(crudas.map(convertir), destinos), 'pegar');
+}
+
+async function subirExcel(archivo) {
+  if (!archivo) return;
+  if (!window.ExcelJS) return toast('Todavía está cargando el lector de Excel, probá en un segundo.', true);
+  if (!/\.xlsx$/i.test(archivo.name)) return toast('Subí el archivo en formato .xlsx (en Excel: Guardar como → Libro de Excel).', true);
+  try {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(await archivo.arrayBuffer());
+    // Se busca la hoja y la fila de títulos que tengan la columna del piloto.
+    for (const ws of wb.worksheets) {
+      if (ws.state && ws.state !== 'visible') continue;
+      const filas = [];
+      ws.eachRow({ includeEmpty: true }, (row, n) => { const v = []; row.eachCell({ includeEmpty: true }, (c, col) => { v[col - 1] = textoCelda(c.value).trim(); }); filas[n - 1] = v; });
+      for (let i = 0; i < filas.length; i++) filas[i] = filas[i] || [];
+      const iTit = filas.slice(0, 30).findIndex(f => mapaTitulos(f));
+      if (iTit < 0) continue;
+      const m = mapaTitulos(filas[iTit]);
+      const crudas = filas.slice(iTit + 1).map(v => crudaPorTitulos(v, m));
+      return confirmarImportacion(planificar(crudas.map(convertir)), 'subir');
+    }
+    toast('No encontré la columna del PILOTO en el Excel. Usá la plantilla (📄) o una lista con títulos: Nº DE COCHE, CLASE, PILOTO…', true);
+  } catch (e) {
+    toast('No se pudo leer el Excel: ' + (e.message || e), true);
+  }
+}
+
+// Plantilla para llenar en la compu: con listas desplegables y lo que ya está cargado.
+async function descargarPlantilla() {
+  if (!window.ExcelJS) return toast('Todavía está cargando el generador de Excel, probá en un segundo.', true);
+  if (!estado.rally) return;
+  const c = cfg();
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'AMADESU RALLYS';
+  const ws = wb.addWorksheet('INSCRIPCION', { views: [{ state: 'frozen', ySplit: 3 }] });
+  const listas = wb.addWorksheet('LISTAS', { state: 'hidden' });
+  const cols = [['Nº DE COCHE', 13], ['CLASE', 16], ['PILOTO', 38], ['NAVEGANTE', 38], ['PAÍS', 18]].concat(c.mostrarCiudad ? [['CIUDAD', 18]] : []).concat(estado.ambitos.map(a => [a.codigo, 10]));
+  ws.columns = cols.map(([, w]) => ({ width: w }));
+  ws.mergeCells(1, 1, 1, cols.length);
+  ws.getCell('A1').value = `PLANILLA DE INSCRIPCIÓN — ${estado.rally.nombre.toUpperCase()}`;
+  ws.getCell('A1').font = { name: 'Cambria', size: 16, bold: true }; ws.getCell('A1').alignment = { horizontal: 'center' };
+  ws.mergeCells(2, 1, 2, cols.length);
+  ws.getCell('A2').value = 'Un auto por fila. Clase y país: elegí de la lista. Campeonatos: poné SI (o dejá vacío). Después: ⬆ Subir Excel en la planilla del sistema.';
+  ws.getCell('A2').font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF555555' } }; ws.getCell('A2').alignment = { horizontal: 'center', wrapText: true };
+  ws.getRow(2).height = 28; ws.getRow(3).height = 26;
+  const borde = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  cols.forEach(([t], i) => {
+    const cel = ws.getCell(3, i + 1);
+    cel.value = t; cel.font = { name: 'Cambria', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+    cel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; cel.border = borde; cel.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+  // Listas para los desplegables
+  listas.getCell('A1').value = 'CLASES'; estado.clases.forEach((cl, i) => { listas.getCell(i + 2, 1).value = cl.codigo; });
+  listas.getCell('B1').value = 'PAISES'; PAISES.forEach((p, i) => { listas.getCell(i + 2, 2).value = p.toUpperCase(); });
+  const o = ordenadas();
+  const iPais = 5, iCiu = c.mostrarCiudad ? 6 : null, iAmb0 = c.mostrarCiudad ? 7 : 6;
+  const FILAS = Math.max(300, o.porClase.length + 100);
+  for (let r = 4; r < 4 + FILAS; r++) {
+    const f = o.porClase[r - 4];
+    const vals = f ? [f.numero, codigoClase(f), f.piloto, f.nav || '', f.pais || ''].concat(c.mostrarCiudad ? [f.ciudad || ''] : []).concat(estado.ambitos.map(a => (f.amb || []).includes(a.id) ? 'SI' : '')) : [];
+    for (let k = 1; k <= cols.length; k++) {
+      const cel = ws.getCell(r, k);
+      if (vals[k - 1] !== undefined && vals[k - 1] !== '') cel.value = vals[k - 1];
+      cel.border = borde; cel.font = { name: 'Calibri', size: 12 }; cel.alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    ws.getCell(r, 2).dataValidation = { type: 'list', allowBlank: true, formulae: [`LISTAS!$A$2:$A$${estado.clases.length + 1}`], showErrorMessage: true, errorTitle: 'Clase', error: 'Elegí una clase de la lista (son las habilitadas en este rally).' };
+    ws.getCell(r, iPais).dataValidation = { type: 'list', allowBlank: true, formulae: [`LISTAS!$B$2:$B$${PAISES.length + 1}`], showErrorMessage: true, errorStyle: 'warning', error: 'Elegí un país de la lista.' };
+    estado.ambitos.forEach((a, j) => { ws.getCell(r, iAmb0 + j).dataValidation = { type: 'list', allowBlank: true, formulae: ['"SI"'] }; });
+    if (iCiu) ws.getCell(r, iCiu).font = { name: 'Calibri', size: 12, bold: true };
+  }
+  const buf = await wb.xlsx.writeBuffer();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  a.download = `PLANTILLA INSCRIPCION - ${estado.rally.nombre.replace(/[\\/:*?"<>|]/g, '')}.xlsx`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(o.porClase.length ? `Plantilla descargada con los ${o.porClase.length} inscritos actuales: agregá o corregí y subila.` : 'Plantilla descargada: llenala y subila con ⬆ Subir Excel.');
+}
+
+document.addEventListener('paste', e => {
+  if (document.querySelector('.pl-dialogo-fondo') || !estado.rally) return;
+  if (e.target.closest && e.target.closest('.pl-barra')) return;
+  const texto = e.clipboardData?.getData('text/plain') || '';
+  const varias = /[\t\n]/.test(texto.trim());
+  const td = estado.activa && celdaDe(estado.activa);
+  if (estado.editando) {
+    if (!varias) return; // un solo valor: se pega normal dentro de la celda
+    e.preventDefault();
+    const inp = td?.querySelector('input');
+    if (inp) cancelar(td);
+    cerrarSug();
+    return pegar(texto, td);
+  }
+  if (!texto.trim()) return;
+  e.preventDefault();
+  if (varias || !td || !td.classList.contains('ed')) return pegar(texto, td && td.classList.contains('ed') ? td : null);
+  empezarEdicion(td, texto.trim());
+});
+
+// ------------------------------------------------------------------
 // Eventos
 // ------------------------------------------------------------------
 $('pl-marco').addEventListener('click', e => {
@@ -1109,6 +1442,9 @@ $('pl-ir').addEventListener('keydown', e => {
 });
 $('pl-excel').onclick = descargarExcel;
 $('pl-config').onclick = abrirConfig;
+$('in-plantilla').onclick = descargarPlantilla;
+$('in-subir').onclick = () => { if (!estado.rally) return toast('Elegí primero el rally.', true); $('in-archivo').click(); };
+$('in-archivo').onchange = e => { const f = e.target.files[0]; e.target.value = ''; subirExcel(f); };
 $('pl-ayuda-x')?.addEventListener('click', () => { $('pl-ayuda').remove(); try { localStorage.setItem('insc_sin_ayuda', '1'); } catch (e) { } });
 // Al desplazar la hoja, la lista de sugerencias sigue a la celda que se escribe.
 window.addEventListener('scroll', () => {

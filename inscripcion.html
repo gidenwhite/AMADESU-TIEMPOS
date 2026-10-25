@@ -31,6 +31,9 @@
         <button type="button" data-orden="clase" class="activo">Por clase</button>
         <button type="button" data-orden="carga">Como se cargó</button>
       </div>
+      <button type="button" class="pl-btn" id="in-plantilla" title="Excel para llenar en la compu y después subirlo">📄 Plantilla para llenar</button>
+      <button type="button" class="pl-btn" id="in-subir" title="Subir la plantilla llena o tu Excel de inscritos">⬆ Subir Excel</button>
+      <input type="file" id="in-archivo" accept=".xlsx" hidden>
       <button type="button" class="pl-btn" id="pl-config">⚙ Encabezado y firmas</button>
       <button type="button" class="pl-btn primario" id="pl-excel">⬇ Descargar Excel</button>
     </div>
@@ -41,7 +44,8 @@
     <b>Cómo cargar:</b> escribí en la <b>última fila</b> (la vacía): Nº de coche, clase, piloto, navegante…
     Al escribir el piloto o el navegante salen los que <b>ya están en el sistema</b>: elegí uno y se completa.
     <b>Enter</b> guarda y baja · <b>Tab</b> pasa a la derecha · flechas para moverte · <b>Espacio</b> marca o desmarca el campeonato ·
-    tocá el título de un campeonato para <b>marcarlo a todos</b>.
+    tocá el título de un campeonato para <b>marcarlo a todos</b>.<br>
+    <b>Muchos de una vez:</b> copiá las filas de tu Excel y pegalas con <b>Ctrl+V</b> en la fila vacía, o usá <b>📄 Plantilla para llenar</b> y después <b>⬆ Subir Excel</b> (también acepta tu lista de inscritos con "PILOTO // NAVEGANTE").
     <button type="button" id="pl-ayuda-x" aria-label="Ocultar ayuda">✕</button>
   </div>
 
