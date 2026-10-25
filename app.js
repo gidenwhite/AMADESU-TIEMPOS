@@ -129,16 +129,93 @@ function pintarBotones() {
     b.onclick = instalar;
     c.appendChild(b);
   }
-  if (soportaAvisos() || (esIOS && !esInstalada())) {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'app-btn app-btn-avisos'; b.id = 'app-btn-avisos';
-    b.setAttribute('aria-label', 'Avisos');
-    b.innerHTML = `${ICONO.campana}<span class="app-btn-txt">Avisos</span><i class="app-dot"></i>`;
-    b.onclick = abrirAvisos;
-    c.appendChild(b);
-    actualizarCampana();
-  }
+  // La campanita abre las Novedades (se ve en cualquier navegador); desde ahí
+  // se activan los avisos en el celular.
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'app-btn app-btn-avisos'; b.id = 'app-btn-avisos';
+  b.setAttribute('aria-label', 'Novedades');
+  b.innerHTML = `${ICONO.campana}<span class="app-btn-txt">Novedades</span><i class="app-dot"></i><b class="app-badge" hidden></b>`;
+  b.onclick = abrirNovedades;
+  c.appendChild(b);
+  actualizarCampana();
+  pintarContador();
 }
+
+// ------------------------------------------------------------------
+// Novedades: lo mismo que mandan los avisos, para verlo en la página
+// ------------------------------------------------------------------
+const ICONO_NOVEDAD = { nuevo: '🏁', publicacion: '📄', largada: '🟢', hoy: '📅', fin: '🏆', manual: '📣' };
+let novedades = [];
+try { novedades = JSON.parse(almacen.get('amd_novedades') || '[]'); } catch (e) { }
+const vistoHasta = () => Number(almacen.get('amd_novedades_visto') || 0);
+// Sin leer: las más nuevas que la última vez que se abrió el panel (y de la última semana).
+const sinLeer = () => novedades.filter(n => n.id > vistoHasta() && Date.now() - Date.parse(n.created_at) < 7 * 86400000);
+function hace(fecha) {
+  const s = Math.max(0, (Date.now() - Date.parse(fecha)) / 1000);
+  if (s < 60) return 'recién';
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
+  if (s < 172800) return 'ayer';
+  return new Date(fecha).toLocaleDateString('es-BO', { day: 'numeric', month: 'short' });
+}
+const escN = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function cargarNovedades() {
+  try {
+    const { data, error } = await db().rpc('app_novedades', { p_limite: 30 });
+    if (error || !Array.isArray(data)) return;
+    novedades = data;
+    almacen.set('amd_novedades', JSON.stringify(novedades)); // también se ven sin internet
+    pintarContador();
+    if (document.getElementById('app-novedades-lista')) pintarLista();
+  } catch (e) { }
+}
+function pintarContador() {
+  const badge = document.querySelector('#app-btn-avisos .app-badge');
+  if (!badge) return;
+  const n = sinLeer().length;
+  badge.hidden = !n;
+  badge.textContent = n > 9 ? '9+' : String(n);
+}
+function pintarLista() {
+  const lista = document.getElementById('app-novedades-lista');
+  if (!lista) return;
+  const visto = Number(lista.dataset.visto || 0);
+  lista.innerHTML = novedades.length ? novedades.map(n => {
+    const titulo = String(n.titulo || '').replace(/^\p{Extended_Pictographic}️?\s*/u, '');
+    const dentro = `<span class="app-nov-ico">${ICONO_NOVEDAD[n.tipo] || '🔔'}</span>
+      <span class="app-nov-txt"><b>${escN(titulo)}</b>${n.cuerpo ? `<span>${escN(n.cuerpo)}</span>` : ''}
+      <small>${n.rally && !titulo.includes(n.rally) && !String(n.cuerpo || '').includes(n.rally) ? escN(n.rally) + ' · ' : ''}${hace(n.created_at)}</small></span>`;
+    const clase = `app-nov ${n.id > visto ? 'nueva' : ''}`;
+    return n.url ? `<a class="${clase}" href="${escN(n.url)}">${dentro}</a>` : `<div class="${clase}">${dentro}</div>`;
+  }).join('') : '<p class="app-nov-vacio">Todavía no hay novedades. Acá vas a ver las carreras nuevas, boletines, largadas y resultados.</p>';
+}
+
+async function abrirNovedades() {
+  const visto = vistoHasta();
+  let estado = '';
+  if (soportaAvisos()) {
+    let activo = false;
+    try { activo = !!(await suscripcionActual()); } catch (e) { }
+    estado = activo
+      ? '<div class="app-nov-avisos ok"><span>✓ Te llegan estos avisos al celular</span><button type="button" class="app-btn-link" id="app-nov-config">Configurar</button></div>'
+      : '<div class="app-nov-avisos"><span>🔔 Recibilos en el celular aunque no tengas la página abierta</span><button type="button" class="app-btn-grande" id="app-nov-config">Activar avisos</button></div>';
+  } else if (esIOS && !esInstalada()) {
+    estado = '<div class="app-nov-avisos"><span>En iPhone los avisos llegan con la app instalada</span><button type="button" class="app-btn-grande" id="app-nov-config">Cómo instalar</button></div>';
+  }
+  hoja(`<h3>🔔 Novedades</h3>${estado}<div class="app-nov-lista" id="app-novedades-lista" data-visto="${visto}"></div>`);
+  pintarLista();
+  document.getElementById('app-nov-config')?.addEventListener('click', () => (soportaAvisos() ? abrirAvisos() : instalar()));
+  // Abrir el panel = todo leído
+  if (novedades.length) almacen.set('amd_novedades_visto', String(Math.max(...novedades.map(n => n.id))));
+  pintarContador();
+  cargarNovedades();
+}
+
+// Si llega un aviso con la página abierta, se actualizan las novedades al momento.
+navigator.serviceWorker?.addEventListener('message', e => { if (e.data && e.data.tipo === 'novedad') cargarNovedades(); });
+setInterval(() => { if (!document.hidden) cargarNovedades(); }, 180000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) cargarNovedades(); });
 
 function hoja(html) {
   cerrarHoja();
@@ -413,6 +490,7 @@ async function iniciar() {
 
   registrar('visita', { rally_id: esUuid(rallyDeLaPagina) ? rallyDeLaPagina : null });
   latido();
+  cargarNovedades();
   if (esInstalada() && !almacen.get('amd_instalacion_registrada')) {
     almacen.set('amd_instalacion_registrada', '1');
     registrar('instalacion');

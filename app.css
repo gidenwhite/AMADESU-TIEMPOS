@@ -465,3 +465,27 @@
     animation: none;
   }
 }
+
+/* Novedades: número de no leídas en la campanita y el panel */
+.app-btn-avisos .app-badge {
+  position: absolute; top: -6px; right: -6px; min-width: 19px; height: 19px; padding: 0 5px;
+  border-radius: 10px; background: var(--accent-primary, #E63946); color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 19px; text-align: center;
+  box-shadow: 0 0 0 2px var(--bg-base, #0a0a0a); font-style: normal;
+}
+.app-btn-avisos .app-badge[hidden] { display: none; }
+.app-nov-avisos { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; padding: 12px 14px; border-radius: 14px; background: rgba(230, 57, 70, 0.08); border: 1px solid rgba(230, 57, 70, 0.3); font-size: 13px; }
+.app-nov-avisos.ok { background: rgba(0, 245, 160, 0.07); border-color: rgba(0, 245, 160, 0.3); color: var(--live-green, #00F5A0); }
+.app-nov-avisos .app-btn-grande { width: auto; margin: 0; padding: 10px 16px; font-size: 13px; }
+.app-nov-lista { display: flex; flex-direction: column; gap: 8px; }
+.app-nov { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06)); color: inherit; text-decoration: none; }
+a.app-nov:active { transform: scale(0.99); }
+a.app-nov:hover { border-color: var(--border-strong, rgba(255, 255, 255, 0.15)); }
+.app-nov.nueva { border-color: rgba(230, 57, 70, 0.45); background: rgba(230, 57, 70, 0.06); }
+.app-nov-ico { font-size: 22px; line-height: 1; flex-shrink: 0; width: 28px; text-align: center; }
+.app-nov-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.app-nov-txt b { font-size: 14px; line-height: 1.3; }
+.app-nov-txt span { font-size: 13px; color: var(--text-muted, #8E9BAE); line-height: 1.4; }
+.app-nov-txt small { font-size: 11px; color: var(--text-muted, #8E9BAE); opacity: 0.8; }
+.app-nov.nueva .app-nov-txt small::before { content: '● '; color: var(--accent-primary, #E63946); }
+.app-nov-vacio { color: var(--text-muted, #8E9BAE); font-size: 14px; text-align: center; padding: 20px 6px; }

@@ -4,7 +4,7 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v11';
+const VERSION = 'amadesu-v12';
 const BASICOS = ['./', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
   './app.js', './app.css', './offline.js',
   // Planilla de Tiempos: se abre y se carga sin internet (los datos van en cola)
@@ -158,6 +158,8 @@ self.addEventListener('push', (event) => {
       data: { url: d.url || './index.html', clave: d.tag || null },
     }),
     anotarAviso(d.tag, 'recibido'),
+    // Las páginas abiertas actualizan su panel de Novedades al momento.
+    self.clients.matchAll({ type: 'window' }).then(ws => ws.forEach(w => w.postMessage({ tipo: 'novedad' }))),
   ]));
 });
 
