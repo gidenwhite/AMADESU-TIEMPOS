@@ -831,29 +831,39 @@
       }, 350);
     }
 
-    function compartirDoc(doc, titulo) {
+    function compartirDoc(doc, titulo, descripcion = '', tipoPub = '') {
       const url = enlaceDoc(doc);
-      const tipo = doc.startsWith('rpp:') ? '📘 Reglamento' : doc.startsWith('gpx:') ? '🗺️ Recorrido' : '📄';
-      const texto = `${tipo} ${titulo}${nombreRally ? ' — ' + nombreRally : ''}\n👉 ${url}`;
+      const tipo = doc.startsWith('rpp:') ? '📘 *REGLAMENTO' : doc.startsWith('gpx:') ? '🗺️ *RECORRIDO' : tipoPub === 'comunicado' ? '📢 *COMUNICADO' : '📄 *BOLETÍN';
+      // Mensaje para WhatsApp: título en negrita (*...*), descripción, carrera y enlace.
+      const texto = [`${tipo}: ${String(titulo || '').trim()}*`, String(descripcion || '').trim(), nombreRally ? `🏁 ${nombreRally}` : '', `👉 ${url}`].filter(Boolean).join('\n');
       const f = document.createElement('div');
       f.className = 'compartir-fondo';
       f.innerHTML = `<div class="compartir-hoja" role="dialog" aria-modal="true">
-        <h3>Compartir</h3><p>${esc(titulo)}</p>
+        <h3>Compartir</h3>
+        <p style="white-space:pre-wrap; color:var(--text-main,#fff); background:rgba(255,255,255,0.04); border-radius:10px; padding:10px 12px; word-break:break-all;">${esc(texto).replace(/\*([^*\n]+)\*/g, '<b>$1</b>')}</p>
         <input type="text" readonly value="${esc(url)}">
         <div class="compartir-acciones">
           <a class="wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(texto)}">WhatsApp</a>
-          <button type="button" data-copiar>Copiar enlace</button>
-          ${navigator.share ? '<button type="button" data-mas style="grid-column: 1 / -1;">Más opciones…</button>' : ''}
+          <button type="button" data-copiar-msj style="background:var(--accent-primary,#E63946); border-color:var(--accent-primary,#E63946);">📋 Copiar mensaje</button>
+          <button type="button" data-copiar>Copiar solo el enlace</button>
+          ${navigator.share ? '<button type="button" data-mas>Más opciones…</button>' : ''}
         </div>
         <button type="button" class="compartir-cerrar" data-cerrar>Cerrar</button></div>`;
       f.addEventListener('click', async e => {
         if (e.target === f || e.target.closest('[data-cerrar]')) return f.remove();
-        const copiar = e.target.closest('[data-copiar]');
+        const copiar = e.target.closest('[data-copiar], [data-copiar-msj]');
         if (copiar) {
-          try { await navigator.clipboard.writeText(url); } catch (er) { f.querySelector('input').select(); document.execCommand('copy'); }
-          copiar.textContent = '✓ Copiado';
+          const valor = copiar.hasAttribute('data-copiar-msj') ? texto : url;
+          try { await navigator.clipboard.writeText(valor); }
+          catch (er) {
+            // Plan B: un textarea conserva los saltos de línea del mensaje.
+            const t = document.createElement('textarea');
+            t.value = valor; t.style.cssText = 'position:fixed; opacity:0;';
+            f.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+          }
+          copiar.textContent = copiar.hasAttribute('data-copiar-msj') ? '✓ Copiado: pegalo donde quieras' : '✓ Enlace copiado';
         }
-        if (e.target.closest('[data-mas]')) { try { await navigator.share({ title: titulo, text: texto.split('\n')[0], url }); f.remove(); } catch (er) { } }
+        if (e.target.closest('[data-mas]')) { try { await navigator.share({ title: titulo, text: texto.replace(/\n👉 .*$/, ''), url }); f.remove(); } catch (er) { } }
       });
       document.body.appendChild(f);
     }
@@ -861,9 +871,9 @@
       const b = e.target.closest('[data-compartir]');
       if (!b) return;
       e.preventDefault(); e.stopPropagation();
-      compartirDoc(b.dataset.compartir, b.dataset.titulo || '');
+      compartirDoc(b.dataset.compartir, b.dataset.titulo || '', b.dataset.desc || '', b.dataset.tipo || '');
     }, true);
-    const botonCompartir = (doc, titulo) => `<button type="button" class="btn-compartir" data-compartir="${esc(doc)}" data-titulo="${esc(titulo)}">
+    const botonCompartir = (doc, titulo, desc = '', tipo = '') => `<button type="button" class="btn-compartir" data-compartir="${esc(doc)}" data-titulo="${esc(titulo)}" data-desc="${esc(desc)}" data-tipo="${esc(tipo)}">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg>Compartir</button>`;
 
     // -----------------------------------------------------------------
@@ -937,7 +947,7 @@
             <div class="pub-card-title">${esc(p.titulo)}</div>
             ${p.descripcion ? `<div class="pub-card-desc">${esc(p.descripcion)}</div>` : ''}
             <div class="pub-card-date">${fmtFecha(p.created_at)}</div>
-            ${botonCompartir('pub:' + p.id, p.titulo)}
+            ${botonCompartir('pub:' + p.id, p.titulo, p.descripcion || '', p.tipo)}
           </div>
         </div>`;
       }).join('')}</div>`;

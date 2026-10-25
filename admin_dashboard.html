@@ -8089,12 +8089,14 @@
     // Al abrirlo, la página baja a ese boletín/comunicado/reglamento/recorrido y lo abre.
     // "com:" solo sirve para el texto ("Comunicado"); en el enlace todo es "pub:".
     window.infoEnlaceDoc = (doc) => new URL(`info.html?id=${encodeURIComponent(window.infoCurrentRallyId)}&doc=${encodeURIComponent(doc.replace(/^com:/, 'pub:')).replace('%3A', ':')}`, location.href).href;
-    window.infoCompartirDoc = function (doc, titulo, recienPublicado = false) {
+    window.infoCompartirDoc = function (doc, titulo, recienPublicado = false, descripcion = '') {
       const sel = document.getElementById('info-rally-select');
       const rally = sel?.options[sel.selectedIndex]?.text || '';
       const url = window.infoEnlaceDoc(doc);
-      const tipo = doc.startsWith('rpp:') ? '📘 Reglamento' : doc.startsWith('gpx:') ? '🗺️ Recorrido' : doc.startsWith('com:') ? '📢 Comunicado' : '📄 Boletín';
-      const texto = `${tipo}: ${titulo}${rally ? ' — ' + rally : ''}\n👉 ${url}`;
+      const tipo = doc.startsWith('rpp:') ? '📘 REGLAMENTO' : doc.startsWith('gpx:') ? '🗺️ RECORRIDO' : doc.startsWith('com:') ? '📢 COMUNICADO' : '📄 BOLETÍN';
+      // Mensaje para WhatsApp: título en negrita (*...*), descripción, carrera y enlace.
+      const [emoji, ...palabra] = tipo.split(' ');
+      const texto = [`${emoji} *${palabra.join(' ')}: ${String(titulo || '').trim()}*`, String(descripcion || '').trim(), rally ? `🏁 ${rally}` : '', `👉 ${url}`].filter(Boolean).join('\n');
       document.getElementById('info-compartir-fondo')?.remove();
       const f = document.createElement('div');
       f.id = 'info-compartir-fondo';
@@ -8102,26 +8104,33 @@
       f.innerHTML = `<div class="card-panel" style="width:min(480px,100%); margin:0;">
         <h3 style="margin:0 0 6px;">${recienPublicado ? '✓ Publicado — compartilo' : '🔗 Compartir'}</h3>
         <p style="color:var(--text-muted); font-size:13px; margin:0 0 14px;">Con este enlace la gente entra a la página <b>directo a este documento</b> y lo ve abierto.</p>
-        <div style="font-weight:700; margin-bottom:8px;">${escapeHtml(titulo)}</div>
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:4px;">Mensaje que se manda</div>
+        <div style="white-space:pre-wrap; font-size:13px; line-height:1.45; background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:10px; padding:10px 12px; margin-bottom:12px; word-break:break-all;">${escapeHtml(texto).replace(/\*([^*\n]+)\*/g, '<b>$1</b>')}</div>
         <input type="text" class="form-control" readonly value="${escapeHtml(url)}" id="info-compartir-url" style="margin-bottom:12px;">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
           <a class="btn-primary" style="background:#1fa855; border-color:#1fa855; text-align:center; text-decoration:none;" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(texto)}">WhatsApp</a>
-          <button type="button" class="btn-secondary" id="info-compartir-copiar">Copiar enlace</button>
-          <button type="button" class="btn-secondary" id="info-compartir-texto" style="grid-column:1 / -1;">Copiar mensaje con el enlace</button>
+          <button type="button" class="btn-primary" id="info-compartir-texto">📋 Copiar mensaje</button>
+          <button type="button" class="btn-secondary" id="info-compartir-copiar" style="grid-column:1 / -1;">Copiar solo el enlace</button>
           <a class="btn-secondary" style="grid-column:1 / -1; text-align:center; text-decoration:none;" href="${escapeHtml(url)}" target="_blank" rel="noopener">Ver cómo se abre</a>
         </div>
         <button type="button" class="btn-secondary" id="info-compartir-cerrar" style="width:100%; margin-top:12px; background:transparent;">Cerrar</button>
       </div>`;
       const copiar = async (valor, btn, ok) => {
-        try { await navigator.clipboard.writeText(valor); } catch (e) { const i = f.querySelector('#info-compartir-url'); i.value = valor; i.select(); document.execCommand('copy'); i.value = url; }
+        try { await navigator.clipboard.writeText(valor); }
+        catch (e) {
+          // Plan B (navegadores viejos): un textarea conserva los saltos de línea del mensaje.
+          const t = document.createElement('textarea');
+          t.value = valor; t.style.cssText = 'position:fixed; opacity:0;';
+          f.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+        }
         btn.textContent = ok;
       };
       f.addEventListener('click', e => { if (e.target === f || e.target.id === 'info-compartir-cerrar') f.remove(); });
       f.querySelector('#info-compartir-copiar').onclick = e => copiar(url, e.target, '✓ Enlace copiado');
-      f.querySelector('#info-compartir-texto').onclick = e => copiar(texto, e.target, '✓ Mensaje copiado');
+      f.querySelector('#info-compartir-texto').onclick = e => copiar(texto, e.target, '✓ Copiado: pegalo donde quieras');
       document.body.appendChild(f);
     };
-    const infoBotonCompartir = (doc, titulo) => `<button class="btn-secondary" style="flex-shrink:0;" title="Enlace directo para WhatsApp" onclick='window.infoCompartirDoc(${JSON.stringify(doc)}, ${JSON.stringify(String(titulo || '')).replace(/'/g, '&#39;')})'>🔗 Compartir</button>`;
+    const infoBotonCompartir = (doc, titulo, descripcion = '') => `<button class="btn-secondary" style="flex-shrink:0;" title="Enlace directo para WhatsApp" onclick='window.infoCompartirDoc(${JSON.stringify(doc)}, ${JSON.stringify(String(titulo || '')).replace(/'/g, '&#39;')}, false, ${JSON.stringify(String(descripcion || '')).replace(/'/g, '&#39;')})'>🔗 Compartir</button>`;
 
     // --- Boletines / Comunicados ---
     window.infoAgregarPublicacion = async function (tipo) {
@@ -8135,7 +8144,7 @@
         rally_id: window.infoCurrentRallyId, tipo, titulo, descripcion: descripcion || null, url_imagen: urlImagen
       }).select('id').single();
       if (error) { window.toast('Error al guardar: ' + error.message, 'error'); return; }
-      if (nueva?.id) window.infoCompartirDoc((tipo === 'boletin' ? 'pub:' : 'com:') + nueva.id, titulo, true);
+      if (nueva?.id) window.infoCompartirDoc((tipo === 'boletin' ? 'pub:' : 'com:') + nueva.id, titulo, true, descripcion);
       document.getElementById(`info-${prefix}-titulo`).value = '';
       document.getElementById(`info-${prefix}-desc`).value = '';
       document.getElementById(`info-${prefix}-url`).value = '';
@@ -8151,7 +8160,7 @@
           ${p.descripcion ? `<div style="font-size:12px; color:var(--text-muted);">${escapeHtml(p.descripcion)}</div>` : ''}
           <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${new Date(p.created_at).toLocaleString('es-BO')}</div>
         </div>
-        ${infoBotonCompartir((p.tipo === 'comunicado' ? 'com:' : 'pub:') + p.id, p.titulo)}
+        ${infoBotonCompartir((p.tipo === 'comunicado' ? 'com:' : 'pub:') + p.id, p.titulo, p.descripcion)}
         <button class="btn-secondary" style="color:#ff4d5a; border-color:rgba(255,77,90,0.3); flex-shrink:0;" onclick="window.infoEliminarFila('publicaciones', '${p.id}', '${reloadFnName}')">Eliminar</button>
       </div>`;
     }
