@@ -30,7 +30,7 @@ window.initAppVisitasSection = async function () {
   await cargar();
   clearInterval(temporizador);
   // Se actualiza sola cada 30 s, salvo mientras se escribe un aviso (no se pierde lo escrito).
-  const escribiendo = () => { const f = document.getElementById('av-form'); return !!f && (f.contains(document.activeElement) || [...f.querySelectorAll('input, textarea')].some(i => i.value.trim())); };
+  const escribiendo = () => { const f = document.getElementById('av-form'); return !!document.querySelector('.av-editar-form') || (!!f && (f.contains(document.activeElement) || [...f.querySelectorAll('input, textarea')].some(i => i.value.trim()))); };
   temporizador = setInterval(() => { if (seccionVisible() && !document.hidden && !escribiendo()) cargar(true); }, 30000);
 };
 
@@ -55,7 +55,20 @@ async function cargar(silencioso = false) {
       (datos.avisos || []).forEach(a => { const x = alcance.get(a.id); if (x) Object.assign(a, { recibidos: x.recibidos, abiertos: x.abiertos }); });
     }
   } catch (e) { }
+  // Historial editable (script 71): sin los borrados y con el enlace de cada aviso.
+  try {
+    const { data: lista, error: e3 } = await db().rpc('app_avisos_admin');
+    if (!e3 && Array.isArray(lista)) { datos.avisos = lista; datos.puedeEditar = true; }
+  } catch (e) { }
   pintar();
+}
+
+function opcionesDestino(actual) {
+  const ops = [['index.html', 'Portada (lista de carreras)']].concat(rallies.flatMap(r => [
+    [`index.html?rally=${r.id}&ver=tiempos`, `Tiempos — ${r.nombre}`], [`info.html?id=${r.id}`, `Información — ${r.nombre}`]]));
+  if (actual && !ops.some(o => o[0] === actual)) ops.unshift([actual, `Enlace actual: ${actual}`]);
+  if (!actual) ops.unshift(['', 'No abre nada (solo el texto)']);
+  return ops.map(([v, t]) => `<option value="${esc(v)}" ${v === (actual || '') ? 'selected' : ''}>${esc(t)}</option>`).join('');
 }
 
 // Qué está mirando la gente que está en línea.
@@ -239,10 +252,13 @@ function seccionAvisos(d) {
         const fecha = new Date(a.created_at).toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
         const reintentar = ['pendiente', 'error', 'omitido'].includes(a.estado) && d.envio_configurado
           ? `<button type="button" class="btn-secondary av-reintentar" data-id="${a.id}">Enviar</button>` : '';
-        return `<div class="av-item">
+        const acciones = d.puedeEditar ? `<div class="av-item-acciones">
+            <button type="button" class="btn-secondary av-editar" data-id="${a.id}" title="Corregir título, texto o adónde lleva">✏️ Editar</button>
+            <button type="button" class="btn-secondary av-borrar" data-id="${a.id}" title="Quitar de Novedades y del historial">🗑 Eliminar</button></div>` : '';
+        return `<div class="av-item" data-aviso="${a.id}">
           <div class="av-item-ico">${ICONO_TIPO[a.tipo] || '🔔'}</div>
           <div class="av-item-txt"><b>${esc(String(a.titulo || '').replace(/^\p{Extended_Pictographic}️?\s*/u, ''))}</b><span>${esc(a.cuerpo)}</span><small>${fecha}</small></div>
-          <div class="av-item-estado"><span class="av-estado ${tono}">${txt}${a.estado === 'enviado' ? ` a ${num(a.enviados)}` : ''}</span>${a.recibidos != null && ['enviado', 'enviando'].includes(a.estado) ? `<small class="av-alcance" title="Recibido: llegó al celular · Abierto: la persona tocó el aviso">📥 Recibido por ${num(a.recibidos)} · 👆 Abierto por ${num(a.abiertos)}${a.enviados ? ` (${Math.round((a.abiertos || 0) / a.enviados * 100)}%)` : ''}</small>` : ''}${reintentar}</div>
+          <div class="av-item-estado"><span class="av-estado ${tono}">${txt}${a.estado === 'enviado' ? ` a ${num(a.enviados)}` : ''}</span>${a.recibidos != null && ['enviado', 'enviando'].includes(a.estado) ? `<small class="av-alcance" title="Recibido: llegó al celular · Abierto: la persona tocó el aviso">📥 Recibido por ${num(a.recibidos)} · 👆 Abierto por ${num(a.abiertos)}${a.enviados ? ` (${Math.round((a.abiertos || 0) / a.enviados * 100)}%)` : ''}</small>` : ''}${reintentar}${acciones}</div>
         </div>`;
       }).join('')}</div>` : '<p class="av-vacio">Todavía no se mandó ningún aviso.</p>'}
     </div>`;
@@ -279,6 +295,50 @@ function conectar() {
     setTimeout(() => cargar(true), 2500);
     cargar(true);
   };
+
+  // Eliminar un aviso
+  r.querySelectorAll('.av-borrar').forEach(b => b.onclick = async () => {
+    const a = (datos.avisos || []).find(x => x.id === Number(b.dataset.id));
+    const yaSalio = a && ['enviado', 'enviando'].includes(a.estado);
+    const msg = `¿Eliminar el aviso "${a?.titulo || ''}"?\n\nSe quita del panel de Novedades de la página y del historial.` +
+      (yaSalio ? `\nOjo: a los ${num(a.enviados)} celulares que ya lo recibieron no se les puede borrar.` : '\nTodavía no salió: ya no se va a enviar.');
+    const ok = window.confirmDialog ? await window.confirmDialog(msg.replace(/\n/g, '<br>'), { title: 'Eliminar aviso', confirmText: 'Eliminar', danger: true }) : confirm(msg);
+    if (!ok) return;
+    b.disabled = true;
+    const { error } = await db().rpc('app_borrar_aviso', { p_id: Number(b.dataset.id) });
+    if (error) { toast('No se pudo eliminar: ' + error.message, 'error'); b.disabled = false; return; }
+    toast('Aviso eliminado.', 'ok');
+    cargar(true);
+  });
+
+  // Editar un aviso (en el mismo lugar de la lista)
+  r.querySelectorAll('.av-editar').forEach(b => b.onclick = () => {
+    const a = (datos.avisos || []).find(x => x.id === Number(b.dataset.id));
+    const item = b.closest('.av-item');
+    if (!a || !item) return;
+    const yaSalio = ['enviado', 'enviando'].includes(a.estado);
+    item.classList.add('editando');
+    item.innerHTML = `<form class="av-editar-form">
+      <h4>✏️ Editar aviso</h4>
+      ${yaSalio ? `<p class="av-mini">Ya llegó a ${num(a.enviados)} celulares: allí queda como llegó. El cambio se ve en el panel de <b>Novedades</b> de la página.</p>` : '<p class="av-mini">Todavía no salió: se envía ya corregido.</p>'}
+      <label class="form-label">Título *</label><input type="text" class="form-control" name="titulo" maxlength="120" value="${esc(a.titulo || '')}">
+      <label class="form-label">Mensaje</label><textarea class="form-control" name="cuerpo" rows="3" maxlength="300">${esc(a.cuerpo || '')}</textarea>
+      <label class="form-label">Al tocar el aviso, abre…</label><select class="form-control" name="url">${opcionesDestino(a.url)}</select>
+      <div class="av-editar-botones"><button type="button" class="btn-secondary" data-cancelar>Cancelar</button><button type="submit" class="btn-primary">Guardar cambios</button></div>
+    </form>`;
+    const f = item.querySelector('form');
+    f.titulo.focus();
+    f.querySelector('[data-cancelar]').onclick = () => pintar();
+    f.onsubmit = async e => {
+      e.preventDefault();
+      if (!f.titulo.value.trim()) { toast('Escribí un título.', 'warn'); f.titulo.focus(); return; }
+      const btn = f.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Guardando…';
+      const { error } = await db().rpc('app_editar_aviso', { p_id: a.id, p_titulo: f.titulo.value.trim(), p_cuerpo: f.cuerpo.value.trim(), p_url: f.url.value });
+      if (error) { toast('No se pudo guardar: ' + error.message, 'error'); btn.disabled = false; btn.textContent = 'Guardar cambios'; return; }
+      toast('Aviso corregido.', 'ok');
+      cargar(true);
+    };
+  });
 
   r.querySelectorAll('.av-reintentar').forEach(b => b.onclick = async () => {
     b.disabled = true;

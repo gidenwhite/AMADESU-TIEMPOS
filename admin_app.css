@@ -107,3 +107,12 @@
   .av-item { grid-template-columns: 26px minmax(0, 1fr); }
   .av-item-estado { grid-column: 2; flex-direction: row; align-items: center; justify-content: flex-start; }
 }
+
+/* Editar / eliminar avisos */
+.av-item-acciones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.av-item-acciones .btn-secondary { padding: 5px 10px; font-size: 12px; }
+.av-item.editando { display: block; }
+.av-editar-form { display: flex; flex-direction: column; gap: 6px; }
+.av-editar-form h4 { margin: 0 0 4px; }
+.av-editar-form .form-label { margin-top: 6px; }
+.av-editar-botones { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
