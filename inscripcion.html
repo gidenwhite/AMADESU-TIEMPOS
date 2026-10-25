@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planilla de Inscripción — AMADESU RALLYS</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="icons/favicon-32.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="planilla.css" />
+  <link rel="stylesheet" href="inscripcion.css" />
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" defer></script>
+  <script type="module" src="inscripcion.js"></script>
+  <script src="offline.js" defer></script>
+</head>
+
+<body>
+  <header class="pl-barra">
+    <a href="admin_dashboard.html" class="pl-volver" id="pl-volver" title="Volver al panel">←</a>
+    <div class="pl-barra-titulo">
+      <b>Planilla de Inscripción</b>
+      <span id="pl-sub">Cargando…</span>
+    </div>
+    <select id="pl-rally" class="pl-control" aria-label="Rally" hidden></select>
+    <div class="pl-herr">
+      <label class="pl-buscar"><span>Ir al Nº</span><input id="pl-ir" class="pl-control" inputmode="numeric" placeholder="Ej. 22" autocomplete="off"></label>
+      <div class="pl-orden" role="group" aria-label="Orden">
+        <button type="button" data-orden="clase" class="activo">Por clase</button>
+        <button type="button" data-orden="carga">Como se cargó</button>
+      </div>
+      <button type="button" class="pl-btn" id="pl-config">⚙ Encabezado y firmas</button>
+      <button type="button" class="pl-btn primario" id="pl-excel">⬇ Descargar Excel</button>
+    </div>
+    <div class="pl-estado" id="pl-estado" aria-live="polite"></div>
+  </header>
+
+  <div class="pl-ayuda" id="pl-ayuda">
+    <b>Cómo cargar:</b> escribí en la <b>última fila</b> (la vacía): Nº de coche, clase, piloto, navegante…
+    Al escribir el piloto o el navegante salen los que <b>ya están en el sistema</b>: elegí uno y se completa.
+    <b>Enter</b> guarda y baja · <b>Tab</b> pasa a la derecha · flechas para moverte · <b>Espacio</b> marca o desmarca el campeonato ·
+    tocá el título de un campeonato para <b>marcarlo a todos</b>.
+    <button type="button" id="pl-ayuda-x" aria-label="Ocultar ayuda">✕</button>
+  </div>
+
+  <main class="pl-marco" id="pl-marco">
+    <div class="pl-cargando">Cargando planilla…</div>
+  </main>
+
+  <div class="in-sug" id="in-sug" hidden></div>
+  <div class="pl-toast" id="pl-toast"></div>
+</body>
+
+</html>

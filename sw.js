@@ -4,15 +4,17 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v9';
+const VERSION = 'amadesu-v10';
 const BASICOS = ['./', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
   './app.js', './app.css', './offline.js',
   // Planilla de Tiempos: se abre y se carga sin internet (los datos van en cola)
   './planilla.html', './planilla.js', './planilla.css', './supabase_config.js',
+  // Planilla de Inscripción: igual, se abre y se carga sin internet
+  './inscripcion.html', './inscripcion.js', './inscripcion.css',
   './planilla_formato/defecto.json', './planilla_formato/fia.png', './planilla_formato/febad.jpg', './planilla_formato/amadesu.jpg',
   'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'];
 // Sin estas, el equipo todavía no puede abrir la planilla sin internet.
-const IMPRESCINDIBLES = ['./', './sin_internet.html', './planilla.html', './planilla.js', './supabase_config.js'];
+const IMPRESCINDIBLES = ['./', './sin_internet.html', './planilla.html', './planilla.js', './inscripcion.html', './inscripcion.js', './supabase_config.js'];
 
 // El hosting (Cloudflare) cambia "planilla.html" por "/planilla" e "index.html"
 // por "/" con una redirección. Las páginas se guardan siempre con un solo

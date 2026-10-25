@@ -1,0 +1,68 @@
+/* Planilla de Inscripción: usa la misma hoja que la Planilla de Tiempos
+   (planilla.css) y agrega lo propio de la lista de inscritos. */
+.pl-hoja.in-hoja { min-width: min(1200px, 100%); }
+.in-hoja .pl-cab, .in-hoja .pl-cab-info, .in-hoja .pl-firmas { width: min(1200px, calc(100vw - 70px)); }
+.in-info { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px 20px; font-size: 14px; margin: 6px 0 10px; }
+.in-info .der { text-align: right; }
+.in-lista { background: #ffff99; font-size: 20px; font-weight: 700; padding: 4px 24px; text-align: center; }
+
+.pl-tabla.in-tabla td { height: 40px; }
+.in-tabla .c-psto, .in-tabla .c-nro { font-weight: 700; font-size: 13px; min-width: 44px; }
+.in-tabla td.ed { cursor: cell; position: relative; outline: none; min-width: 70px; }
+.in-tabla td.ed[data-c="num"] { font-family: Calibri, Arial, sans-serif; font-size: 20px; min-width: 76px; }
+.in-tabla td.ed[data-c="cat"] { font-family: Calibri, Arial, sans-serif; font-size: 15px; min-width: 110px; }
+.in-tabla td.ed[data-c="pil"], .in-tabla td.ed[data-c="nav"] { font-family: Calibri, Arial, sans-serif; font-size: 15px; min-width: 240px; max-width: 320px; white-space: normal; text-transform: uppercase; }
+.in-tabla td.ed[data-c="pais"] { font-size: 13px; min-width: 110px; }
+.in-tabla td.ed[data-c="ciu"] { font-weight: 700; font-size: 13px; min-width: 100px; text-transform: uppercase; }
+.in-tabla td.ed:hover { background: #f5faff; }
+.in-tabla td.ed.activa, .in-tabla td.amb.activa { box-shadow: inset 0 0 0 2px #1a73e8; background: #fff !important; z-index: 1; }
+.in-tabla td.ed input { position: absolute; inset: 0; width: 100%; height: 100%; border: none; outline: 2px solid #1a73e8; outline-offset: -2px; text-align: center; font: inherit; background: #fff; color: #000; padding: 0 6px; text-transform: none; }
+
+/* Campeonatos: una columna por campeonato habilitado en el rally */
+.in-tabla th.amb-th { cursor: pointer; min-width: 64px; user-select: none; }
+.in-tabla th.amb-th:hover { background: #1a1a1a; }
+.in-tabla th.amb-th small { display: block; font-size: 10px; opacity: 0.75; font-weight: 400; margin-top: 2px; }
+.in-tabla td.amb { cursor: pointer; min-width: 64px; outline: none; }
+.in-tabla td.amb .caja { display: inline-flex; width: 22px; height: 22px; border: 2px solid #555; border-radius: 5px; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #fff; }
+.in-tabla td.amb.si .caja { background: #1f7a3c; border-color: #1f7a3c; }
+.in-tabla td.amb.si .caja::after { content: '✓'; }
+
+.in-tabla td.c-quitar { min-width: 44px; border-right-color: transparent !important; background: transparent; }
+.in-tabla td.c-quitar button { background: transparent; border: none; cursor: pointer; font-size: 16px; opacity: 0.35; padding: 6px; }
+.in-tabla tr:hover td.c-quitar button { opacity: 0.9; }
+
+/* Estados de cada fila */
+.in-tabla tr.borrador td { background: #fafafa; }
+.in-tabla tr.borrador td.c-psto { color: #b35900; font-size: 11px; font-weight: 600; white-space: normal; line-height: 1.1; }
+.in-tabla tr.espera td.c-nro { box-shadow: inset 4px 0 0 #ff8c00; }
+.in-tabla tr.guardando td.c-nro { box-shadow: inset 4px 0 0 #f0ad00; }
+.in-tabla tr.error td { background: #fde7e9 !important; }
+.in-tabla tr.error td.c-psto { color: #d93025; font-size: 11px; font-weight: 700; white-space: normal; line-height: 1.1; cursor: pointer; }
+.in-tabla tr.ok td { animation: plOk 1.2s ease-out; }
+.in-tabla tr.nueva td { background: #f3fbf6; }
+.in-tabla tr.nueva td.c-psto { color: #1f7a3c; font-size: 18px; }
+.in-tabla tr.fila-activa > td { background: #eaf2fe; }
+.in-tabla td.col-activa { background: #eaf2fe; }
+.in-tabla th.col-activa { background: #1a73e8 !important; }
+
+/* Sugerencias al escribir (pilotos, navegantes, clases, países) */
+.in-sug { position: fixed; z-index: 120; background: #1c1c1c; color: var(--txt); border: 1px solid var(--borde); border-radius: 10px; box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55); max-height: 300px; overflow-y: auto; min-width: 240px; font-family: 'Barlow', sans-serif; }
+.in-sug[hidden] { display: none; }
+.in-sug .t { padding: 7px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--borde); }
+.in-sug .op { padding: 9px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 1px; }
+.in-sug .op b { font-size: 14px; }
+.in-sug .op small { font-size: 12px; color: var(--muted); }
+.in-sug .op.activa, .in-sug .op:hover { background: rgba(0, 245, 160, 0.1); }
+
+.pl-dialogo .chk { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--txt); text-transform: none; letter-spacing: 0; }
+.pl-dialogo .chk input { width: 18px; height: 18px; }
+
+@media (max-width: 720px) {
+  .in-info { grid-template-columns: 1fr; text-align: center; }
+  .in-info .der { text-align: center; }
+  .in-tabla td.ed[data-c="pil"], .in-tabla td.ed[data-c="nav"] { min-width: 180px; }
+}
+
+@media print {
+  .in-tabla td.c-quitar, .in-tabla th.c-quitar, .in-tabla tr.nueva { display: none; }
+}

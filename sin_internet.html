@@ -60,13 +60,17 @@
     (function () {
       var pend = {};
       try { pend = JSON.parse(localStorage.getItem('pl_pendientes_v1') || '{}'); } catch (e) { }
+      var pendInsc = {};
+      try { pendInsc = JSON.parse(localStorage.getItem('insc_pendientes_v1') || '{}'); } catch (e) { }
+      // Planillas de tiempos (pl_copia_) y de inscripción (insc_copia_) guardadas en este equipo.
       var planillas = [];
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i);
-        if (!k || k.indexOf('pl_copia_') !== 0) continue;
+        var tipo = !k ? null : k.indexOf('pl_copia_') === 0 ? 'tiempos' : k.indexOf('insc_copia_') === 0 ? 'inscripcion' : null;
+        if (!tipo) continue;
         try {
           var c = JSON.parse(localStorage.getItem(k));
-          if (c && c.rally) planillas.push(c);
+          if (c && c.rally) { c.tipo = tipo; planillas.push(c); }
         } catch (e) { }
       }
       planillas.sort(function (a, b) { return b.ts - a.ts; });
@@ -76,11 +80,13 @@
         lista.innerHTML = '<div class="vacio">Este equipo todavía no tiene ninguna planilla guardada. Abrí la Planilla de Tiempos <b>una vez con internet</b> (desde el panel → Control de Tiempos → Planilla) y después va a funcionar sin conexión.</div>';
       } else {
         lista.innerHTML = planillas.map(function (c) {
-          var n = Object.keys(pend).filter(function (x) { return pend[x].rally === c.rally.id; }).length;
+          var insc = c.tipo === 'inscripcion';
+          var fuente = insc ? pendInsc : pend;
+          var n = Object.keys(fuente).filter(function (x) { return fuente[x].rally === c.rally.id; }).length;
           var cuando = new Date(c.ts).toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-          return '<a class="planilla" href="planilla.html?rally=' + encodeURIComponent(c.rally.id) + '"><div><b>' + esc(c.rally.nombre) + '</b>' +
-            '<small>Datos guardados el ' + cuando + (n ? ' · <span class="pend">' + n + ' cambio' + (n > 1 ? 's' : '') + ' sin subir</span>' : '') + '</small></div>' +
-            '<span class="ir">Abrir planilla</span></a>';
+          return '<a class="planilla" href="' + (insc ? 'inscripcion.html' : 'planilla.html') + '?rally=' + encodeURIComponent(c.rally.id) + '"><div><b>' + esc(c.rally.nombre) + '</b>' +
+            '<small>' + (insc ? 'Inscripción' : 'Tiempos') + ' · guardada el ' + cuando + (n ? ' · <span class="pend">' + n + ' cambio' + (n > 1 ? 's' : '') + ' sin subir</span>' : '') + '</small></div>' +
+            '<span class="ir">' + (insc ? 'Abrir inscripción' : 'Abrir planilla') + '</span></a>';
         }).join('');
       }
       if (window.caches) caches.keys().then(function (k) {
