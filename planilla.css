@@ -192,6 +192,11 @@ table.pl-tabla { border-collapse: separate; border-spacing: 0; font-family: var(
 .pl-orden-clases li span { flex: 1; font-weight: 700; font-size: 15px; letter-spacing: 0.03em; }
 .pl-orden-clases li .pl-btn { padding: 5px 10px; }
 .pl-orden-clases li .pl-btn:disabled { opacity: 0.25; cursor: default; }
+.pl-opciones-export { display: flex; flex-direction: column; gap: 8px; }
+.pl-opciones-export label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--borde); cursor: pointer; text-transform: none; letter-spacing: 0; margin: 0; color: var(--txt); font-size: 14px; }
+.pl-opciones-export label:has(input:checked) { border-color: var(--verde); background: rgba(0, 245, 160, 0.06); }
+.pl-opciones-export input { margin-top: 3px; width: 16px; height: 16px; }
+.pl-opciones-export small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .pl-lista-penal { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-direction: column; gap: 6px; }
 .pl-lista-penal li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 9px; background: rgba(255, 255, 255, 0.04); font-size: 13px; }
 .pl-lista-penal li b { color: #ffa94d; }

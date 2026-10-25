@@ -1286,7 +1286,39 @@ async function imagenParaExcel(wb, url) {
   } catch (e) { return null; }
 }
 
-async function descargarExcel() {
+// Qué columnas se exportan: 'completo' | 'pe' (sin horas: PE, etapas y general) | 'etapas' (etapas y general).
+const MODOS_EXPORT = {
+  completo: { nombre: 'Completo', ayuda: 'Todo: horas de salida y de paso, PE, etapas y general.' },
+  pe: { nombre: 'PE y etapas', ayuda: 'Sin las horas de salida y de paso: cada PE, cada etapa y la general.' },
+  etapas: { nombre: 'Etapas y general', ayuda: 'Solo el total de cada etapa y la general.' },
+};
+const columnaVisible = (k, modo) => !((k === 's' || k === 'p') && modo !== 'completo') && !(k === 't' && modo === 'etapas');
+
+// Antes de exportar se elige qué columnas van (queda recordado en este equipo).
+function elegirExportacion(formato) {
+  if (!estado.rally || !estado.pes.length) return;
+  let modo = 'completo';
+  try { modo = localStorage.getItem('pl_export_modo') || 'completo'; } catch (e) { }
+  if (!MODOS_EXPORT[modo]) modo = 'completo';
+  const d = dialogo(`<h3>${formato === 'pdf' ? '📄 Exportar PDF' : '⬇ Exportar Excel'}</h3>
+    <p>Elegí qué columnas van. El orden es la clasificación general, por clase.</p>
+    <div class="pl-opciones-export">${Object.entries(MODOS_EXPORT).map(([k, m]) => `
+      <label><input type="radio" name="pl-exp" value="${k}" ${k === modo ? 'checked' : ''}><span><b>${m.nombre}</b><small>${m.ayuda}</small></span></label>`).join('')}
+    </div>
+    <div class="acciones"><button type="button" class="pl-btn" data-cerrar>Cancelar</button>
+      <button type="button" class="pl-btn ${formato === 'pdf' ? 'primario' : ''}" data-formato="pdf">📄 PDF</button>
+      <button type="button" class="pl-btn ${formato !== 'pdf' ? 'primario' : ''}" data-formato="excel">⬇ Excel</button></div>`);
+  d.addEventListener('click', e => {
+    const b = e.target.closest('[data-formato]');
+    if (!b) return;
+    const elegido = d.querySelector('input[name="pl-exp"]:checked')?.value || 'completo';
+    try { localStorage.setItem('pl_export_modo', elegido); } catch (er) { }
+    d.remove();
+    if (b.dataset.formato === 'pdf') descargarPdfPlanilla(elegido); else descargarExcel(elegido);
+  });
+}
+
+async function descargarExcel(modo = 'completo') {
   if (!window.ExcelJS) return toast('Todavía está cargando el generador de Excel, probá en un segundo.', true);
   if (!estado.rally || !estado.pes.length) return;
   const btn = $('pl-excel'); btn.disabled = true; btn.textContent = 'Generando…';
@@ -1312,15 +1344,18 @@ async function descargarExcel() {
     for (const et of estado.etapas) {
       for (const pe of et.recorridos) {
         pos[pe.id] = { s: cols.length + 1, p: cols.length + 2, t: cols.length + 3 };
-        cols.push({ t: 'Hr. Salida', w: 10.7, f: 12 }, { t: `Hr. Paso P${pe.numero}`, w: 13.7, f: 12 }, { t: `PE${pe.numero}`, w: 11, f: 16, b: true });
+        cols.push({ t: 'Hr. Salida', w: 10.7, f: 12, k: 's' }, { t: `Hr. Paso P${pe.numero}`, w: 13.7, f: 12, k: 'p' }, { t: `PE${pe.numero}`, w: 12.5, f: 16, b: true, k: 't' });
       }
       pos[et.id] = cols.length + 1;
-      cols.push({ t: et.nombre.toUpperCase(), w: 16.8, f: 16, b: true });
+      cols.push({ t: et.nombre.toUpperCase(), w: 18.5, f: 16, b: true });
     }
     const cPen = cols.length + 1, cGen = cols.length + 2, cVel = cols.length + 3, cAnt = cols.length + 4, cPri = cols.length + 5;
-    cols.push({ t: 'penalización', w: 13, f: 12 }, { t: 'GENERAL', w: 13, f: 16, b: true }, { t: 'Promedio Velocidad km/h', w: 11.8, f: 11 }, { t: 'DIF. CON ANTERIOR', w: 10.6, f: 10 }, { t: 'DIF. CON PRIMERO', w: 10.9, f: 10 });
+    // GENERAL más ancha: con letra 16 en negrita "1:02:33.4" necesita ~19 de ancho (si no, Excel muestra ####).
+    cols.push({ t: 'penalización', w: 13, f: 12 }, { t: 'GENERAL', w: 19.5, f: 16, b: true }, { t: 'Promedio Velocidad km/h', w: 11.8, f: 11 }, { t: 'DIF. CON ANTERIOR', w: 12, f: 10 }, { t: 'DIF. CON PRIMERO', w: 12, f: 10 });
     const N = cols.length;
-    ws.columns = cols.map(x => ({ width: x.w }));
+    ws.columns = cols.map(x => ({ width: x.w, hidden: !columnaVisible(x.k, modo) }));
+    // Columnas ocultas (no se borran: así las fórmulas de PE, etapa y general siguen funcionando).
+    const visibles = cols.map((x, i) => columnaVisible(x.k, modo) ? i + 1 : null).filter(Boolean);
 
     // Encabezado
     c.titulos.forEach((t, i) => {
@@ -1391,8 +1426,11 @@ async function descargarExcel() {
           }
           filaAnterior = r;
         } else {
-          const txt = f.especial ? ESPECIALES[f.especial] : f.completas ? `Faltan ${estado.pes.length - f.completas} PE` : null;
-          put(cGen, txt, { f: f.especial ? 12 : 11, b: !!f.especial, i: !f.especial, fill: 'FFDCE6F2', color: f.especial ? 'FFC0392B' : 'FF777777' });
+          // Al exportar, al que le faltan PE se lo da como ABANDONO (en pantalla sigue "Faltan N PE").
+          const abandono = !f.especial && f.completas > 0;
+          const txt = f.especial ? ESPECIALES[f.especial] : abandono ? ESPECIALES.abandono : null;
+          const destacado = !!f.especial || abandono;
+          put(cGen, txt, { f: destacado ? 12 : 11, b: destacado, i: !destacado, fill: 'FFDCE6F2', color: destacado ? 'FFC0392B' : 'FF777777' });
           put(cVel, f.vel ? Number(f.vel.toFixed(2)) : null, { f: 11, fmt: '0.00' });
           put(cAnt, null); put(cPri, null);
         }
@@ -1403,7 +1441,9 @@ async function descargarExcel() {
 
     // Firmas: como en la planilla oficial (columna E y L→R), 5 filas abajo del último auto.
     const filaFirma = r + 4;
-    const lugares = [{ c1: 5, c2: 5 }, { c1: Math.min(N - 6, 12), c2: Math.min(N - 6, 12) + 6 }];
+    // La segunda firma va sobre columnas que se ven (en los modos cortos hay columnas ocultas).
+    const i2 = Math.max(6, visibles.length - 9);
+    const lugares = [{ c1: 5, c2: 5 }, { c1: visibles[i2], c2: visibles[Math.min(visibles.length - 4, i2 + 5)] }];
     c.firmas.slice(0, 2).forEach((fi, k) => {
       const lug = lugares[k];
       if (lug.c2 > lug.c1) { ws.mergeCells(filaFirma, lug.c1, filaFirma, lug.c2); ws.mergeCells(filaFirma + 1, lug.c1, filaFirma + 1, lug.c2); }
@@ -1414,7 +1454,7 @@ async function descargarExcel() {
     });
 
     // Logos: mismas cajas que en pantalla, convertidas a celda + desplazamiento.
-    const anchosPx = cols.map(x => Math.round(x.w * 7 + 5));
+    const anchosPx = cols.map(x => columnaVisible(x.k, modo) ? Math.round(x.w * 7 + 5) : 0);
     const altosPx = [22.8, 22.8, 22.8, 22.8, 28.8, 18].map(h => Math.round(h * 96 / 72));
     const celdaX = px => { let col = 0; while (col < anchosPx.length - 1 && px >= anchosPx[col]) { px -= anchosPx[col]; col++; } return { col, off: px }; };
     const celdaY = px => { let row = 0; while (row < altosPx.length - 1 && px >= altosPx[row]) { px -= altosPx[row]; row++; } return { row, off: px }; };
@@ -1455,7 +1495,7 @@ async function descargarExcel() {
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `PLANILLA - ${estado.rally.nombre.replace(/[\\/:*?"<>|]/g, '')}.xlsx`;
+    a.download = `PLANILLA${modo === 'completo' ? '' : modo === 'pe' ? ' (PE y etapas)' : ' (etapas y general)'} - ${estado.rally.nombre.replace(/[\\/:*?"<>|]/g, '')}.xlsx`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     toast('Excel descargado.');
@@ -1480,11 +1520,12 @@ const nombresFila = i => {
   const n = i.navegante ? `${i.navegante.nombre} ${i.navegante.apellido}`.trim() : '';
   return n ? `${p} / ${n}` : p;
 };
-function tiempoFila(f) {
+// exportar = PDF: al que le faltan PE se lo da como ABANDONO (Copiar lista sigue con "Faltan N PE").
+function tiempoFila(f, exportar = false) {
   const c = f.cl;
   if (c.completa) return verTotal(c.tiempo);
   if (c.especial) return ESPECIALES[c.especial];
-  if (c.completas) return `Faltan ${c.n - c.completas} PE (${verTotal(c.total + c.penal)})`;
+  if (c.completas) return exportar ? ESPECIALES.abandono : `Faltan ${c.n - c.completas} PE (${verTotal(c.total + c.penal)})`;
   return c.conDatos ? 'En carrera' : 'Sin tiempos';
 }
 const momento = () => new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -1512,50 +1553,146 @@ async function copiarLista() {
   toast('📋 Clasificación copiada: pegala en WhatsApp o donde quieras.');
 }
 
-function descargarPdf() {
+// PDF con el mismo formato que el Excel: encabezado con logos y títulos, tabla
+// negra, etapas en gris, general en celeste, una fila en blanco entre clases y
+// las firmas. Hoja OFICIO apaisada. Mismas opciones de columnas que el Excel.
+async function imagenParaPdf(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const blob = await r.blob();
+    const data = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(blob); });
+    if (!data) return null;
+    const dim = await new Promise(res => { const im = new Image(); im.onload = () => res({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => res(null); im.src = data; });
+    return dim ? { data, ...dim, formato: /png/.test(blob.type) ? 'PNG' : 'JPEG' } : null;
+  } catch (e) { return null; }
+}
+
+async function descargarPdfPlanilla(modo = 'completo') {
   if (!window.jspdf?.jsPDF) return toast('Todavía está cargando el generador de PDF, probá en un segundo.', true);
   if (!estado.rally || !estado.pes.length) return;
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const ancho = doc.internal.pageSize.getWidth();
-  const c = cfg();
-  let y = 14;
-  doc.setFont('times', 'bold');
-  doc.setFontSize(13);
-  for (const t of c.titulos.filter(Boolean)) {
-    const lineas = doc.splitTextToSize(t, ancho - 24); // título largo: en varias líneas, sin pisarse
-    doc.text(lineas, ancho / 2, y, { align: 'center' });
-    y += 5.6 * lineas.length;
-  }
-  doc.setFontSize(15); doc.text(`CLASIFICACIÓN ${nombreAlcance().toUpperCase()} POR CLASE`, ancho / 2, y + 2, { align: 'center' }); y += 8;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90);
-  const pesA = pesDelAlcance(estado.alcance);
-  doc.text(`${pesA.length} PE · ${pesA.reduce((a, p) => a + p.km, 0).toFixed(2)} km · actualizado ${momento()}`, ancho / 2, y, { align: 'center' });
-  doc.setTextColor(0); y += 5;
-  for (const { clase, filas } of clasificacionPorClase()) {
-    if (y > 260) { doc.addPage(); y = 16; }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(clase, 14, y + 4); y += 6;
-    doc.autoTable({
-      startY: y,
-      head: [['Psto', 'Nº', 'Piloto / Navegante', 'Asociación', 'PE', 'Penal.', 'Tiempo', 'Dif. 1º']],
-      body: filas.map(f => [f.psto ?? '', f.ins.numero, nombresFila(f.ins), f.ins.asociacion?.nombre || '', `${f.cl.completas}/${f.cl.n}`,
-        f.cl.penal ? verPenal(f.cl.penal) : '', tiempoFila(f), f.difPrimero != null ? '+' + verDuracion(f.difPrimero) : '']),
-      theme: 'grid', margin: { left: 14, right: 14 },
-      styles: { fontSize: 8.5, cellPadding: 1.6, valign: 'middle' },
-      headStyles: { fillColor: [0, 0, 0], textColor: 255, halign: 'center' },
-      columnStyles: { 0: { halign: 'center', cellWidth: 11, fontStyle: 'bold' }, 1: { halign: 'center', cellWidth: 11 }, 3: { cellWidth: 26 }, 4: { halign: 'center', cellWidth: 12 }, 5: { halign: 'center', cellWidth: 14 }, 6: { halign: 'center', cellWidth: 25, fontStyle: 'bold' }, 7: { halign: 'center', cellWidth: 20 } },
-      didParseCell: d => { if (d.section === 'body' && d.column.index === 6 && !/^\d/.test(String(d.cell.raw))) { d.cell.styles.fontStyle = 'italic'; d.cell.styles.textColor = /ABANDONO|NO LARG/.test(String(d.cell.raw)) ? [192, 57, 43] : [120, 120, 120]; } },
+  const btn = $('pl-pdf'); btn.disabled = true; btn.textContent = 'Generando…';
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [216, 330] }); // Oficio apaisada
+    const ancho = doc.internal.pageSize.getWidth(), M = 8;
+    const c = cfg();
+    const grupos = clasificar('general');
+
+    // Columnas (mismos títulos y proporciones que el Excel)
+    const cols = [{ t: 'Nro', w: 6, k: 'nro' }, { t: 'Psto.', w: 7, k: 'psto' }, { t: 'Nº COCHE', w: 9.5, k: 'num' }, { t: 'CLASE', w: 12, k: 'clase' }, { t: 'PILOTO / NAVEGANTE', w: 42, k: 'pil' }, { t: 'ASOCIACIÓN', w: 16, k: 'asoc' }];
+    for (const et of estado.etapas) {
+      for (const pe of et.recorridos) cols.push({ t: 'Hr. Salida', w: 10.7, k: 's', pe }, { t: `Hr. Paso P${pe.numero}`, w: 13.7, k: 'p', pe }, { t: `PE${pe.numero}`, w: 12.5, k: 't', pe });
+      cols.push({ t: et.nombre.toUpperCase(), w: 17, k: 'etapa', et });
+    }
+    cols.push({ t: 'Penal.', w: 10, k: 'pen' }, { t: 'GENERAL', w: 18, k: 'gen' }, { t: 'Vel. km/h', w: 10, k: 'vel' }, { t: 'DIF. ANTERIOR', w: 12, k: 'ant' }, { t: 'DIF. PRIMERO', w: 12, k: 'pri' });
+    const vis = cols.filter(x => columnaVisible(x.k, modo));
+    const totalW = vis.reduce((a, x) => a + x.w, 0), escala = (ancho - 2 * M) / totalW;
+    const letra = Math.max(5.5, Math.min(10, 11.5 - vis.length * 0.17));
+
+    // Encabezado: logo del evento a la izquierda, FIA / AMADESU / FEBAD a la derecha, títulos al medio.
+    const caja = async (url, x, y, w, h) => {
+      const im = await imagenParaPdf(url);
+      if (!im) return;
+      const k = Math.min(w / im.w, h / im.h), iw = im.w * k, ih = im.h * k;
+      try { doc.addImage(im.data, im.formato, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); } catch (e) { }
+    };
+    const dz = disenoCabecera(c);
+    if (dz.ev[0]) await caja(dz.ev[0].url, M, 6, 58, 28);
+    for (const [i, f] of dz.fijos.entries()) await caja(f.url, ancho - M - 54 + (i === 1 ? 28 : 0), i === 2 ? 22 : 5, i === 2 ? 54 : 26, i === 2 ? 14 : 16);
+    doc.setFont('times', 'bold'); doc.setFontSize(13);
+    let y = 11;
+    for (const t of c.titulos.filter(Boolean)) {
+      const lineas = doc.splitTextToSize(t, ancho - 2 * M - 130);
+      doc.text(lineas, ancho / 2, y, { align: 'center' });
+      y += 5.4 * lineas.length;
+    }
+    y = Math.max(y, 37);
+    doc.setFontSize(9.5);
+    const km = estado.pes.reduce((a, p) => a + p.km, 0).toFixed(2);
+    doc.text(c.fecha || '', M, y);
+    doc.setFont('times', 'italic'); doc.text(`Hora de Publicación: ${c.hora || '—'}`, M + 75, y);
+    doc.setFont('times', 'normal'); doc.text(`Kilometraje total: ${km}`, M + 150, y);
+    y += 3;
+
+    // Cuerpo: igual que el Excel (ABANDONO para los que tienen PE faltantes)
+    const body = [], tipos = [];
+    const clases = ordenarClases(Object.keys(grupos));
+    let nro = 0;
+    clases.forEach((cl, ci) => {
+      for (const f of grupos[cl]) {
+        nro++;
+        const i = f.ins;
+        const piloto = i.piloto ? `${i.piloto.nombre} ${i.piloto.apellido}`.trim() : '';
+        const nav = i.navegante ? `${i.navegante.nombre} ${i.navegante.apellido}`.trim() : '';
+        const abandono = !f.completa && (f.especial || f.completas > 0);
+        body.push(vis.map(x => {
+          if (x.k === 'nro') return nro;
+          if (x.k === 'psto') return f.psto ?? '';
+          if (x.k === 'num') return i.numero;
+          if (x.k === 'clase') return cl;
+          if (x.k === 'pil') return nav ? `${piloto} // ${nav}` : piloto;
+          if (x.k === 'asoc') return i.asociacion?.nombre || '';
+          if (x.k === 's') return verSalida(f.porPE[x.pe.id].salidaMs);
+          if (x.k === 'p') { const p = f.porPE[x.pe.id]; return p.especial ? ESPECIALES[p.especial] : verPaso(p.pasoMs); }
+          if (x.k === 't') return verDuracion(f.porPE[x.pe.id].brutoMs);
+          if (x.k === 'etapa') { const e = f.etapas[x.et.id]; return e.alguna ? verTotal(e.ms) : ''; }
+          if (x.k === 'pen') return f.penal ? verPenal(f.penal) : '';
+          if (x.k === 'gen') return f.completa ? verTotal(f.general) : abandono ? ESPECIALES[f.especial] || ESPECIALES.abandono : '';
+          if (x.k === 'vel') return f.vel ? f.vel.toFixed(2) : '';
+          if (x.k === 'ant') return f.difAnterior != null ? '+' + verDuracion(f.difAnterior) : '';
+          if (x.k === 'pri') return f.difPrimero != null ? '+' + verDuracion(f.difPrimero) : '';
+          return '';
+        }));
+        tipos.push('fila');
+      }
+      if (ci < clases.length - 1) { body.push(vis.map(() => '')); tipos.push('sep'); }
     });
-    y = doc.lastAutoTable.finalY + 6;
+
+    doc.autoTable({
+      startY: y, head: [vis.map(x => x.t)], body,
+      theme: 'grid', margin: { left: M, right: M, bottom: 12 },
+      styles: { font: 'times', fontSize: letra, cellPadding: 0.9, halign: 'center', valign: 'middle', lineColor: [120, 120, 120], lineWidth: 0.15, textColor: 0, overflow: 'linebreak' },
+      headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold', fontSize: letra * 0.82 },
+      columnStyles: Object.fromEntries(vis.map((x, i) => [i, { cellWidth: x.w * escala, ...(x.k === 'pil' ? { fontStyle: 'bold', halign: 'center' } : {}), ...(['etapa', 'gen', 't'].includes(x.k) ? { fontStyle: 'bold' } : {}) }])),
+      didParseCell: dd => {
+        if (dd.section !== 'body') return;
+        const x = vis[dd.column.index];
+        if (tipos[dd.row.index] === 'sep') { dd.cell.styles.minCellHeight = 2.2; dd.cell.styles.lineWidth = 0; dd.cell.styles.fillColor = [255, 255, 255]; return; }
+        if (x.k === 'etapa') dd.cell.styles.fillColor = [242, 242, 242];
+        if (x.k === 'gen') dd.cell.styles.fillColor = [220, 230, 242];
+        if (/ABANDONO|NO LARG/.test(String(dd.cell.raw))) {
+          dd.cell.styles.textColor = [192, 57, 43]; dd.cell.styles.fontStyle = 'bold';
+          if (x.k !== 'gen') dd.cell.styles.fontSize = letra * 0.78; // en una celda angosta (Hr. Paso), un poco más chica para que entre
+        }
+      },
+    });
+
+    // Firmas, como en el Excel
+    let yf = doc.lastAutoTable.finalY + 22;
+    if (yf > doc.internal.pageSize.getHeight() - 20) { doc.addPage(); yf = 40; }
+    const firmas = c.firmas.slice(0, 2).filter(fi => fi.nombre || fi.cargo);
+    for (const [k, fi] of firmas.entries()) {
+      const cx = firmas.length === 1 ? ancho / 2 : (k === 0 ? ancho * 0.28 : ancho * 0.72);
+      if (fi.img) await caja(urlImagen(fi.img), cx - 25, yf - 22, 50, 20);
+      doc.setDrawColor(0); doc.setLineWidth(0.3); doc.line(cx - 35, yf, cx + 35, yf);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text(fi.nombre || '', cx, yf + 4.5, { align: 'center' });
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text(fi.cargo || '', cx, yf + 9, { align: 'center' });
+    }
+    const paginas = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= paginas; i++) {
+      doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110);
+      doc.text('AMADESU RALLYS — Planilla de Tiempos', M, doc.internal.pageSize.getHeight() - 5);
+      doc.text(`Página ${i} de ${paginas}`, ancho - M, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
+      doc.setTextColor(0);
+    }
+    doc.save(`PLANILLA${modo === 'completo' ? '' : modo === 'pe' ? ' (PE y etapas)' : ' (etapas y general)'} - ${estado.rally.nombre.replace(/[\\/:*?"<>|]/g, '')}.pdf`);
+    toast('📄 PDF descargado.');
+  } catch (e) {
+    toast('No se pudo generar el PDF: ' + (e.message || e), true);
+  } finally {
+    btn.disabled = false; btn.textContent = '📄 PDF';
   }
-  const paginas = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= paginas; i++) {
-    doc.setPage(i); doc.setFontSize(8); doc.setTextColor(120);
-    doc.text(`AMADESU RALLYS — ${estado.rally.nombre}`, 14, 290);
-    doc.text(`Página ${i} de ${paginas}`, ancho - 14, 290, { align: 'right' });
-  }
-  doc.save(`CLASIFICACION - ${estado.rally.nombre.replace(/[\\/:*?"<>|]/g, '')}.pdf`);
-  toast('📄 PDF descargado.');
 }
 
 // ------------------------------------------------------------------
@@ -1617,9 +1754,9 @@ $('pl-ir').addEventListener('keydown', e => {
   if (tactil) empezarEdicion(primera);
   $('pl-ir').value = '';
 });
-$('pl-excel').onclick = descargarExcel;
+$('pl-excel').onclick = () => elegirExportacion('excel');
 $('pl-copiar-lista').onclick = copiarLista;
-$('pl-pdf').onclick = descargarPdf;
+$('pl-pdf').onclick = () => elegirExportacion('pdf');
 $('pl-revisar').onclick = irAlSiguienteParaRevisar;
 $('pl-orden-clases').onclick = abrirOrdenClases;
 $('pl-config').onclick = abrirConfig;
