@@ -12,4 +12,4 @@ Disallow: /files/
 Disallow: /*.sql$
 Disallow: /*.js$
 
-Sitemap: https://[TU-DOMINIO]/sitemap.xml
+Sitemap: https://amadesu.com/sitemap.xml

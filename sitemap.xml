@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Reemplaza [TU-DOMINIO] por el dominio real antes de publicar. -->
+<!-- Dominio del sitio. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://[TU-DOMINIO]/</loc>
+    <loc>https://amadesu.com/</loc>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
   </url>
