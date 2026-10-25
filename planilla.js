@@ -8,13 +8,12 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tactil = window.matchMedia('(pointer: coarse)').matches;
 const ESPECIALES = { abandono: 'ABANDONO', no_presentado: 'NO LARGÓ' };
-const ORDEN_CLASES = ['RC2', 'PROTO', 'RC2N', 'RC4', 'R2B', 'R1B', 'PROMOCIONAL'];
 
 const estado = {
   esAdmin: false, rally: null, etapas: [], pes: [], inscritos: [],
   tiempos: new Map(),     // "ins|rec" -> { id, salidaMs, pasoMs, brutoMs, estado, brutoSinHoras }
   penales: new Map(),     // "ins|rec" -> [{ id, ms, motivo }]
-  config: {}, orden: 'numero', clase: '', ultimoSync: null,
+  config: {}, orden: 'resultado', alcance: 'general', clase: '', ultimoSync: null,
   activa: null, editando: null, guardando: new Map(),
 };
 const clave = (i, r) => `${i}|${r}`;
@@ -162,9 +161,9 @@ async function refrescarOtrasCopias() {
       const recIds = c.etapas.flatMap(e => e.recorridos.map(r => r.id));
       if (!recIds.length) continue;
       const [filas, pen, ins] = await Promise.all([
-        todo(() => db().from('tiempos').select('id, inscripcion_id, recorrido_id, vuelta, hora_salida, hora_llegada, tiempo_bruto, estado, updated_at').in('recorrido_id', recIds).is('deleted_at', null).order('updated_at')),
+        leerTiempos(recIds, null),
         todo(() => db().from('penalizaciones').select('id, inscripcion_id, recorrido_id, tiempo_penalizacion, motivo, created_at').in('recorrido_id', recIds).eq('tipo', 'tiempo').is('deleted_at', null).order('created_at')),
-        todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre), asociacion:asociaciones(nombre)').eq('rally_id', id).is('deleted_at', null).order('numero')),
+        todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre)').eq('rally_id', id).is('deleted_at', null).order('numero')),
       ]);
       const tiempos = new Map(), penales = new Map();
       let ultimo = null;
@@ -185,10 +184,28 @@ async function refrescarOtrasCopias() {
 }
 
 let sincronizando = false;
+// Rechazo por sesión vencida o sin sesión (no es un problema de los datos).
+const esErrorDeSesion = e => [401, 403].includes(e?.status) || ['42501', 'PGRST301', 'PGRST302', 'PGRST303'].includes(e?.code) ||
+  /jwt|row-level security|permission denied|not authorized|sin sesi/i.test(String(e?.message || e || ''));
+let reintentoSesion = false;
+async function renovarSesion() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session && data.session.expires_at * 1000 > Date.now() + 30000) return true;
+    const r = await supabase.auth.refreshSession();
+    return !!r.data?.session;
+  } catch (e) { return false; }
+}
+
 async function sincronizar(avisar = true) {
   if (sincronizando || !estado.rally || !enLinea()) { estadoBarra(); return; }
   const lista = pendientesDelRally();
   if (!lista.length) { estadoBarra(); return; }
+  // Antes de subir, que la sesión esté vigente (si se abrió sin internet puede haber vencido).
+  if (!(await renovarSesion())) { estado.sinSesion = true; estadoBarra(); return; }
+  estado.sinSesion = false;
+  // Las celdas que quedaron en rojo por la sesión se vuelven a intentar.
+  for (const [k, v] of estado.guardando) if (v === 'error') estado.guardando.delete(k);
   sincronizando = true; estadoBarra();
   let subidos = 0;
   for (const x of lista) {
@@ -219,6 +236,13 @@ function estadoBarra() {
   const err = [...estado.guardando.values()].filter(v => v === 'error').length;
   const enEquipo = pendientesDelRally().length;
   const offline = !navigator.onLine || estado.sinConexion;
+  if (estado.sinSesion && !offline) {
+    // Al iniciar sesión vuelve sola a esta planilla y sube lo pendiente.
+    const volver = encodeURIComponent(location.pathname.split('/').pop() + location.search);
+    $('pl-estado').innerHTML = `<span class="sin-red">🔒 Se cerró tu sesión. ${enEquipo ? `Tus <b>${enEquipo} cambio${enEquipo > 1 ? 's' : ''}</b> están guardados en este equipo y` : 'Lo que cargues queda guardado en este equipo y'} se suben apenas inicies sesión.
+      <a class="pl-btn" href="admin_login.html?volver=${volver}" style="padding:3px 10px; text-decoration:none;">Iniciar sesión</a></span>`;
+    return;
+  }
   $('pl-estado').innerHTML = [
     offline ? `<span class="sin-red">📴 Sin conexión${enEquipo ? ` · <b>${enEquipo} cambio${enEquipo > 1 ? 's' : ''} guardado${enEquipo > 1 ? 's' : ''} en este equipo</b> — se suben solos cuando vuelva internet` : ' · podés seguir cargando, todo se guarda en este equipo'}</span>` : '',
     !offline && enEquipo && !pend ? `<span class="sin-red">⏳ ${enEquipo} cambio${enEquipo > 1 ? 's' : ''} por subir… <button type="button" class="pl-btn" id="pl-sync" style="padding:3px 10px;">Subir ahora</button></span>` : '',
@@ -286,8 +310,10 @@ async function iniciar() {
   estado.esAdmin = !usuario || Number(usuario.rol_id) !== 3;
   $('pl-volver').href = estado.esAdmin ? 'admin_dashboard.html' : 'operador_dashboard.html';
   $('pl-config').hidden = !estado.esAdmin;
+  $('pl-orden-clases').hidden = !estado.esAdmin;
 
-  try { estado.orden = localStorage.getItem('pl_orden') || 'numero'; if (localStorage.getItem('pl_sin_ayuda')) $('pl-ayuda').remove(); } catch (e) { }
+  // Por defecto: por resultado (por clase, el menor tiempo arriba).
+  try { estado.orden = localStorage.getItem('pl_orden_v2') || 'resultado'; if (localStorage.getItem('pl_sin_ayuda')) $('pl-ayuda').remove(); } catch (e) { }
   document.querySelectorAll('.pl-orden button').forEach(b => b.classList.toggle('activo', b.dataset.orden === estado.orden));
 
   let rallyId = new URLSearchParams(location.search).get('rally');
@@ -309,7 +335,7 @@ async function cargarRally(rallyId) {
   $('pl-marco').innerHTML = '<div class="pl-cargando">Cargando planilla…</div>';
   try {
     if (estado.sinConexion) throw new TypeError('sin conexión');
-    const { data: rally, error } = await db().from('rallies').select('id, nombre, fecha_inicio, fecha_fin, ciudad, tipo_evento, imagen_url').eq('id', rallyId).maybeSingle();
+    const { data: rally, error } = await leerRally(rallyId);
     if (error || !rally) throw error || new Error('No se encontró el rally.');
     estado.rally = rally;
     $('pl-sub').textContent = rally.nombre;
@@ -320,7 +346,7 @@ async function cargarRally(rallyId) {
     }
     const [etapas, inscritos, cfg] = await Promise.all([
       db().from('etapas').select('id, numero, nombre, recorridos(id, numero, nombre, distancia_km, deleted_at)').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero'),
-      todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre), asociacion:asociaciones(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero')),
+      todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero')),
       db().from('planillas').select('config').eq('rally_id', rallyId).maybeSingle(),
     ]);
     if (etapas.error) throw etapas.error;
@@ -389,23 +415,47 @@ async function cargarDefecto() {
   return null;
 }
 
-async function traerTiemposYPenales(completo) {
-  const recIds = estado.pes.map(p => p.id);
-  if (!recIds.length) return;
-  const desde = completo ? null : estado.ultimoSync;
-  const filas = await todo(() => {
+// La planilla tiene sus propios tiempos (rally.planilla_tiempos, script 74):
+// lo que se carga fuera de la planilla se ve en la página, pero no acá.
+// Si todavía no se corrió el script 74, muestra los de la página (como antes).
+const esTablaFaltante = e => ['42P01', 'PGRST205', 'PGRST202'].includes(e?.code) || (/planilla_tiempos/.test(e?.message || '') && /exist|find|schema cache/i.test(e?.message || ''));
+async function leerTiempos(recIds, desde) {
+  if (estado.tablaPropia !== false) {
+    try {
+      const filas = await todo(() => {
+        let q = db().from('planilla_tiempos').select('inscripcion_id, recorrido_id, hora_salida, hora_llegada, tiempo_bruto, estado, updated_at').in('recorrido_id', recIds).order('updated_at');
+        if (desde) q = q.gt('updated_at', desde);
+        return q;
+      });
+      estado.tablaPropia = true;
+      return filas.map(f => ({ ...f, vuelta: 1, propia: true }));
+    } catch (e) {
+      if (!esTablaFaltante(e)) throw e;
+      estado.tablaPropia = false;
+    }
+  }
+  return todo(() => {
     let q = db().from('tiempos').select('id, inscripcion_id, recorrido_id, vuelta, hora_salida, hora_llegada, tiempo_bruto, estado, updated_at')
       .in('recorrido_id', recIds).is('deleted_at', null).order('updated_at');
     if (desde) q = q.gt('updated_at', desde);
     return q;
   });
-  if (completo) estado.tiempos.clear();
+}
+
+async function traerTiemposYPenales(completo) {
+  const recIds = estado.pes.map(p => p.id);
+  if (!recIds.length) return;
+  const desde = completo ? null : estado.ultimoSync;
+  const anteriores = estado.tiempos;
+  const filas = await leerTiempos(recIds, desde);
+  if (completo) estado.tiempos = new Map([...anteriores].filter(([k]) => estado.editando === k || estado.guardando.get(k) === 'guardando' || esPendiente(k)));
   for (const f of filas) {
     if ((f.vuelta || 1) !== 1) continue;
     const k = clave(f.inscripcion_id, f.recorrido_id);
     if (estado.editando === k || estado.guardando.get(k) === 'guardando' || esPendiente(k)) continue;
     const salidaMs = msDesdeISO(f.hora_salida), pasoMs = msDesdeISO(f.hora_llegada), brutoMs = msDesdeIntervalo(f.tiempo_bruto);
-    estado.tiempos.set(k, { id: f.id, salidaMs, pasoMs, brutoMs, estado: f.estado, brutoSinHoras: !!brutoMs && pasoMs == null });
+    // id = la fila de la página (rally.tiempos) a reemplazar, si ya se conoce.
+    estado.tiempos.set(k, { id: f.id ?? anteriores.get(k)?.id, salidaMs, pasoMs, brutoMs, estado: f.estado, brutoSinHoras: !!brutoMs && pasoMs == null, enPlanilla: !!f.propia });
     if (!estado.ultimoSync || f.updated_at > estado.ultimoSync) estado.ultimoSync = f.updated_at;
   }
   const pen = await todo(() => db().from('penalizaciones').select('id, inscripcion_id, recorrido_id, tiempo_penalizacion, motivo, created_at')
@@ -426,8 +476,63 @@ const nombreClase = ins => {
   if (c === 'PROMO') c = 'PROMOCIONAL';
   return c;
 };
-const posClase = c => { const i = ORDEN_CLASES.indexOf(c); return i === -1 ? ORDEN_CLASES.length : i; };
+// Orden de las clases: el manual del rally (↕ Orden de clases); si no hay,
+// el "orden" de cada clase en el catálogo; las que no tienen, al final.
+const normalClase = c => { let x = String(c || '').trim().toUpperCase(); if (x === 'PROMO') x = 'PROMOCIONAL'; return x; };
+function posClase(c) {
+  const manual = (estado.rally?.orden_clases || []).map(normalClase);
+  const i = manual.indexOf(c);
+  if (i >= 0) return i;
+  const ins = estado.inscritos.find(x => nombreClase(x) === c);
+  return 1000 + (ins?.categoria?.orden ?? 9000);
+}
 const ordenarClases = lista => [...lista].sort((a, b) => posClase(a) - posClase(b) || a.localeCompare(b));
+
+// Rally con su orden de clases (si todavía no se corrió el script 73, sin él).
+async function leerRally(id) {
+  const campos = 'id, nombre, fecha_inicio, fecha_fin, ciudad, tipo_evento, imagen_url';
+  const r = await db().from('rallies').select(campos + ', orden_clases').eq('id', id).maybeSingle();
+  if (r.error && r.error.code === '42703') return db().from('rallies').select(campos).eq('id', id).maybeSingle();
+  return r;
+}
+
+// ↕ Orden de clases: se acomoda con flechas y se guarda en el rally.
+function abrirOrdenClases() {
+  if (!enLinea()) return toast('Para cambiar el orden de las clases hace falta internet.', true);
+  let lista = ordenarClases([...new Set(estado.inscritos.map(nombreClase))]);
+  if (!lista.length) return toast('Este rally todavía no tiene inscritos.', true);
+  const d = dialogo(`<h3>↕ Orden de clases</h3>
+    <p>Así salen las clases en la planilla, el Excel, el PDF, la lista y la página pública de <b>${esc(estado.rally.nombre)}</b>.</p>
+    <ol class="pl-orden-clases" id="pl-oc"></ol>
+    <div class="acciones">
+      <button type="button" class="pl-btn" data-cerrar>Cancelar</button>
+      ${estado.rally.orden_clases?.length ? '<button type="button" class="pl-btn" id="pl-oc-cat" title="Vuelve al orden del catálogo de clases">Orden del catálogo</button>' : ''}
+      <button type="button" class="pl-btn primario" id="pl-oc-ok">Guardar orden</button>
+    </div>`);
+  const pintar = () => {
+    d.querySelector('#pl-oc').innerHTML = lista.map((c, i) => `<li><b>${i + 1}</b><span>${esc(c)}</span>
+      <button type="button" class="pl-btn" data-sube="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Subir">▲</button>
+      <button type="button" class="pl-btn" data-baja="${i}" ${i === lista.length - 1 ? 'disabled' : ''} aria-label="Bajar">▼</button></li>`).join('');
+  };
+  pintar();
+  d.addEventListener('click', e => {
+    const s = e.target.closest('[data-sube]'), b = e.target.closest('[data-baja]');
+    const i = s ? +s.dataset.sube : b ? +b.dataset.baja : -1;
+    if (i < 0) return;
+    const j = s ? i - 1 : i + 1;
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+    pintar();
+  });
+  const guardarOrden = async valor => {
+    const { error } = await db().from('rallies').update({ orden_clases: valor }).eq('id', estado.rally.id);
+    if (error) return toast('No se pudo guardar: ' + error.message + (error.code === '42703' || /orden_clases/.test(error.message) ? ' (¿corriste el script 73?)' : ''), true);
+    estado.rally.orden_clases = valor;
+    guardarCopiaLocal(); llenarFiltroClases(); d.remove(); dibujar();
+    toast(valor ? 'Orden de clases guardado para este rally.' : 'Volvió al orden del catálogo.');
+  };
+  d.querySelector('#pl-oc-ok').onclick = () => guardarOrden(lista);
+  d.querySelector('#pl-oc-cat')?.addEventListener('click', () => guardarOrden(null));
+}
 const penalPE = (i, r) => (estado.penales.get(clave(i, r)) || []).reduce((a, p) => a + p.ms, 0);
 
 function celdaPE(insId, pe) {
@@ -462,19 +567,52 @@ function calcular(ins) {
 
 // Por clase: completas por tiempo, después las incompletas (más PE primero),
 // después abandono / no largó, y al final los que todavía no tienen nada.
-function clasificar() {
+// Qué se clasifica: 'general' (suma de todas las etapas), 'etapa:<id>' o 'pe:<id>'.
+function pesDelAlcance(alcance) {
+  if (String(alcance).startsWith('etapa:')) {
+    const et = estado.etapas.find(e => e.id === alcance.slice(6));
+    if (et) return et.recorridos.map(r => estado.pes.find(p => p.id === r.id)).filter(Boolean);
+  }
+  if (String(alcance).startsWith('pe:')) { const pe = estado.pes.find(p => p.id === alcance.slice(3)); if (pe) return [pe]; }
+  return estado.pes;
+}
+function nombreAlcance(alcance = estado.alcance) {
+  if (String(alcance).startsWith('etapa:')) { const et = estado.etapas.find(e => e.id === alcance.slice(6)); if (et) return et.nombre; }
+  if (String(alcance).startsWith('pe:')) { const pe = estado.pes.find(p => p.id === alcance.slice(3)); if (pe) return `PE${pe.numero} ${pe.nombre || ''}`.trim(); }
+  return 'General';
+}
+// Tiempo de cada auto contando solo las PE del alcance (con sus penalizaciones).
+function enAlcance(f, pes) {
+  const c = { n: pes.length, completas: 0, total: 0, penal: 0, especial: null, conDatos: false };
+  for (const pe of pes) {
+    const x = f.porPE[pe.id];
+    c.penal += penalPE(f.ins.id, pe.id);
+    if (x.salidaMs != null || x.pasoMs != null || x.brutoMs != null || x.especial) c.conDatos = true;
+    if (x.especial && !c.especial) c.especial = x.especial;
+    if (x.brutoMs) { c.completas++; c.total += x.brutoMs; }
+  }
+  c.completa = c.completas === c.n && c.n > 0;
+  c.tiempo = c.completa ? c.total + c.penal : null;
+  return c;
+}
+
+// Por clase: los que completaron todas las PE del alcance, del menor tiempo al
+// mayor; después los que les faltan PE (más PE primero, y a igual cantidad el
+// menor tiempo); después abandono / no largó; al final los que no tienen nada.
+function clasificar(alcance = estado.alcance) {
+  const pes = pesDelAlcance(alcance);
   const grupos = {};
-  for (const ins of estado.inscritos) { const f = calcular(ins); (grupos[f.clase] ||= []).push(f); }
-  const rango = f => f.especial ? 2 : f.completa ? 0 : f.conDatos ? 1 : 3;
+  for (const ins of estado.inscritos) { const f = calcular(ins); f.cl = enAlcance(f, pes); (grupos[f.clase] ||= []).push(f); }
+  const rango = f => f.cl.especial ? 2 : f.cl.completa ? 0 : f.cl.conDatos ? 1 : 3;
   for (const lista of Object.values(grupos)) {
-    lista.sort((a, b) => rango(a) - rango(b) || (rango(a) === 0 ? a.general - b.general : rango(a) === 1 ? (b.completas - a.completas) || (a.total + a.penal - b.total - b.penal) : 0) || (a.ins.numero - b.ins.numero));
+    lista.sort((a, b) => rango(a) - rango(b) || (rango(a) === 0 ? a.cl.tiempo - b.cl.tiempo : rango(a) === 1 ? (b.cl.completas - a.cl.completas) || (a.cl.total + a.cl.penal - b.cl.total - b.cl.penal) : 0) || (a.ins.numero - b.ins.numero));
     let lider = null, previo = null;
     lista.forEach((f, i) => {
       f.psto = rango(f) <= 2 ? i + 1 : null;
-      if (f.completa) {
-        if (lider == null) lider = f.general;
-        else { f.difPrimero = f.general - lider; f.difAnterior = f.general - previo; }
-        previo = f.general;
+      if (f.cl.completa) {
+        if (lider == null) lider = f.cl.tiempo;
+        else { f.difPrimero = f.cl.tiempo - lider; f.difAnterior = f.cl.tiempo - previo; }
+        previo = f.cl.tiempo;
       }
     });
   }
@@ -545,10 +683,103 @@ function zonaLogos(cajas, W, H) {
   return `<div class="pl-zona" style="width:${Math.round(W)}px; aspect-ratio:${W} / ${H};">${cajas.map(i => `<img src="${esc(i.url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" style="left:${(i.x / W * 100).toFixed(2)}%; top:${(i.y / H * 100).toFixed(2)}%; width:${(i.w / W * 100).toFixed(2)}%; height:${(i.h / H * 100).toFixed(2)}%;">`).join('')}</div>`;
 }
 
+// "Clasificación": General (suma de todas las etapas), cada etapa o cada PE.
+function llenarAlcance() {
+  const sel = $('pl-alcance');
+  if (!sel) return;
+  const valido = estado.alcance === 'general' || estado.etapas.some(e => estado.alcance === 'etapa:' + e.id) || estado.pes.some(p => estado.alcance === 'pe:' + p.id);
+  if (!valido) estado.alcance = 'general';
+  sel.innerHTML = '<option value="general">Clasificación: General</option>' +
+    (estado.etapas.length > 1 ? `<optgroup label="Por etapa">${estado.etapas.map(e => `<option value="etapa:${e.id}">${esc(e.nombre)}</option>`).join('')}</optgroup>` : '') +
+    `<optgroup label="Por PE">${estado.pes.map(p => `<option value="pe:${p.id}">PE${p.numero}${p.nombre ? ' · ' + esc(p.nombre) : ''}</option>`).join('')}</optgroup>`;
+  sel.value = estado.alcance;
+}
+
+// Color de cada etapa (se repiten cada 6) y tono alternado de sus PE.
+const colorEtapa = et => 'et' + (Math.max(0, estado.etapas.indexOf(et)) % 6);
+const colorPE = (et, pe) => `${colorEtapa(et)} ${et.recorridos.indexOf(pe) % 2 ? 'pe-b' : 'pe-a'}`;
+
 function llenarFiltroClases() {
+  llenarAlcance();
   const clases = ordenarClases([...new Set(estado.inscritos.map(nombreClase))]);
   $('pl-clase').innerHTML = '<option value="">Todas las clases</option>' + clases.map(c => `<option>${esc(c)}</option>`).join('');
   $('pl-clase').value = clases.includes(estado.clase) ? estado.clase : '';
+}
+
+// ------------------------------------------------------------------
+// Tiempos para revisar: cada PE se compara con lo "normal" de su clase en esa
+// misma PE (la mediana, que no se mueve por uno o dos tiempos mal cargados).
+// Solo avisa con un color; no bloquea ni cambia nada.
+// ------------------------------------------------------------------
+const MARGEN = 0.20, MIN_MS = 30000, MAX_MS = 180000;   // 20%, entre 30 s y 3 min
+const MARGEN_POCOS = 0.35;                               // clase con menos de 3 autos: contra toda la PE
+const VEL_IMPOSIBLE = 160;                               // km/h
+const mediana = l => { const a = [...l].sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+const leerRevisados = () => { try { return new Set(JSON.parse(localStorage.getItem('pl_revisados_v1') || '[]')); } catch (e) { return new Set(); } };
+const claveRevisado = (k, ms) => `${k}|${ms}`; // si el tiempo cambia, se vuelve a revisar
+
+function tiemposParaRevisar() {
+  const out = new Map();
+  const revisados = leerRevisados();
+  for (const pe of estado.pes) {
+    const porClase = {}, todos = [];
+    for (const ins of estado.inscritos) {
+      const ms = celdaPE(ins.id, pe).brutoMs;
+      if (!ms) continue;
+      (porClase[nombreClase(ins)] ||= []).push({ ins, ms });
+      todos.push(ms);
+    }
+    if (!todos.length) continue;
+    const normalPE = mediana(todos);
+    for (const [cl, lista] of Object.entries(porClase)) {
+      const pocos = lista.length < 3;
+      const normal = pocos ? normalPE : mediana(lista.map(x => x.ms));
+      const lim = Math.min(Math.max(normal * (pocos ? MARGEN_POCOS : MARGEN), MIN_MS), pocos ? MAX_MS * 1.5 : MAX_MS);
+      for (const { ins, ms } of lista) {
+        const k = clave(ins.id, pe.id);
+        if (revisados.has(claveRevisado(k, ms))) continue;
+        const vel = pe.km ? pe.km / (ms / 3600000) : 0;
+        const pct = Math.round((ms - normal) / normal * 100);
+        const ref = pocos ? `en toda la PE${pe.numero}` : `en ${cl}`;
+        if (vel > VEL_IMPOSIBLE) out.set(k, { tipo: 'imposible', msg: `Velocidad imposible: ${Math.round(vel)} km/h (${verDuracion(ms)} en ${pe.km} km). Revisá la hora de salida y de paso.` });
+        else if (ms < normal - lim) out.set(k, { tipo: 'rapido', msg: `Muy rápido: ${verDuracion(ms)} contra ${verDuracion(normal)} normal ${ref} (${pct}%). ¿Hora mal cargada?` });
+        else if (ms > normal + lim) out.set(k, { tipo: 'lento', msg: `Muy lento: ${verDuracion(ms)} contra ${verDuracion(normal)} normal ${ref} (+${pct}%). Puede ser real (problema en la PE) o un error.` });
+      }
+    }
+  }
+  return out;
+}
+
+function verRevision(insId, recId) {
+  const k = clave(insId, recId), a = estado.atipicos?.get(k);
+  if (!a) return;
+  const ins = estado.inscritos.find(i => i.id === insId), pe = estado.pes.find(p => p.id === recId);
+  const ms = celdaPE(insId, pe).brutoMs;
+  const d = dialogo(`<h3>${a.tipo === 'lento' ? '🟠' : a.tipo === 'rapido' ? '🟣' : '🔴'} Tiempo para revisar</h3>
+    <p><b>#${esc(ins.numero)} ${esc(nombresFila(ins))}</b> · PE${pe.numero}</p>
+    <p>${esc(a.msg)}</p>
+    <div class="acciones"><button type="button" class="pl-btn" data-cerrar>Cerrar</button>
+    <button type="button" class="pl-btn" id="pl-rev-ok" title="Deja de resaltarlo (vuelve si el tiempo cambia)">✓ Está bien</button>
+    <button type="button" class="pl-btn primario" id="pl-rev-corregir">Corregir la hora de paso</button></div>`);
+  d.querySelector('#pl-rev-ok').onclick = () => {
+    const r = leerRevisados(); r.add(claveRevisado(k, ms));
+    try { localStorage.setItem('pl_revisados_v1', JSON.stringify([...r])); } catch (e) { }
+    d.remove(); dibujar(); toast('Marcado como revisado.');
+  };
+  d.querySelector('#pl-rev-corregir').onclick = () => {
+    d.remove();
+    const td = document.querySelector(`tr[data-ins="${insId}"] td.ed[data-r="${recId}"][data-c="p"]`);
+    if (td) { seleccionar(td); empezarEdicion(td); }
+  };
+}
+// "⚠ N para revisar": lleva al siguiente, en el orden de la hoja.
+function irAlSiguienteParaRevisar() {
+  const celdas = [...document.querySelectorAll('.pl-tabla td.c-pe[data-revisar]')];
+  if (!celdas.length) return toast('No hay tiempos para revisar.');
+  estado.idxRevisar = ((estado.idxRevisar ?? -1) + 1) % celdas.length;
+  const td = celdas[estado.idxRevisar];
+  td.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+  setTimeout(() => verRevision(td.closest('tr').dataset.ins, td.dataset.r), 350);
 }
 
 function dibujar() {
@@ -560,12 +791,20 @@ function dibujar() {
   const c = cfg();
   const grupos = clasificar();
   const kmTotal = estado.pes.reduce((a, p) => a + p.km, 0);
+  estado.atipicos = tiemposParaRevisar();
+  const nRev = estado.atipicos.size;
+  $('pl-revisar').hidden = !nRev;
+  $('pl-revisar').textContent = `⚠ ${nRev} ${nRev === 1 ? 'tiempo' : 'tiempos'} para revisar`;
 
   let cab = `<tr>
-    <th rowspan="1">Nro</th><th>Psto.</th><th class="fijo c-num">Nº COCHE</th><th>CLASE</th><th class="fijo c-pil pil">PILOTO / NAVEGANTE</th><th>ASOCIACIÓN</th>`;
+    <th rowspan="1">Nro</th><th title="Puesto en la clase según: ${esc(nombreAlcance())}">Psto.${estado.alcance !== 'general' ? `<small style="display:block;font-size:10px;">${esc(nombreAlcance())}</small>` : ''}</th><th class="fijo c-num">Nº COCHE</th><th>CLASE</th><th class="fijo c-pil pil">PILOTO / NAVEGANTE</th><th>ASOCIACIÓN</th>`;
+  // Colores: cada etapa tiene el suyo y sus PE alternan dos tonos (colorEtapa / colorPE).
   for (const et of estado.etapas) {
-    for (const pe of et.recorridos) cab += `<th>Hr. Salida</th><th>Hr. Paso P${pe.numero}</th><th class="pe" title="${esc(pe.nombre)} · ${pe.km} km">PE${pe.numero}</th>`;
-    cab += `<th class="etapa">${esc(et.nombre)}</th>`;
+    for (const pe of et.recorridos) {
+      const cc = colorPE(et, pe), t = `title="${esc(et.nombre)} · ${esc(pe.nombre)} · ${pe.km} km"`;
+      cab += `<th class="${cc}" ${t}>Hr. Salida</th><th class="${cc}" ${t}>Hr. Paso P${pe.numero}</th><th class="pe ${cc} ${estado.alcance === 'pe:' + pe.id ? 'alcance' : ''}" ${t}>PE${pe.numero}</th>`;
+    }
+    cab += `<th class="etapa ${colorEtapa(et)} ${estado.alcance === 'etapa:' + et.id ? 'alcance' : ''}">${esc(et.nombre)}</th>`;
   }
   cab += `<th>penalización</th><th class="gen">GENERAL</th><th>Promedio Velocidad km/h</th><th>DIF. CON ANTERIOR</th><th>DIF. CON PRIMERO</th></tr>`;
 
@@ -591,12 +830,14 @@ function dibujar() {
           const k = clave(i.id, pe.id);
           const marca = estado.guardando.get(k) || (esPendiente(k) ? 'espera' : '');
           const pasoTxt = p.especial ? ESPECIALES[p.especial] : verPaso(p.pasoMs);
-          tr += `<td class="ed salida ${marca}" tabindex="-1" data-r="${pe.id}" data-c="s">${verSalida(p.salidaMs)}</td>`;
-          tr += `<td class="ed paso ${marca} ${p.especial ? 'especial' : ''}" tabindex="-1" data-r="${pe.id}" data-c="p">${pasoTxt}</td>`;
-          tr += `<td class="c-pe">${verDuracion(p.brutoMs)}</td>`;
+          const cc = colorPE(et, pe);
+          tr += `<td class="ed salida ${cc} ${marca}" tabindex="-1" data-r="${pe.id}" data-c="s">${verSalida(p.salidaMs)}</td>`;
+          tr += `<td class="ed paso ${cc} ${marca} ${p.especial ? 'especial' : ''}" tabindex="-1" data-r="${pe.id}" data-c="p">${pasoTxt}</td>`;
+          const at = estado.atipicos.get(k);
+          tr += `<td class="c-pe ${cc} ${at ? 'atipico-' + at.tipo : ''}" data-r="${pe.id}" ${at ? `data-revisar="1" title="${esc(at.msg)} — tocá para ver"` : ''}>${verDuracion(p.brutoMs)}</td>`;
         }
         const e = f.etapas[et.id];
-        tr += `<td class="c-etapa ${e.completa ? '' : 'parcial'}">${e.alguna ? verTotal(e.ms) : ''}</td>`;
+        tr += `<td class="c-etapa ${colorEtapa(et)} ${e.completa ? '' : 'parcial'}">${e.alguna ? verTotal(e.ms) : ''}</td>`;
       }
       const genTxt = f.completa ? verTotal(f.general) : f.especial ? ESPECIALES[f.especial] : f.completas ? `Faltan ${estado.pes.length - f.completas} PE` : '';
       tr += `<td class="c-penal" data-penal="${i.id}" title="Ver o agregar penalizaciones">${verPenal(f.penal)}</td>`;
@@ -761,7 +1002,8 @@ async function guardarAhora(insId, recId) {
   const c = celdaPE(insId, pe);
   const bruto = especial ? null : c.brutoMs;
   const pen = penalPE(insId, recId);
-  if (!t.id && t.salidaMs == null && t.pasoMs == null && !especial && !t.brutoSinHoras) { estado.tiempos.delete(k); quitarPendiente(k, tsPend); return true; }
+  const vacia = t.salidaMs == null && t.pasoMs == null && !especial && !t.brutoSinHoras;
+  if (!t.id && !t.enPlanilla && vacia) { estado.tiempos.delete(k); quitarPendiente(k, tsPend); return true; }
   const datos = {
     hora_salida: t.salidaMs != null ? isoDesdeMs(t.salidaMs) : null,
     hora_llegada: !especial && t.pasoMs != null ? isoDesdeMs(t.pasoMs) : null,
@@ -773,17 +1015,43 @@ async function guardarAhora(insId, recId) {
   };
   estado.guardando.set(k, 'guardando'); marcar(k, 'guardando'); estadoBarra();
   try {
+    // Una corrección que no tocó ninguna fila NO es un "guardado": sin sesión
+    // el servidor la ignora en silencio (o la fila fue borrada desde otro lado).
+    const sinFilas = async () => {
+      const { data: s } = await supabase.auth.getSession();
+      return new Error(s?.session ? 'Ese tiempo ya no existe en el servidor (lo borraron desde otro lado). Recargá la planilla.' : 'sin sesión');
+    };
+    // 1) Los tiempos propios de la planilla (lo que la planilla muestra).
+    if (estado.tablaPropia !== false) {
+      const { data: fp, error: ep } = await db().from('planilla_tiempos')
+        .upsert({ inscripcion_id: insId, recorrido_id: recId, hora_salida: datos.hora_salida, hora_llegada: datos.hora_llegada, tiempo_bruto: datos.tiempo_bruto, estado: datos.estado }, { onConflict: 'inscripcion_id,recorrido_id' })
+        .select('inscripcion_id');
+      if (ep && esTablaFaltante(ep)) estado.tablaPropia = false;
+      else if (ep) throw ep;
+      else if (!fp || !fp.length) throw await sinFilas();
+      else t.enPlanilla = true;
+    }
+    // 2) La página: lo de la planilla REEMPLAZA el tiempo de ese auto en esa PE.
+    let hecho = false;
     if (t.id) {
-      const { error } = await db().from('tiempos').update(datos).eq('id', t.id);
+      const { data: filas, error } = await db().from('tiempos').update(datos).eq('id', t.id).is('deleted_at', null).select('id');
       if (error) throw error;
-    } else {
+      hecho = !!(filas && filas.length);
+      if (!hecho) { const { data: s } = await supabase.auth.getSession(); if (!s?.session) throw new Error('sin sesión'); t.id = null; }
+    }
+    if (!hecho && vacia) {
+      // Celda borrada en la planilla: si la página tiene un tiempo de ese auto en esa PE, también se borra.
+      const { data: ex } = await db().from('tiempos').select('id').eq('inscripcion_id', insId).eq('recorrido_id', recId).eq('vuelta', 1).is('deleted_at', null).maybeSingle();
+      if (ex) { const { error: e3 } = await db().from('tiempos').update(datos).eq('id', ex.id); if (e3) throw e3; t.id = ex.id; }
+    } else if (!hecho) {
       const { data, error } = await db().from('tiempos').insert({ ...datos, inscripcion_id: insId, recorrido_id: recId, vuelta: 1 }).select('id').single();
       if (error && error.code === '23505') {
         // Otro operador cargó este mismo auto/PE recién: se actualiza esa fila.
         const { data: ex } = await db().from('tiempos').select('id').eq('inscripcion_id', insId).eq('recorrido_id', recId).eq('vuelta', 1).is('deleted_at', null).maybeSingle();
         if (!ex) throw error;
-        const { error: e2 } = await db().from('tiempos').update(datos).eq('id', ex.id);
+        const { data: f2, error: e2 } = await db().from('tiempos').update(datos).eq('id', ex.id).select('id');
         if (e2) throw e2;
+        if (!f2 || !f2.length) throw await sinFilas();
         t.id = ex.id;
       } else if (error) throw error;
       else t.id = data.id;
@@ -799,6 +1067,14 @@ async function guardarAhora(insId, recId) {
     if (esErrorDeRed(e)) {
       // Sin internet: el cambio queda guardado en el equipo y se sube después.
       estado.sinConexion = true;
+      estado.guardando.set(k, 'espera');
+      marcar(k, 'espera');
+    } else if (esErrorDeSesion(e)) {
+      // La sesión venció (pasa al abrir sin internet y volver después): se
+      // renueva sola y se reintenta; si no se puede, se pide iniciar sesión.
+      // El cambio sigue guardado en el equipo, no se pierde.
+      if (!reintentoSesion && await renovarSesion()) { reintentoSesion = true; const ok = await guardarAhora(insId, recId); reintentoSesion = false; return ok; }
+      estado.sinSesion = true;
       estado.guardando.set(k, 'espera');
       marcar(k, 'espera');
     } else {
@@ -852,7 +1128,8 @@ function abrirPenales(insId) {
     <div class="acciones"><button type="button" class="pl-btn" data-cerrar>Cerrar</button><button type="button" class="pl-btn primario" id="pl-pen-add">Aplicar</button></div>`);
   const recalcular = async recId => {
     await traerTiemposYPenales(false);
-    if (estado.tiempos.get(clave(insId, recId))?.id) await guardar(insId, recId);
+    const tp = estado.tiempos.get(clave(insId, recId));
+    if (tp?.id || tp?.enPlanilla) await guardar(insId, recId);
     d.querySelector('#pl-pen-lista').innerHTML = pinta();
     dibujar();
   };
@@ -1015,7 +1292,7 @@ async function descargarExcel() {
   const btn = $('pl-excel'); btn.disabled = true; btn.textContent = 'Generando…';
   try {
     const c = cfg();
-    const grupos = clasificar();
+    const grupos = clasificar('general'); // el Excel oficial siempre va por la general
     const wb = new ExcelJS.Workbook();
     wb.creator = 'AMADESU RALLYS';
     const ws = wb.addWorksheet('TIEMPOS', {
@@ -1190,9 +1467,103 @@ async function descargarExcel() {
 }
 
 // ------------------------------------------------------------------
+// Clasificación por clase (menor tiempo arriba): copiar como texto y PDF
+// ------------------------------------------------------------------
+// Mismo orden que "Por resultado": completas por tiempo, después las que les
+// faltan PE (más PE primero), después abandono / no largó y al final sin tiempos.
+function clasificacionPorClase() {
+  const grupos = clasificar();
+  return ordenarClases(Object.keys(grupos)).filter(cl => !estado.clase || cl === estado.clase).map(cl => ({ clase: cl, filas: grupos[cl] }));
+}
+const nombresFila = i => {
+  const p = i.piloto ? `${i.piloto.nombre} ${i.piloto.apellido}`.trim() : 'Sin piloto';
+  const n = i.navegante ? `${i.navegante.nombre} ${i.navegante.apellido}`.trim() : '';
+  return n ? `${p} / ${n}` : p;
+};
+function tiempoFila(f) {
+  const c = f.cl;
+  if (c.completa) return verTotal(c.tiempo);
+  if (c.especial) return ESPECIALES[c.especial];
+  if (c.completas) return `Faltan ${c.n - c.completas} PE (${verTotal(c.total + c.penal)})`;
+  return c.conDatos ? 'En carrera' : 'Sin tiempos';
+}
+const momento = () => new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+
+async function copiarLista() {
+  if (!estado.rally || !estado.pes.length) return;
+  const lineas = [`🏁 *${estado.rally.nombre.toUpperCase()}*`, `Clasificación ${nombreAlcance() === 'General' ? 'general' : nombreAlcance()} por clase · ${momento()}`];
+  for (const { clase, filas } of clasificacionPorClase()) {
+    lineas.push('', `*${clase}*`);
+    for (const f of filas) {
+      if (!f.conDatos) continue; // sin ningún tiempo cargado todavía
+      const dif = f.difPrimero != null ? ` (+${verDuracion(f.difPrimero)})` : '';
+      const pen = f.cl.penal ? ` [pen. ${verPenal(f.cl.penal)}]` : '';
+      lineas.push(`${f.psto ?? '-'}. #${f.ins.numero} ${nombresFila(f.ins)} — ${tiempoFila(f)}${f.cl.completa ? dif + pen : ''}`);
+    }
+    if (!filas.some(f => f.conDatos)) lineas.push('(todavía sin tiempos)');
+  }
+  const texto = lineas.join('\n');
+  try { await navigator.clipboard.writeText(texto); }
+  catch (e) {
+    const t = document.createElement('textarea');
+    t.value = texto; t.style.cssText = 'position:fixed; opacity:0;';
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+  }
+  toast('📋 Clasificación copiada: pegala en WhatsApp o donde quieras.');
+}
+
+function descargarPdf() {
+  if (!window.jspdf?.jsPDF) return toast('Todavía está cargando el generador de PDF, probá en un segundo.', true);
+  if (!estado.rally || !estado.pes.length) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const ancho = doc.internal.pageSize.getWidth();
+  const c = cfg();
+  let y = 14;
+  doc.setFont('times', 'bold');
+  doc.setFontSize(13);
+  for (const t of c.titulos.filter(Boolean)) {
+    const lineas = doc.splitTextToSize(t, ancho - 24); // título largo: en varias líneas, sin pisarse
+    doc.text(lineas, ancho / 2, y, { align: 'center' });
+    y += 5.6 * lineas.length;
+  }
+  doc.setFontSize(15); doc.text(`CLASIFICACIÓN ${nombreAlcance().toUpperCase()} POR CLASE`, ancho / 2, y + 2, { align: 'center' }); y += 8;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90);
+  const pesA = pesDelAlcance(estado.alcance);
+  doc.text(`${pesA.length} PE · ${pesA.reduce((a, p) => a + p.km, 0).toFixed(2)} km · actualizado ${momento()}`, ancho / 2, y, { align: 'center' });
+  doc.setTextColor(0); y += 5;
+  for (const { clase, filas } of clasificacionPorClase()) {
+    if (y > 260) { doc.addPage(); y = 16; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(clase, 14, y + 4); y += 6;
+    doc.autoTable({
+      startY: y,
+      head: [['Psto', 'Nº', 'Piloto / Navegante', 'Asociación', 'PE', 'Penal.', 'Tiempo', 'Dif. 1º']],
+      body: filas.map(f => [f.psto ?? '', f.ins.numero, nombresFila(f.ins), f.ins.asociacion?.nombre || '', `${f.cl.completas}/${f.cl.n}`,
+        f.cl.penal ? verPenal(f.cl.penal) : '', tiempoFila(f), f.difPrimero != null ? '+' + verDuracion(f.difPrimero) : '']),
+      theme: 'grid', margin: { left: 14, right: 14 },
+      styles: { fontSize: 8.5, cellPadding: 1.6, valign: 'middle' },
+      headStyles: { fillColor: [0, 0, 0], textColor: 255, halign: 'center' },
+      columnStyles: { 0: { halign: 'center', cellWidth: 11, fontStyle: 'bold' }, 1: { halign: 'center', cellWidth: 11 }, 3: { cellWidth: 26 }, 4: { halign: 'center', cellWidth: 12 }, 5: { halign: 'center', cellWidth: 14 }, 6: { halign: 'center', cellWidth: 25, fontStyle: 'bold' }, 7: { halign: 'center', cellWidth: 20 } },
+      didParseCell: d => { if (d.section === 'body' && d.column.index === 6 && !/^\d/.test(String(d.cell.raw))) { d.cell.styles.fontStyle = 'italic'; d.cell.styles.textColor = /ABANDONO|NO LARG/.test(String(d.cell.raw)) ? [192, 57, 43] : [120, 120, 120]; } },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+  const paginas = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= paginas; i++) {
+    doc.setPage(i); doc.setFontSize(8); doc.setTextColor(120);
+    doc.text(`AMADESU RALLYS — ${estado.rally.nombre}`, 14, 290);
+    doc.text(`Página ${i} de ${paginas}`, ancho - 14, 290, { align: 'right' });
+  }
+  doc.save(`CLASIFICACION - ${estado.rally.nombre.replace(/[\\/:*?"<>|]/g, '')}.pdf`);
+  toast('📄 PDF descargado.');
+}
+
+// ------------------------------------------------------------------
 // Eventos
 // ------------------------------------------------------------------
 $('pl-marco').addEventListener('click', e => {
+  const rev = e.target.closest('td.c-pe[data-revisar]');
+  if (rev) return verRevision(rev.closest('tr').dataset.ins, rev.dataset.r);
   const pen = e.target.closest('td[data-penal]');
   if (pen) return abrirPenales(pen.dataset.penal);
   const td = e.target.closest('td.ed');
@@ -1229,11 +1600,12 @@ $('pl-teclas').addEventListener('click', e => {
 
 document.querySelectorAll('.pl-orden button').forEach(b => b.onclick = () => {
   estado.orden = b.dataset.orden;
-  try { localStorage.setItem('pl_orden', estado.orden); } catch (e) { }
+  try { localStorage.setItem('pl_orden_v2', estado.orden); } catch (e) { }
   document.querySelectorAll('.pl-orden button').forEach(x => x.classList.toggle('activo', x === b));
   dibujar();
 });
 $('pl-clase').onchange = () => { estado.clase = $('pl-clase').value; dibujar(); };
+$('pl-alcance').onchange = () => { estado.alcance = $('pl-alcance').value; dibujar(); toast(`Ordenado por ${nombreAlcance()}: en cada clase, el menor tiempo arriba.`); };
 $('pl-ir').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   e.preventDefault();
@@ -1246,6 +1618,10 @@ $('pl-ir').addEventListener('keydown', e => {
   $('pl-ir').value = '';
 });
 $('pl-excel').onclick = descargarExcel;
+$('pl-copiar-lista').onclick = copiarLista;
+$('pl-pdf').onclick = descargarPdf;
+$('pl-revisar').onclick = irAlSiguienteParaRevisar;
+$('pl-orden-clases').onclick = abrirOrdenClases;
 $('pl-config').onclick = abrirConfig;
 $('pl-ayuda-x')?.addEventListener('click', () => { $('pl-ayuda').remove(); try { localStorage.setItem('pl_sin_ayuda', '1'); } catch (e) { } });
 window.addEventListener('beforeunload', e => { if ([...estado.guardando.values()].includes('guardando')) { e.preventDefault(); e.returnValue = ''; } });

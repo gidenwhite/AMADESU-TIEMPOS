@@ -13,7 +13,6 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const tactil = window.matchMedia('(pointer: coarse)').matches;
 const normal = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const nuevoId = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
-const ORDEN_CLASES = ['RC2', 'PROTO', 'RC2N', 'RC4', 'R2B', 'R1B', 'PROMOCIONAL'];
 const PAISES = ['Argentina', 'Bolivia', 'Brasil', 'Canadá', 'Chile', 'China', 'Colombia', 'Costa Rica', 'Cuba', 'Ecuador', 'El Salvador', 'España', 'Estados Unidos', 'Francia', 'Guatemala', 'Honduras', 'Italia', 'Japón', 'México', 'Nicaragua', 'Panamá', 'Paraguay', 'Perú', 'Puerto Rico', 'Reino Unido', 'República Dominicana', 'Uruguay', 'Venezuela'];
 const CAMPOS = ['num', 'cat', 'pil', 'nav', 'pais', 'ciu'];
 const DEF_INSC = { titulo_lista: 'LISTA DE INSCRITOS', mostrar_ciudad: true, papel: 'carta', firmas: [{ nombre: 'Sr. Luis Fuentes', cargo: 'DIRECTOR DE PRUEBA' }] };
@@ -95,6 +94,13 @@ function estadoBarra() {
   const enEquipo = lista.filter(x => !x.error && (x.op === 'borrar' || completa(x.fila))).length;
   const subiendo = [...estado.guardando.values()].filter(v => v === 'guardando').length;
   const offline = !enLinea();
+  if (estado.sinSesion && !offline) {
+    // Al iniciar sesión vuelve sola a esta planilla y sube lo pendiente.
+    const volver = encodeURIComponent(location.pathname.split('/').pop() + location.search);
+    $('pl-estado').innerHTML = `<span class="sin-red">🔒 Se cerró tu sesión. ${enEquipo ? `Tus <b>${enEquipo} fila${enEquipo > 1 ? 's' : ''}</b> están guardadas en este equipo y` : 'Lo que cargues queda guardado en este equipo y'} se suben apenas inicies sesión.
+      <a class="pl-btn" href="admin_login.html?volver=${volver}" style="padding:3px 10px; text-decoration:none;">Iniciar sesión</a></span>`;
+    return;
+  }
   $('pl-estado').innerHTML = [
     offline ? `<span class="sin-red">📴 Sin conexión${enEquipo ? ` · <b>${enEquipo} fila${enEquipo > 1 ? 's' : ''} guardada${enEquipo > 1 ? 's' : ''} en este equipo</b> — se suben solas cuando vuelva internet` : ' · podés seguir cargando, todo se guarda en este equipo'}</span>` : '',
     !offline && enEquipo && !subiendo ? `<span class="sin-red">⏳ ${enEquipo} fila${enEquipo > 1 ? 's' : ''} por subir… <button type="button" class="pl-btn" id="pl-sync" style="padding:3px 10px;">Subir ahora</button></span>` : '',
@@ -115,10 +121,13 @@ const completa = f => !!(f && f.numero && f.cat && String(f.piloto || '').trim()
 const claseDe = f => estado.clases.find(c => c.id === f.cat);
 const codigoClase = f => { const c = claseDe(f); return c ? String(c.codigo || c.nombre).toUpperCase() : ''; };
 const nombreClase = f => { const c = claseDe(f); let n = c ? String(c.nombre || c.codigo).trim().toUpperCase() : ''; if (n === 'PROMO') n = 'PROMOCIONAL'; return n; };
+// Orden de las clases: el manual del rally (se elige en la Planilla de Tiempos,
+// "↕ Orden de clases"); si no hay, el "orden" de cada clase en el catálogo.
 function posClase(f) {
   const c = claseDe(f);
-  const i = ORDEN_CLASES.indexOf(nombreClase(f));
-  return [i === -1 ? ORDEN_CLASES.length : i, c?.orden ?? 999, nombreClase(f)];
+  const manual = (estado.rally?.orden_clases || []).map(x => { const n = String(x || '').trim().toUpperCase(); return n === 'PROMO' ? 'PROMOCIONAL' : n; });
+  const i = manual.indexOf(nombreClase(f));
+  return [i === -1 ? manual.length : i, c?.orden ?? 999, nombreClase(f)];
 }
 const cmpClase = (a, b) => { const x = posClase(a), y = posClase(b); return x[0] - y[0] || x[1] - y[1] || x[2].localeCompare(y[2]); };
 
@@ -223,7 +232,10 @@ async function cargarRally(rallyId) {
   $('pl-marco').innerHTML = '<div class="pl-cargando">Cargando planilla…</div>';
   try {
     if (estado.sinConexion) throw new TypeError('sin conexión');
-    const { data: rally, error } = await db().from('rallies').select('id, nombre, fecha_inicio, fecha_fin, ciudad, tipo_evento, imagen_url').eq('id', rallyId).maybeSingle();
+    const campos = 'id, nombre, fecha_inicio, fecha_fin, ciudad, tipo_evento, imagen_url';
+    let { data: rally, error } = await db().from('rallies').select(campos + ', orden_clases').eq('id', rallyId).maybeSingle();
+    // Si todavía no se corrió el script 73 (orden de clases), sin esa columna.
+    if (error && error.code === '42703') ({ data: rally, error } = await db().from('rallies').select(campos).eq('id', rallyId).maybeSingle());
     if (error || !rally) throw error || new Error('No se encontró el rally.');
     if (rally.tipo_evento === 'circuito') {
       $('pl-marco').innerHTML = '<div class="pl-vacio">La Planilla de Inscripción es para el modo <b>rally</b>. Los circuitos se inscriben desde Inscripciones en el panel.</div>';
@@ -245,7 +257,8 @@ async function cargarRally(rallyId) {
       catIds.length ? db().from('categorias').select('id, codigo, nombre, orden').in('id', catIds) : { data: [] },
       ambIds.length ? db().from('ambitos_campeonato').select('id, codigo, nombre, orden').in('id', ambIds) : { data: [] },
     ]);
-    estado.clases = (clases.data || []).sort((a, b) => cmpClase({ cat: a.id }, { cat: b.id }));
+    estado.clases = clases.data || []; // primero se cargan (cmpClase las busca acá) y después se ordena una copia
+    estado.clases = [...estado.clases].sort((a, b) => cmpClase({ cat: a.id }, { cat: b.id }));
     estado.ambitos = (ambitos.data || []).sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     estado.cfgTiempos = cfgT.data?.config || {};
     estado.cfgInsc = cfgI.data?.config && Object.keys(cfgI.data.config).length ? cfgI.data.config : null;
@@ -744,6 +757,12 @@ async function guardarAhora(id) {
   } catch (e) {
     estado.guardando.delete(id);
     if (esErrorDeRed(e)) estado.sinConexion = true;
+    else if (esErrorDeSesion(e)) {
+      // Sesión vencida (al abrir sin internet y volver después): se renueva y se
+      // reintenta; si no se puede, se pide iniciar sesión. La fila no se pierde.
+      if (!reintentoSesion && await renovarSesion()) { reintentoSesion = true; const ok = await guardarAhora(id); reintentoSesion = false; return ok; }
+      estado.sinSesion = true;
+    }
     else if (x.op === 'borrar') {
       // No se pudo borrar (por ejemplo, ya tiene tiempos): la fila vuelve a aparecer.
       quitarPend(id);
@@ -777,10 +796,26 @@ function sumarPersona(f) {
 }
 
 let sincronizando = false;
+// Rechazo por sesión vencida o sin sesión (no es un problema de los datos).
+const esErrorDeSesion = e => ['42501', 'PGRST301', 'PGRST302', 'PGRST303'].includes(e?.code) ||
+  /jwt|permission denied|not authorized|no tienes permisos|sin sesi/i.test(String(e?.message || e || ''));
+let reintentoSesion = false;
+async function renovarSesion() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session && data.session.expires_at * 1000 > Date.now() + 30000) return true;
+    const r = await supabase.auth.refreshSession();
+    return !!r.data?.session;
+  } catch (e) { return false; }
+}
+
 async function sincronizar() {
   if (sincronizando || !estado.rally || !enLinea()) { estadoBarra(); return; }
   const lista = pendientes().filter(x => !x.error && (x.op === 'borrar' || completa(x.fila)));
   if (!lista.length) { estadoBarra(); return; }
+  // Antes de subir, que la sesión esté vigente (si se abrió sin internet puede haber vencido).
+  if (!(await renovarSesion())) { estado.sinSesion = true; estadoBarra(); return; }
+  estado.sinSesion = false;
   sincronizando = true;
   let subidas = 0;
   for (const x of lista) {

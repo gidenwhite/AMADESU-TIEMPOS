@@ -5331,15 +5331,27 @@
       return clasificarGrupo(entries);
     }
 
-    // Orden fijo de las tablas por clase en modo rally; el resto de las
-    // clases va después, en orden alfabético. PROMO y PROMOCIONAL cuentan
-    // como la misma posición.
-    const ORDEN_CLASES_RALLY = ['RC2', 'PROTO', 'RC2N', 'RC4', 'R2B', 'R1B', 'PROMOCIONAL'];
+    // Orden de las tablas por clase en modo rally: el orden manual del rally
+    // ("↕ Orden de clases" en la Planilla de Tiempos); si no tiene, el "orden"
+    // de cada clase en el catálogo; las demás al final, en orden alfabético.
+    // PROMO y PROMOCIONAL cuentan como la misma clase.
+    const normalClase = cat => { const c = String(cat || '').trim().toUpperCase(); return c === 'PROMO' ? 'PROMOCIONAL' : c; };
+    let ordenClasesRally = [];          // del rally abierto
+    const ordenCatalogo = new Map();    // nombre/código de clase -> orden del catálogo
+    // Las clases activas primero: una vieja desactivada (ej. "PROMO", orden 60)
+    // no le pisa el orden a la que se usa hoy ("PROMOCIONAL", orden 80).
+    supabase.schema('rally').from('categorias').select('codigo, nombre, orden, activa').is('deleted_at', null).order('activa', { ascending: false })
+      .then(({ data }) => (data || []).forEach(c => {
+        [c.nombre, c.codigo].forEach(n => { const k = normalClase(n); if (k && !ordenCatalogo.has(k)) ordenCatalogo.set(k, c.orden ?? 0); });
+      }), () => { });
+    function usarOrdenDelRally(rallyId) {
+      ordenClasesRally = (allRallies.find(r => r.id === rallyId)?.orden_clases || []).map(normalClase);
+    }
     function posicionClaseRally(cat) {
-      let c = String(cat || '').trim().toUpperCase();
-      if (c === 'PROMO') c = 'PROMOCIONAL';
-      const i = ORDEN_CLASES_RALLY.indexOf(c);
-      return i === -1 ? ORDEN_CLASES_RALLY.length : i;
+      const c = normalClase(cat);
+      const i = ordenClasesRally.indexOf(c);
+      if (i >= 0) return i;
+      return 1000 + (ordenCatalogo.has(c) ? ordenCatalogo.get(c) : 9000);
     }
     function ordenarClases(cats, ordenRally) {
       const alfa = [...cats].sort();
@@ -5804,6 +5816,7 @@
 
       const rallyInfo = allRallies.find(r => r.id === rallyId);
       const esCircuito = rallyInfo?.tipo_evento === 'circuito';
+      usarOrdenDelRally(rallyId);
 
       const [etapasRes, shakeFilas, mangasRes] = await Promise.all([
         supabase.schema('rally').from('etapas')
@@ -6210,6 +6223,7 @@
       window.statsViewMode = 'general';
 
       const esCircuitoStats = allRallies.find(r => r.id === rallyId)?.tipo_evento === 'circuito';
+      usarOrdenDelRally(rallyId);
       document.getElementById('stats-view-btn-general-label').textContent = esCircuitoStats ? 'Circuito General' : 'General';
       window.statsSwitchView('general');
 

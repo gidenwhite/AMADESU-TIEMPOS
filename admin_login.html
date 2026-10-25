@@ -428,6 +428,11 @@
           errorMsg.style.display = 'none';
         }, 4000);
       } else {
+        // Si venía de una planilla (sesión vencida), vuelve ahí y sube lo pendiente.
+        // Solo se aceptan las planillas del propio sitio.
+        const volver = new URLSearchParams(location.search).get('volver') || '';
+        if (/^(planilla|inscripcion)(\.html)?(\?[\w=&:%.-]*)?$/.test(volver)) { window.location.href = volver; return; }
+
         // Login exitoso, consultar rol para redirigir
         const userId = data.user.id;
         const { data: userData, error: userError } = await supabase.schema('rally').from('usuarios').select('rol_id, rally_id').eq('id', userId).single();

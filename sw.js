@@ -4,7 +4,7 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v12';
+const VERSION = 'amadesu-v14';
 const BASICOS = ['./', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
   './app.js', './app.css', './offline.js',
   // Planilla de Tiempos: se abre y se carga sin internet (los datos van en cola)
@@ -12,7 +12,9 @@ const BASICOS = ['./', './info.html', './sin_internet.html', './manifest.webmani
   // Planilla de Inscripción: igual, se abre y se carga sin internet
   './inscripcion.html', './inscripcion.js', './inscripcion.css',
   './planilla_formato/defecto.json', './planilla_formato/fia.png', './planilla_formato/febad.jpg', './planilla_formato/amadesu.jpg',
-  'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'];
+  'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'];
 // Sin estas, el equipo todavía no puede abrir la planilla sin internet.
 const IMPRESCINDIBLES = ['./', './sin_internet.html', './planilla.html', './planilla.js', './inscripcion.html', './inscripcion.js', './supabase_config.js'];
 
