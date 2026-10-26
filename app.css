@@ -489,3 +489,20 @@ a.app-nov:hover { border-color: var(--border-strong, rgba(255, 255, 255, 0.15));
 .app-nov-txt small { font-size: 11px; color: var(--text-muted, #8E9BAE); opacity: 0.8; }
 .app-nov.nueva .app-nov-txt small::before { content: '● '; color: var(--accent-primary, #E63946); }
 .app-nov-vacio { color: var(--text-muted, #8E9BAE); font-size: 14px; text-align: center; padding: 20px 6px; }
+
+/* Íconos de línea en lugar de emojis */
+.ico { display: inline-block; vertical-align: -3px; flex-shrink: 0; }
+.app-h3-ico { display: flex; align-items: center; gap: 10px; }
+.app-h3-ico .ico { color: var(--accent-primary, #E63946); }
+.app-hoja-x .ico { vertical-align: middle; }
+.app-lista li { display: flex; align-items: center; gap: 10px; }
+.app-lista li .ico { color: var(--accent-primary, #E63946); }
+.app-beneficios li>span { display: flex; align-items: center; justify-content: center; color: var(--accent-primary, #E63946); }
+.app-nov-ico { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); color: #cfd6df; }
+.app-nov-ico.t-nuevo { color: #E63946; background: rgba(230, 57, 70, 0.14); }
+.app-nov-ico.t-publicacion { color: #5ab0ff; background: rgba(90, 176, 255, 0.14); }
+.app-nov-ico.t-largada { color: #00F5A0; background: rgba(0, 245, 160, 0.12); }
+.app-nov-ico.t-hoy { color: #ffb547; background: rgba(255, 181, 71, 0.14); }
+.app-nov-ico.t-fin { color: #FFD166; background: rgba(255, 209, 102, 0.14); }
+.app-nov-ico.t-manual { color: #c084fc; background: rgba(192, 132, 252, 0.14); }
+.app-nov-avisos span .ico, .app-toast .ico { vertical-align: -3px; margin-right: 2px; }

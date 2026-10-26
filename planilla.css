@@ -77,42 +77,59 @@ table.pl-tabla { border-collapse: separate; border-spacing: 0; font-family: var(
 .pl-tabla thead th { background: #000; color: #fff; font-weight: 400; font-size: 13px; height: 52px; white-space: normal; line-height: 1.15; position: sticky; top: 0; z-index: 3; border-color: #444; }
 .pl-tabla thead th.pe, .pl-tabla thead th.etapa, .pl-tabla thead th.gen { font-size: 17px; font-weight: 700; }
 .pl-tabla thead th.pil { font-size: 15px; font-weight: 700; font-style: italic; }
-/* Colores por etapa: encabezado fuerte; las PE alternan dos tonos claros; el total de la etapa, el más fuerte */
-.pl-tabla thead th.et0 { background: #1565c0; border-color: rgba(255,255,255,0.25); }
-.pl-tabla thead th.et0.pe-b { background: color-mix(in srgb, #1565c0 78%, #000); }
-.pl-tabla td.et0.pe-a { background: #eaf2fd; }
-.pl-tabla td.et0.pe-b { background: #d9e8fb; }
-.pl-tabla td.c-etapa.et0 { background: #c7dcf7; }
-.pl-tabla thead th.et1 { background: #2e7d32; border-color: rgba(255,255,255,0.25); }
-.pl-tabla thead th.et1.pe-b { background: color-mix(in srgb, #2e7d32 78%, #000); }
-.pl-tabla td.et1.pe-a { background: #ebf6ec; }
-.pl-tabla td.et1.pe-b { background: #dbefdd; }
-.pl-tabla td.c-etapa.et1 { background: #c8e6cb; }
-.pl-tabla thead th.et2 { background: #d35400; border-color: rgba(255,255,255,0.25); }
-.pl-tabla thead th.et2.pe-b { background: color-mix(in srgb, #d35400 78%, #000); }
-.pl-tabla td.et2.pe-a { background: #fff1e6; }
-.pl-tabla td.et2.pe-b { background: #ffe4cf; }
-.pl-tabla td.c-etapa.et2 { background: #ffd5b5; }
-.pl-tabla thead th.et3 { background: #6a1b9a; border-color: rgba(255,255,255,0.25); }
-.pl-tabla thead th.et3.pe-b { background: color-mix(in srgb, #6a1b9a 78%, #000); }
-.pl-tabla td.et3.pe-a { background: #f4ecfa; }
-.pl-tabla td.et3.pe-b { background: #e9dbf5; }
-.pl-tabla td.c-etapa.et3 { background: #dcc6ee; }
-.pl-tabla thead th.et4 { background: #00838f; border-color: rgba(255,255,255,0.25); }
-.pl-tabla thead th.et4.pe-b { background: color-mix(in srgb, #00838f 78%, #000); }
-.pl-tabla td.et4.pe-a { background: #e6f6f7; }
-.pl-tabla td.et4.pe-b { background: #d3eef0; }
-.pl-tabla td.c-etapa.et4 { background: #bde4e7; }
-.pl-tabla thead th.et5 { background: #ad1457; border-color: rgba(255,255,255,0.25); }
-.pl-tabla thead th.et5.pe-b { background: color-mix(in srgb, #ad1457 78%, #000); }
-.pl-tabla td.et5.pe-a { background: #fcebf2; }
-.pl-tabla td.et5.pe-b { background: #f8dbe7; }
-.pl-tabla td.c-etapa.et5 { background: #f2c6d8; }
 /* Tiempos para revisar (muy distintos a los de su clase en esa PE) */
 .pl-tabla td.c-pe.atipico-rapido { background: #ead7ff !important; color: #5b21b6; font-weight: 800; box-shadow: inset 0 0 0 2px #7c3aed; cursor: pointer; }
 .pl-tabla td.c-pe.atipico-lento { background: #ffe2bf !important; color: #9a4a00; font-weight: 800; box-shadow: inset 0 0 0 2px #f59e0b; cursor: pointer; }
 .pl-tabla td.c-pe.atipico-imposible { background: #ffd0d0 !important; color: #b91c1c; font-weight: 800; box-shadow: inset 0 0 0 2px #dc2626; cursor: pointer; }
 .pl-btn.pl-revisar { background: #5b2a00; border-color: #f59e0b; color: #ffd8a0; }
+/* Colores por etapa (bien visibles): encabezado fuerte; las PE alternan dos tonos; el total de la etapa, el más fuerte.
+   Una línea gruesa del color de la etapa marca dónde empieza cada PE y encierra el total de la etapa. */
+.pl-tabla thead tr.banda th { height: 24px; top: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; z-index: 5; }
+.pl-tabla thead tr.banda th.vacia { background: #000; }
+.pl-tabla thead tr:not(.banda) th { top: 24px; }
+.pl-tabla td.c-etapa[class*="et"] { font-weight: 800; }
+.pl-tabla thead th.et0 { background: #1565c0; border-color: rgba(255,255,255,0.3); }
+.pl-tabla thead th.et0.pe-b { background: color-mix(in srgb, #1565c0 70%, #000); }
+.pl-tabla thead tr.banda th.et0 { background: #1565c0; border-left: 3px solid #fff; }
+.pl-tabla td.et0.pe-a { background: #d6e6fb; }
+.pl-tabla td.et0.pe-b { background: #b3d1f6; }
+.pl-tabla td.c-etapa.et0 { background: #8fbbf0; border-left: 3px solid #1565c0; border-right: 3px solid #1565c0; }
+.pl-tabla td.salida.et0, .pl-tabla thead th.pe-ini.et0 { border-left: 3px solid #1565c0; }
+.pl-tabla thead th.et1 { background: #2e7d32; border-color: rgba(255,255,255,0.3); }
+.pl-tabla thead th.et1.pe-b { background: color-mix(in srgb, #2e7d32 70%, #000); }
+.pl-tabla thead tr.banda th.et1 { background: #2e7d32; border-left: 3px solid #fff; }
+.pl-tabla td.et1.pe-a { background: #d4ecd6; }
+.pl-tabla td.et1.pe-b { background: #b0dbb4; }
+.pl-tabla td.c-etapa.et1 { background: #8ccb92; border-left: 3px solid #2e7d32; border-right: 3px solid #2e7d32; }
+.pl-tabla td.salida.et1, .pl-tabla thead th.pe-ini.et1 { border-left: 3px solid #2e7d32; }
+.pl-tabla thead th.et2 { background: #d35400; border-color: rgba(255,255,255,0.3); }
+.pl-tabla thead th.et2.pe-b { background: color-mix(in srgb, #d35400 70%, #000); }
+.pl-tabla thead tr.banda th.et2 { background: #d35400; border-left: 3px solid #fff; }
+.pl-tabla td.et2.pe-a { background: #ffe0c7; }
+.pl-tabla td.et2.pe-b { background: #ffc89c; }
+.pl-tabla td.c-etapa.et2 { background: #ffb070; border-left: 3px solid #d35400; border-right: 3px solid #d35400; }
+.pl-tabla td.salida.et2, .pl-tabla thead th.pe-ini.et2 { border-left: 3px solid #d35400; }
+.pl-tabla thead th.et3 { background: #6a1b9a; border-color: rgba(255,255,255,0.3); }
+.pl-tabla thead th.et3.pe-b { background: color-mix(in srgb, #6a1b9a 70%, #000); }
+.pl-tabla thead tr.banda th.et3 { background: #6a1b9a; border-left: 3px solid #fff; }
+.pl-tabla td.et3.pe-a { background: #e6d4f2; }
+.pl-tabla td.et3.pe-b { background: #d0b0e8; }
+.pl-tabla td.c-etapa.et3 { background: #b98ddd; border-left: 3px solid #6a1b9a; border-right: 3px solid #6a1b9a; }
+.pl-tabla td.salida.et3, .pl-tabla thead th.pe-ini.et3 { border-left: 3px solid #6a1b9a; }
+.pl-tabla thead th.et4 { background: #00838f; border-color: rgba(255,255,255,0.3); }
+.pl-tabla thead th.et4.pe-b { background: color-mix(in srgb, #00838f 70%, #000); }
+.pl-tabla thead tr.banda th.et4 { background: #00838f; border-left: 3px solid #fff; }
+.pl-tabla td.et4.pe-a { background: #cceef1; }
+.pl-tabla td.et4.pe-b { background: #a3dfe4; }
+.pl-tabla td.c-etapa.et4 { background: #79d0d7; border-left: 3px solid #00838f; border-right: 3px solid #00838f; }
+.pl-tabla td.salida.et4, .pl-tabla thead th.pe-ini.et4 { border-left: 3px solid #00838f; }
+.pl-tabla thead th.et5 { background: #ad1457; border-color: rgba(255,255,255,0.3); }
+.pl-tabla thead th.et5.pe-b { background: color-mix(in srgb, #ad1457 70%, #000); }
+.pl-tabla thead tr.banda th.et5 { background: #ad1457; border-left: 3px solid #fff; }
+.pl-tabla td.et5.pe-a { background: #f9d3e2; }
+.pl-tabla td.et5.pe-b { background: #f2acc8; }
+.pl-tabla td.c-etapa.et5 { background: #ea86ae; border-left: 3px solid #ad1457; border-right: 3px solid #ad1457; }
+.pl-tabla td.salida.et5, .pl-tabla thead th.pe-ini.et5 { border-left: 3px solid #ad1457; }
 .pl-tabla thead th.alcance { background: #b8860b; color: #fff; box-shadow: inset 0 -4px 0 #ffd166; } /* columna por la que se ordena */
 .pl-tabla thead tr:first-child th { border-top: 1px solid #444; }
 

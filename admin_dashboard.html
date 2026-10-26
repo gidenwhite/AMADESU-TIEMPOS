@@ -5100,7 +5100,7 @@
       const passActual = document.getElementById('edit-op-pass-actual').value;
       const passNueva = document.getElementById('edit-op-pass-nueva').value;
       const passFinal = passNueva ? passNueva : passActual;
-      return `Hola! Estos son tus accesos para el sistema de Cronometraje del Rally:\n\nUsuario (CI): ${ci}\nContraseña: ${passFinal}\n\nIngresa aquí: https://[URL_DEL_RALLY]/admin_login.html`;
+      return `Hola! Estos son tus accesos para el sistema de Cronometraje del Rally:\n\nUsuario (CI): ${ci}\nContraseña: ${passFinal}\n\nIngresa aquí: https://amadesu.com/admin_login`;
     }
 
     document.getElementById('btn-copiar-credenciales').addEventListener('click', () => {
@@ -5135,7 +5135,7 @@
       if (op.cred && op.cred.length > 0) pass = op.cred[0].password_plano;
       const ci = op.email.replace('@rally.local', '');
       
-      const texto = `Hola! Estos son tus accesos para el sistema de Cronometraje del Rally:\n\nUsuario (CI): ${ci}\nContraseña: ${pass}\n\nIngresa aquí: https://[URL_DEL_RALLY]/admin_login.html`;
+      const texto = `Hola! Estos son tus accesos para el sistema de Cronometraje del Rally:\n\nUsuario (CI): ${ci}\nContraseña: ${pass}\n\nIngresa aquí: https://amadesu.com/admin_login`;
       
       navigator.clipboard.writeText(texto).then(() => {
         window.toast('Datos copiados al portapapeles.', 'ok');
@@ -5156,7 +5156,7 @@
       if (op.cred && op.cred.length > 0) pass = op.cred[0].password_plano;
       const ci = op.email.replace('@rally.local', '');
       
-      const texto = `Hola! Estos son tus accesos para el sistema de Cronometraje del Rally:\n\nUsuario (CI): ${ci}\nContraseña: ${pass}\n\nIngresa aquí: https://[URL_DEL_RALLY]/admin_login.html`;
+      const texto = `Hola! Estos son tus accesos para el sistema de Cronometraje del Rally:\n\nUsuario (CI): ${ci}\nContraseña: ${pass}\n\nIngresa aquí: https://amadesu.com/admin_login`;
       
       let num = op.telefono.replace(/\D/g, '');
       if (num.length === 8 && !num.startsWith('591')) {

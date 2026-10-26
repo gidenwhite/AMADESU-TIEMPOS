@@ -95,6 +95,24 @@ window.appRegistrarVista = (seccion, rallyId) => {
 // ------------------------------------------------------------------
 // Interfaz: botones en la barra, aviso inferior de instalación, hoja de diálogo
 // ------------------------------------------------------------------
+// Íconos de línea (mismo estilo que el resto del sitio; la página pública no usa emojis).
+const ico = (paths, t = 18) => `<svg class="ico" width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const ICONOS = {
+  bandera: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+  documento: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/>',
+  largada: '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>',
+  calendario: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+  trofeo: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  megafono: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+  campana: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  campanaOff: '<path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="m2 2 20 20"/>',
+  candado: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  cronometro: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/>',
+  celular: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>',
+  menu: '<line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>',
+  cerrar: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+};
 const ICONO = {
   instalar: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M5 21h14"></path></svg>',
   campana: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>',
@@ -144,7 +162,7 @@ function pintarBotones() {
 // ------------------------------------------------------------------
 // Novedades: lo mismo que mandan los avisos, para verlo en la página
 // ------------------------------------------------------------------
-const ICONO_NOVEDAD = { nuevo: '🏁', publicacion: '📄', largada: '🟢', hoy: '📅', fin: '🏆', manual: '📣' };
+const ICONO_NOVEDAD = { nuevo: 'bandera', publicacion: 'documento', largada: 'largada', hoy: 'calendario', fin: 'trofeo', manual: 'megafono' };
 let novedades = [];
 try { novedades = JSON.parse(almacen.get('amd_novedades') || '[]'); } catch (e) { }
 const vistoHasta = () => Number(almacen.get('amd_novedades_visto') || 0);
@@ -183,7 +201,7 @@ function pintarLista() {
   const visto = Number(lista.dataset.visto || 0);
   lista.innerHTML = novedades.length ? novedades.map(n => {
     const titulo = String(n.titulo || '').replace(/^\p{Extended_Pictographic}️?\s*/u, '');
-    const dentro = `<span class="app-nov-ico">${ICONO_NOVEDAD[n.tipo] || '🔔'}</span>
+    const dentro = `<span class="app-nov-ico t-${escN(n.tipo || 'aviso')}">${ico(ICONOS[ICONO_NOVEDAD[n.tipo]] || ICONOS.campana, 20)}</span>
       <span class="app-nov-txt"><b>${escN(titulo)}</b>${n.cuerpo ? `<span>${escN(n.cuerpo)}</span>` : ''}
       <small>${n.rally && !titulo.includes(n.rally) && !String(n.cuerpo || '').includes(n.rally) ? escN(n.rally) + ' · ' : ''}${hace(n.created_at)}</small></span>`;
     const clase = `app-nov ${n.id > visto ? 'nueva' : ''}`;
@@ -198,12 +216,12 @@ async function abrirNovedades() {
     let activo = false;
     try { activo = !!(await suscripcionActual()); } catch (e) { }
     estado = activo
-      ? '<div class="app-nov-avisos ok"><span>✓ Te llegan estos avisos al celular</span><button type="button" class="app-btn-link" id="app-nov-config">Configurar</button></div>'
-      : '<div class="app-nov-avisos"><span>🔔 Recibilos en el celular aunque no tengas la página abierta</span><button type="button" class="app-btn-grande" id="app-nov-config">Activar avisos</button></div>';
+      ? `<div class="app-nov-avisos ok"><span>${ico(ICONOS.check, 16)} Te llegan estos avisos al celular</span><button type="button" class="app-btn-link" id="app-nov-config">Configurar</button></div>`
+      : `<div class="app-nov-avisos"><span>${ico(ICONOS.campana, 16)} Recibilos en el celular aunque no tengas la página abierta</span><button type="button" class="app-btn-grande" id="app-nov-config">Activar avisos</button></div>`;
   } else if (esIOS && !esInstalada()) {
     estado = '<div class="app-nov-avisos"><span>En iPhone los avisos llegan con la app instalada</span><button type="button" class="app-btn-grande" id="app-nov-config">Cómo instalar</button></div>';
   }
-  hoja(`<h3>🔔 Novedades</h3>${estado}<div class="app-nov-lista" id="app-novedades-lista" data-visto="${visto}"></div>`);
+  hoja(`<h3 class="app-h3-ico">${ico(ICONOS.campana, 22)} Novedades</h3>${estado}<div class="app-nov-lista" id="app-novedades-lista" data-visto="${visto}"></div>`);
   pintarLista();
   document.getElementById('app-nov-config')?.addEventListener('click', () => (soportaAvisos() ? abrirAvisos() : instalar()));
   // Abrir el panel = todo leído
@@ -221,7 +239,7 @@ function hoja(html) {
   cerrarHoja();
   const o = document.createElement('div');
   o.className = 'app-hoja-fondo'; o.id = 'app-hoja';
-  o.innerHTML = `<div class="app-hoja" role="dialog" aria-modal="true"><button type="button" class="app-hoja-x" aria-label="Cerrar">✕</button>${html}</div>`;
+  o.innerHTML = `<div class="app-hoja" role="dialog" aria-modal="true"><button type="button" class="app-hoja-x" aria-label="Cerrar">${ico(ICONOS.cerrar, 18)}</button>${html}</div>`;
   o.addEventListener('click', e => { if (e.target === o || e.target.closest('.app-hoja-x') || e.target.closest('[data-cerrar]')) cerrarHoja(); });
   document.body.appendChild(o);
   requestAnimationFrame(() => o.classList.add('visible'));
@@ -229,9 +247,10 @@ function hoja(html) {
 }
 function cerrarHoja() { document.getElementById('app-hoja')?.remove(); }
 
-function avisoCorto(texto) {
+function avisoCorto(texto, icono) {
   const t = document.createElement('div');
   t.className = 'app-toast'; t.textContent = texto;
+  if (icono) t.insertAdjacentHTML('afterbegin', ico(icono, 16) + ' ');
   document.body.appendChild(t);
   requestAnimationFrame(() => t.classList.add('visible'));
   setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 300); }, 3200);
@@ -287,7 +306,7 @@ async function instalar() {
     ]);
   } else if (esAndroid && esSamsung) {
     pasos('Instalá AMADESU en tu Samsung', [
-      'Tocá el menú <b>☰</b> (abajo a la derecha).',
+      `Tocá el menú <b>${ico(ICONOS.menu, 16)}</b> (abajo a la derecha).`,
       'Elegí <b>“Agregar página a”</b> → <b>“Pantalla de inicio”</b>.',
       'Tocá <b>Agregar</b>. ¡Listo!',
     ]);
@@ -326,9 +345,9 @@ function programarInvitacion() {
           </div>
         </div>
         <ul class="app-beneficios">
-          <li><span>⏱️</span><div><b>Tiempos en vivo a un toque</b><small>Se abre al instante, a pantalla completa.</small></div></li>
-          <li><span>🔔</span><div><b>Avisos de cada largada</b><small>Etapas, PE, mangas, boletines y resultados.</small></div></li>
-          <li><span>📲</span><div><b>Liviana y sin tiendas</b><small>No ocupa espacio ni pide cuenta. Se instala en 2 segundos.</small></div></li>
+          <li><span>${ico(ICONOS.cronometro, 24)}</span><div><b>Tiempos en vivo a un toque</b><small>Se abre al instante, a pantalla completa.</small></div></li>
+          <li><span>${ico(ICONOS.campana, 24)}</span><div><b>Avisos de cada largada</b><small>Etapas, PE, mangas, boletines y resultados.</small></div></li>
+          <li><span>${ico(ICONOS.celular, 24)}</span><div><b>Liviana y sin tiendas</b><small>No ocupa espacio ni pide cuenta. Se instala en 2 segundos.</small></div></li>
         </ul>
         <button type="button" class="app-btn-grande app-btn-instalar-grande" data-accion="instalar">${ICONO.instalar}<span>Instalar la app gratis</span></button>
         <button type="button" class="app-btn-link" data-accion="cerrar">Seguir en el navegador</button>
@@ -400,7 +419,7 @@ async function activarAvisos() {
     await suscribir();
     registrar('avisos_activados');
     cerrarHoja();
-    avisoCorto('🔔 Avisos activados. Te vamos a avisar de cada novedad.');
+    avisoCorto('Avisos activados. Te vamos a avisar de cada novedad.', ICONOS.campana);
   } catch (e) {
     cerrarHoja();
     hoja(`<h3>No se pudieron activar los avisos</h3><p>${(e.message || 'Error desconocido').replace(/</g, '&lt;')}</p>
@@ -425,31 +444,31 @@ async function desactivarAvisos() {
 
 const QUE_AVISAMOS = `
   <ul class="app-lista">
-    <li>🏁 Nuevas carreras y circuitos</li>
-    <li>🟢 Largada de cada Etapa, PE, Shakedown, Clasificación y Manga</li>
-    <li>📄 Boletines, comunicados y reglamento</li>
-    <li>🏆 Fin de la carrera y resultados</li>
+    <li>${ico(ICONOS.bandera, 18)}<span>Nuevas carreras y circuitos</span></li>
+    <li>${ico(ICONOS.largada, 18)}<span>Largada de cada Etapa, PE, Shakedown, Clasificación y Manga</span></li>
+    <li>${ico(ICONOS.documento, 18)}<span>Boletines, comunicados y reglamento</span></li>
+    <li>${ico(ICONOS.trofeo, 18)}<span>Fin de la carrera y resultados</span></li>
   </ul>`;
 
 async function abrirAvisos() {
   if (!soportaAvisos()) {
     if (esIOS && !esInstalada()) {
-      hoja(`<h3>🔔 Avisos en iPhone</h3>
+      hoja(`<h3 class="app-h3-ico">${ico(ICONOS.campana, 22)} Avisos en iPhone</h3>
         <p>En iPhone los avisos llegan <b>solo con la app instalada</b>. Instalala y después activalos desde la campanita.</p>
         ${QUE_AVISAMOS}
         <button type="button" class="app-btn-grande" id="app-ir-instalar">Cómo instalar la app</button>`);
       document.getElementById('app-ir-instalar').onclick = instalar;
     } else {
-      hoja(`<h3>🔔 Avisos</h3><p>Este navegador no permite avisos. Probá con Chrome en Android, o instalando la app.</p>
+      hoja(`<h3 class="app-h3-ico">${ico(ICONOS.campana, 22)} Avisos</h3><p>Este navegador no permite avisos. Probá con Chrome en Android, o instalando la app.</p>
         <button type="button" class="app-btn-grande" data-cerrar>Entendido</button>`);
     }
     return;
   }
   if (Notification.permission === 'denied') {
-    hoja(`<h3>🔕 Avisos bloqueados</h3>
+    hoja(`<h3 class="app-h3-ico">${ico(ICONOS.campanaOff, 22)} Avisos bloqueados</h3>
       <p>Los avisos están bloqueados para esta página. Para activarlos:</p>
       <ol class="app-pasos">
-        <li><b>1</b><span>Tocá el candado 🔒 al lado de la dirección (o abrí los ajustes de la app).</span></li>
+        <li><b>1</b><span>Tocá el candado ${ico(ICONOS.candado, 15)} al lado de la dirección (o abrí los ajustes de la app).</span></li>
         <li><b>2</b><span>Entrá a <b>Permisos → Notificaciones</b> y elegí <b>Permitir</b>.</span></li>
         <li><b>3</b><span>Volvé y tocá la campanita otra vez.</span></li>
       </ol>
@@ -458,11 +477,11 @@ async function abrirAvisos() {
   }
   const sub = await suscripcionActual();
   if (sub) {
-    hoja(`<h3>🔔 Avisos activados</h3><p>Te avisamos de:</p>${QUE_AVISAMOS}
+    hoja(`<h3 class="app-h3-ico">${ico(ICONOS.campana, 22)} Avisos activados</h3><p>Te avisamos de:</p>${QUE_AVISAMOS}
       <button type="button" class="app-btn-grande secundario" id="app-desactivar">Desactivar avisos</button>`);
     document.getElementById('app-desactivar').onclick = desactivarAvisos;
   } else {
-    hoja(`<h3>🔔 ¿Te avisamos?</h3><p>Recibí una notificación en el celular cuando haya novedades:</p>${QUE_AVISAMOS}
+    hoja(`<h3 class="app-h3-ico">${ico(ICONOS.campana, 22)} ¿Te avisamos?</h3><p>Recibí una notificación en el celular cuando haya novedades:</p>${QUE_AVISAMOS}
       <button type="button" class="app-btn-grande" id="app-activar">Activar avisos</button>
       <button type="button" class="app-btn-link" data-cerrar>Ahora no</button>`);
     document.getElementById('app-activar').onclick = activarAvisos;

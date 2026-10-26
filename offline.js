@@ -2,7 +2,7 @@
 // - Activa el service worker (sw.js) en todas las páginas, también en los paneles.
 // - Apenas carga la página, le pide al service worker que guarde todo lo que
 //   esta usó (scripts, librerías, estilos), así sin internet abre a la primera.
-// - Cuando el equipo queda listo, lo avisa una vez: "✓ Listo para usar sin internet".
+// - Cuando el equipo queda listo, lo avisa una vez: "Listo para usar sin internet".
 (function () {
   if (!('serviceWorker' in navigator)) return;
   // App ya instalada: se busca la versión nueva en cada apertura (sin la copia
@@ -38,6 +38,8 @@
   function aviso(texto) {
     var d = document.createElement('div');
     d.textContent = texto;
+    // Ícono de línea (la página pública no usa emojis)
+    d.insertAdjacentHTML('afterbegin', '<svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;margin-right:6px;"><path d="M20 6 9 17l-5-5"/></svg>');
     d.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:99999;background:#0f2a1f;color:#b8ffe3;border:1px solid rgba(0,245,160,.45);' +
       'padding:10px 14px;border-radius:12px;font:600 13px system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.5);max-width:calc(100% - 32px);';
     document.body.appendChild(d);
@@ -58,7 +60,7 @@
           if (localStorage.getItem(clave)) return;
           localStorage.setItem(clave, '1');
         } catch (er) { return; }
-        aviso('✓ Este equipo ya está listo para usar sin internet (' + String(d.version).replace('amadesu-', '') + ')');
+        aviso('Este equipo ya está listo para usar sin internet (' + String(d.version).replace('amadesu-', '') + ')');
       };
       sw.postMessage({ tipo: 'guardar-recursos', urls: recursosUsados() }, [canal.port2]);
     }).catch(function () { });

@@ -802,11 +802,14 @@ function dibujar() {
   for (const et of estado.etapas) {
     for (const pe of et.recorridos) {
       const cc = colorPE(et, pe), t = `title="${esc(et.nombre)} · ${esc(pe.nombre)} · ${pe.km} km"`;
-      cab += `<th class="${cc}" ${t}>Hr. Salida</th><th class="${cc}" ${t}>Hr. Paso P${pe.numero}</th><th class="pe ${cc} ${estado.alcance === 'pe:' + pe.id ? 'alcance' : ''}" ${t}>PE${pe.numero}</th>`;
+      cab += `<th class="${cc} pe-ini" ${t}>Hr. Salida</th><th class="${cc}" ${t}>Hr. Paso P${pe.numero}</th><th class="pe ${cc} ${estado.alcance === 'pe:' + pe.id ? 'alcance' : ''}" ${t}>PE${pe.numero}</th>`;
     }
     cab += `<th class="etapa ${colorEtapa(et)} ${estado.alcance === 'etapa:' + et.id ? 'alcance' : ''}">${esc(et.nombre)}</th>`;
   }
   cab += `<th>penalización</th><th class="gen">GENERAL</th><th>Promedio Velocidad km/h</th><th>DIF. CON ANTERIOR</th><th>DIF. CON PRIMERO</th></tr>`;
+  // Banda de arriba: el nombre de cada etapa con su color, sobre todas sus columnas.
+  const banda = `<tr class="banda"><th class="vacia" colspan="6"></th>${estado.etapas.map(et => `<th class="${colorEtapa(et)}" colspan="${et.recorridos.length * 3 + 1}">${esc(et.nombre)}</th>`).join('')}<th class="vacia" colspan="5"></th></tr>`;
+  cab = banda + cab;
 
   const totalCols = 6 + estado.etapas.reduce((a, e) => a + e.recorridos.length * 3 + 1, 0) + 5;
   let cuerpo = '', nro = 0;
@@ -887,7 +890,7 @@ function marcarCruz(td) {
   const tr = td.closest('tr'), idx = td.cellIndex;
   tr.classList.add('fila-activa');
   document.querySelectorAll('.pl-tabla tbody tr[data-ins]').forEach(f => f.cells[idx]?.classList.add('col-activa'));
-  document.querySelector('.pl-tabla thead tr')?.cells[idx]?.classList.add('col-activa');
+  document.querySelector('.pl-tabla thead tr:last-child')?.cells[idx]?.classList.add('col-activa');
 }
 
 function seleccionar(td, enfocar = true) {
