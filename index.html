@@ -4651,17 +4651,76 @@
     function datosTarjeta(insId) {
       const d = window.tiemposAccordionData;
       if (!d) return null;
-      const { generalFilas } = armarEntradasRally(d.etapas, d.tiemposRally, d.esCircuito, d.penalMap);
+      const { entradas, peNumeroPorRecorrido, generalFilas } = armarEntradasRally(d.etapas, d.tiemposRally, d.esCircuito, d.penalMap);
       const general = clasificarSinCategoria(generalFilas);
       const g = general.find(r => r.insId === insId);
       if (!g) return null;
-      const clase = agruparPorCategoriaYClasificar(generalFilas)[g.clase] || [];
-      return {
-        g, c: clase.find(r => r.insId === insId) || g,
-        totalGeneral: general.length, totalClase: clase.length,
+      const claseDe = ins => ins?.categoria?.nombre || 'Sin Clase';
+      const filasClase = agruparPorCategoriaYClasificar(generalFilas)[g.clase] || [];
+      const t = {
+        g, c: filasClase.find(r => r.insId === insId) || g,
+        totalGeneral: general.length, totalClase: filasClase.length,
         rally: allRallies.find(r => r.id === d.rallyId) || { nombre: d.rallyNombre },
         esCircuito: d.esCircuito
       };
+
+      // Velocidad: puesto entre los de su clase y tope de la escala del velocímetro
+      if (g.vel != null) {
+        if (filasClase.length > 1) t.velPosClase = 1 + filasClase.filter(r => r.vel != null && r.vel > g.vel).length;
+        const maxVel = Math.max(...general.map(r => r.vel || 0));
+        t.velEscala = Math.max(60, Math.ceil(maxVel * 1.15 / 20) * 20);
+      }
+
+      if (!d.esCircuito) {
+        // PE ganadas (en su clase y en la general) y su mejor PE
+        const porRec = {};
+        entradas.forEach(e => { if (e.ms != null) (porRec[e.recorrido_id] ??= []).push(e); });
+        let ganClase = 0, ganGeneral = 0, mejor = null;
+        Object.entries(porRec).forEach(([rec, arr]) => {
+          const mio = arr.find(e => e.inscripcion_id === insId);
+          if (!mio) return;
+          const posG = 1 + arr.filter(e => e.ms < mio.ms).length;
+          const posC = 1 + arr.filter(e => claseDe(e.inscripcion) === g.clase && e.ms < mio.ms).length;
+          if (posG === 1) ganGeneral++;
+          if (posC === 1) ganClase++;
+          if (!mejor || posC < mejor.posC || (posC === mejor.posC && posG < mejor.posG)) mejor = { pe: peNumeroPorRecorrido[rec], posC, posG };
+        });
+        t.pe = { ganClase, ganGeneral, mejor };
+      } else {
+        // Circuito: su vuelta más rápida y en qué puesto queda dentro de la clase
+        const mejorPorAuto = {}, vueltasPorAuto = {};
+        d.tiemposRally.forEach(r => {
+          const ms = intervalToMsPublic(r.tiempo_bruto);
+          if (!ms) return;
+          vueltasPorAuto[r.inscripcion_id] = (vueltasPorAuto[r.inscripcion_id] || 0) + 1;
+          const m = mejorPorAuto[r.inscripcion_id];
+          if (!m || ms < m.ms) mejorPorAuto[r.inscripcion_id] = { ms, vuelta: r.vuelta, clase: claseDe(r.inscripcion) };
+        });
+        const mia = mejorPorAuto[insId];
+        if (mia) {
+          const todas = Object.values(mejorPorAuto);
+          t.vuelta = {
+            ms: mia.ms, num: mia.vuelta, total: vueltasPorAuto[insId],
+            posClase: 1 + todas.filter(v => v.clase === g.clase && v.ms < mia.ms).length,
+            posGeneral: 1 + todas.filter(v => v.ms < mia.ms).length,
+          };
+        }
+      }
+
+      // El cartel de logro (lo más importante que consiguió)
+      const pc = t.c.pos, pg = g.pos, clase = String(g.clase).toUpperCase();
+      const extra = t.pe?.ganClase ? ` · ${t.pe.ganClase} PE GANADA${t.pe.ganClase > 1 ? 'S' : ''}` : (t.vuelta?.posClase === 1 ? ' · VUELTA MÁS RÁPIDA' : '');
+      if (g.estadoEspecial) t.logro = null;
+      else if (g.faltanPe) t.logro = { medalla: 0, titulo: 'EN CARRERA', sub: `VA ${pc}° EN CLASE ${clase}` };
+      else if (pc === 1 && pg === 1 && t.totalGeneral > 1) t.logro = { medalla: 1, titulo: '¡GANADOR ABSOLUTO!', sub: `1° GENERAL Y 1° EN CLASE ${clase}${extra}`, confeti: true };
+      else if (pc === 1) t.logro = { medalla: 1, titulo: '¡GANADOR DE CLASE!', sub: `CLASE ${clase}${extra}`, confeti: true };
+      else if (pc <= 3) t.logro = { medalla: pc, titulo: `¡PODIO! ${pc}° EN SU CLASE`, sub: `CLASE ${clase}${extra}` };
+      else if (t.pe?.ganClase) t.logro = { medalla: 0, titulo: `¡GANÓ ${t.pe.ganClase} PE EN SU CLASE!`, sub: `${pc}° EN CLASE ${clase}` };
+      else if (t.vuelta?.posClase === 1) t.logro = { medalla: 0, titulo: '¡VUELTA MÁS RÁPIDA DE SU CLASE!', sub: `${pc}° EN CLASE ${clase}` };
+      else if (pc <= 5) t.logro = { medalla: 0, titulo: `TOP 5 DE SU CLASE`, sub: `${pc}° EN CLASE ${clase}` };
+      else t.logro = { medalla: 0, titulo: '¡CARRERA COMPLETADA!', sub: `${pc}° EN CLASE ${clase}` };
+      t.provisional = t.rally.estado === 'en_curso';
+      return t;
     }
 
     const imagenesTarjeta = new Map();
@@ -4689,27 +4748,35 @@
       const x = cv.getContext('2d');
       const DISP = '"Russo One", "Barlow Condensed", sans-serif';
       const BODY = '"Chakra Petch", sans-serif';
-      try { await Promise.all([document.fonts.load('64px "Russo One"'), document.fonts.load('700 40px "Chakra Petch"'), document.fonts.load('500 40px "Chakra Petch"')]); } catch (e) { }
+      try { await Promise.all([document.fonts.load('64px "Russo One"'), document.fonts.load('700 40px "Chakra Petch"'), document.fonts.load('600 40px "Chakra Petch"'), document.fonts.load('500 40px "Chakra Petch"')]); } catch (e) { }
       const [foto, escudo] = await Promise.all([cargarImagenTarjeta(t.rally.imagen_url), cargarImagenTarjeta('icons/amadesu_escudo.png', false)]);
       // Texto sobre el color elegido: oscuro si el color es claro (dorado, blanco)
       const hex = ACC.replace('#', '');
       const [cr, cg, cb] = [0, 2, 4].map(i => parseInt(hex.substr(i, 2), 16));
-      const sobreAcc = (0.299 * cr + 0.587 * cg + 0.114 * cb) > 165 ? '#111318' : '#fff';
+      const claro = (0.299 * cr + 0.587 * cg + 0.114 * cb) > 165;
+      const sobreAcc = claro ? '#111318' : '#fff';
       const accA = a => `rgba(${cr},${cg},${cb},${a})`;
       const rect = (bx, by, bw, bh, rad) => { x.beginPath(); if (x.roundRect) x.roundRect(bx, by, bw, bh, rad); else x.rect(bx, by, bw, bh); };
       // Achica la letra hasta que el texto entre en el ancho
       const ajustar = (txt, max, size, peso, fam) => {
         let s = size;
-        do { x.font = `${peso} ${s}px ${fam}`.trim(); s -= 2; } while (x.measureText(txt).width > max && s > 14);
+        do { x.font = `${peso} ${s}px ${fam}`.trim(); s -= 2; } while (x.measureText(txt).width > max && s > 12);
       };
+      const MEDALLA = { 1: ['#FFE08A', '#F2B705', '#9A6B00'], 2: ['#F4F6F9', '#C3CBD5', '#6E7886'], 3: ['#F3C29A', '#D98544', '#7A3F12'] };
+      const g = t.g;
+      // Números "al azar" pero siempre iguales para el mismo auto (confeti)
+      let semilla = [...String(g.insId || g.num)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+      const azar = () => ((semilla = (semilla * 1664525 + 1013904223) >>> 0) / 4294967296);
 
-      // Fondo + imagen del rally (recortada para llenar la parte de arriba)
+      // ---------- Fondo + imagen del rally ----------
       x.fillStyle = '#0b0d12'; x.fillRect(0, 0, W, H);
-      const FOTO_H = 680;
+      const FOTO_H = 610;
       if (foto) {
         const esc = Math.max(W / foto.width, FOTO_H / foto.height);
         const fw = foto.width * esc, fh = foto.height * esc;
+        x.save(); x.beginPath(); x.rect(0, 0, W, FOTO_H); x.clip();
         x.drawImage(foto, (W - fw) / 2, (FOTO_H - fh) / 2, fw, fh);
+        x.restore();
       } else {
         const gf = x.createLinearGradient(0, 0, W, FOTO_H);
         gf.addColorStop(0, accA(0.55)); gf.addColorStop(1, '#0b0d12');
@@ -4718,115 +4785,210 @@
       let gr = x.createLinearGradient(0, 0, 0, 300);
       gr.addColorStop(0, 'rgba(11,13,18,0.9)'); gr.addColorStop(0.5, 'rgba(11,13,18,0.6)'); gr.addColorStop(1, 'rgba(11,13,18,0)');
       x.fillStyle = gr; x.fillRect(0, 0, W, 300);
-      gr = x.createLinearGradient(0, 300, 0, FOTO_H);
-      gr.addColorStop(0, 'rgba(11,13,18,0)'); gr.addColorStop(0.55, 'rgba(11,13,18,0.82)'); gr.addColorStop(1, 'rgba(11,13,18,1)');
-      x.fillStyle = gr; x.fillRect(0, 300, W, FOTO_H - 300);
-      // Resplandor del color elegido detrás de los datos
-      gr = x.createRadialGradient(W * 0.85, 1080, 40, W * 0.85, 1080, 620);
-      gr.addColorStop(0, accA(0.16)); gr.addColorStop(1, accA(0));
-      x.fillStyle = gr; x.fillRect(0, FOTO_H, W, H - FOTO_H);
+      gr = x.createLinearGradient(0, 250, 0, FOTO_H);
+      gr.addColorStop(0, 'rgba(11,13,18,0)'); gr.addColorStop(0.55, 'rgba(11,13,18,0.85)'); gr.addColorStop(1, 'rgba(11,13,18,1)');
+      x.fillStyle = gr; x.fillRect(0, 250, W, FOTO_H - 250);
+      // Resplandor del color elegido (o dorado si ganó) detrás de los datos
+      const brillo = t.logro?.medalla ? MEDALLA[t.logro.medalla][1] : ACC;
+      gr = x.createRadialGradient(W / 2, 860, 30, W / 2, 860, 700);
+      gr.addColorStop(0, brillo + '30'); gr.addColorStop(1, brillo + '00');
+      x.fillStyle = gr; x.fillRect(0, FOTO_H - 80, W, H - FOTO_H + 80);
+      // Líneas de velocidad muy suaves en el fondo oscuro
+      x.save(); x.strokeStyle = 'rgba(255,255,255,0.035)'; x.lineWidth = 2;
+      for (let i = 0; i < 26; i++) { const yy = 640 + i * 27; x.beginPath(); x.moveTo(W - 40 - azar() * 260, yy); x.lineTo(W, yy - 70); x.stroke(); }
+      x.restore();
 
       // Franja diagonal de carrera arriba a la derecha
-      x.save();
       x.beginPath(); x.moveTo(W - 250, 0); x.lineTo(W - 170, 0); x.lineTo(W - 330, 300); x.lineTo(W - 410, 300); x.closePath();
       x.fillStyle = accA(0.85); x.fill();
       x.beginPath(); x.moveTo(W - 150, 0); x.lineTo(W - 120, 0); x.lineTo(W - 280, 300); x.lineTo(W - 310, 300); x.closePath();
       x.fillStyle = accA(0.5); x.fill();
-      x.restore();
 
-      // Encabezado: escudo + marca
+      // Confeti si ganó su clase
+      if (t.logro?.confeti) {
+        const colores = ['#FFD166', '#F2B705', ACC, '#ffffff', '#FFE08A'];
+        for (let i = 0; i < 70; i++) {
+          const px = azar() * W, py = 165 + azar() * 300;
+          if (px < 560 && py < 200) continue;
+          x.save(); x.translate(px, py); x.rotate(azar() * Math.PI);
+          x.globalAlpha = 0.55 + azar() * 0.45;
+          x.fillStyle = colores[i % colores.length];
+          if (i % 3 === 0) { x.beginPath(); x.arc(0, 0, 4 + azar() * 4, 0, Math.PI * 2); x.fill(); }
+          else x.fillRect(-5, -10, 9 + azar() * 5, 18 + azar() * 8);
+          x.restore();
+        }
+      }
+
+      // ---------- Encabezado ----------
       const tx = M + (escudo ? 136 : 0);
       if (escudo) { const eh = 96, ew = escudo.width * eh / escudo.height; x.drawImage(escudo, M, 50, ew, eh); }
       x.fillStyle = '#fff'; x.font = `34px ${DISP}`;
       x.fillText('AMADESU RALLYS', tx, 108);
       x.fillStyle = ACC; x.font = `700 22px ${BODY}`;
-      x.fillText('RESULTADO', tx, 140);
+      x.fillText(t.provisional ? 'RESULTADO PROVISIONAL' : 'RESULTADO OFICIAL', tx, 140);
 
-      // Rally o circuito
+      // ---------- Rally o circuito ----------
       const fmtF = s => s ? new Date(String(s).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
       const nombreRally = String(t.rally.nombre || '').toUpperCase();
       const lugar = [t.rally.ciudad, fmtF(t.rally.fecha_inicio)].filter(Boolean).join(' · ').toUpperCase();
-      x.fillStyle = ACC; x.fillRect(M, 612, 90, 8);
-      x.fillStyle = '#fff'; ajustar(nombreRally, W - 2 * M, 66, '', DISP);
-      x.fillText(nombreRally, M, 694);
-      if (lugar) { x.fillStyle = 'rgba(255,255,255,0.7)'; ajustar(lugar, W - 2 * M, 30, '500', BODY); x.fillText(lugar, M, 742); }
+      x.fillStyle = ACC; x.fillRect(M, 500, 90, 8);
+      x.fillStyle = '#fff'; ajustar(nombreRally, W - 2 * M, 62, '', DISP);
+      x.fillText(nombreRally, M, 574);
+      if (lugar) { x.fillStyle = 'rgba(255,255,255,0.7)'; ajustar(lugar, W - 2 * M, 28, '500', BODY); x.fillText(lugar, M, 616); }
 
-      // Nº + piloto / navegante
-      const g = t.g, Y = 790;
+      // ---------- Nº + piloto / navegante ----------
+      const Y = 650;
       const numTxt = '#' + g.num;
-      ajustar(numTxt, 260, 76, '', DISP);
-      const nw = Math.max(170, x.measureText(numTxt).width + 56);
-      x.fillStyle = ACC; rect(M, Y, nw, 130, 18); x.fill();
+      ajustar(numTxt, 260, 72, '', DISP);
+      const nw = Math.max(160, x.measureText(numTxt).width + 52);
+      x.save(); x.shadowColor = accA(0.55); x.shadowBlur = 30;
+      x.fillStyle = ACC; rect(M, Y, nw, 118, 18); x.fill(); x.restore();
       x.fillStyle = sobreAcc; x.textAlign = 'center';
-      x.fillText(numTxt, M + nw / 2, Y + 92);
+      x.fillText(numTxt, M + nw / 2, Y + 84);
       x.textAlign = 'left';
-      const nx = M + nw + 32, nmax = W - M - nx;
+      const nx = M + nw + 30, nmax = W - M - nx;
       const piloto = String(g.name || '').toUpperCase();
-      x.fillStyle = '#fff'; ajustar(piloto, nmax, 50, '700', BODY);
-      x.fillText(piloto, nx, Y + (g.navName ? 58 : 82));
+      x.fillStyle = '#fff'; ajustar(piloto, nmax, 48, '700', BODY);
+      x.fillText(piloto, nx, Y + (g.navName ? 52 : 74));
       if (g.navName) {
         const nav = 'NAV. ' + String(g.navName).toUpperCase();
-        x.fillStyle = 'rgba(255,255,255,0.65)'; ajustar(nav, nmax, 32, '500', BODY); x.fillText(nav, nx, Y + 108);
+        x.fillStyle = 'rgba(255,255,255,0.65)'; ajustar(nav, nmax, 30, '500', BODY); x.fillText(nav, nx, Y + 98);
       }
 
-      // Dos cajas: General y Clase
-      const MEDALLA = { 1: '#FFD166', 2: '#D7DEE6', 3: '#E0975A' };
-      const bw = (W - 2 * M - 32) / 2, by = 960, bh = 250;
-      const puesto = (bx, titulo, fila, total) => {
-        const medalla = !fila.estadoEspecial && MEDALLA[fila.pos];
-        x.fillStyle = 'rgba(255,255,255,0.06)'; rect(bx, by, bw, bh, 22); x.fill();
-        x.strokeStyle = medalla ? medalla : 'rgba(255,255,255,0.14)'; x.lineWidth = medalla ? 3 : 2; x.stroke();
-        x.save(); rect(bx, by, bw, bh, 22); x.clip(); x.fillStyle = ACC; x.fillRect(bx, by, bw, 8); x.restore();
-        x.fillStyle = 'rgba(255,255,255,0.65)'; ajustar(titulo, bw - (medalla ? 190 : 56), 28, '700', BODY);
-        x.fillText(titulo, bx + 28, by + 56);
-        if (medalla) {
-          x.font = `700 20px ${BODY}`;
-          const tag = 'PODIO', tw = x.measureText(tag).width + 28;
-          x.fillStyle = medalla; rect(bx + bw - tw - 22, by + 28, tw, 36, 18); x.fill();
-          x.fillStyle = '#111318'; x.fillText(tag, bx + bw - tw - 8, by + 53);
+      // ---------- Cartel de logro ----------
+      const medallaDibujo = (cx, cy, r, n) => {
+        const [c1, c2, c3] = MEDALLA[n];
+        // cintas
+        x.fillStyle = ACC;
+        x.beginPath(); x.moveTo(cx - r * 0.75, cy - r * 1.55); x.lineTo(cx - r * 0.2, cy - r * 1.55); x.lineTo(cx + r * 0.2, cy - r * 0.6); x.lineTo(cx - r * 0.35, cy - r * 0.6); x.closePath(); x.fill();
+        x.fillStyle = accA(0.7);
+        x.beginPath(); x.moveTo(cx + r * 0.75, cy - r * 1.55); x.lineTo(cx + r * 0.2, cy - r * 1.55); x.lineTo(cx - r * 0.2, cy - r * 0.6); x.lineTo(cx + r * 0.35, cy - r * 0.6); x.closePath(); x.fill();
+        // disco
+        const gm = x.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+        gm.addColorStop(0, c1); gm.addColorStop(0.55, c2); gm.addColorStop(1, c3);
+        x.save(); x.shadowColor = c2 + 'aa'; x.shadowBlur = 24;
+        x.fillStyle = gm; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill(); x.restore();
+        x.strokeStyle = c3; x.lineWidth = 3; x.beginPath(); x.arc(cx, cy, r * 0.78, 0, Math.PI * 2); x.stroke();
+        x.fillStyle = c3; x.font = `${Math.round(r * 1.05)}px ${DISP}`; x.textAlign = 'center';
+        x.fillText(String(n), cx, cy + r * 0.37); x.textAlign = 'left';
+      };
+      const LY = 784, LH = 100;
+      if (t.logro) {
+        const med = t.logro.medalla, colLogro = med ? MEDALLA[med][1] : ACC;
+        const gl = x.createLinearGradient(M, 0, W - M, 0);
+        gl.addColorStop(0, colLogro + '40'); gl.addColorStop(1, colLogro + '0a');
+        x.fillStyle = gl; rect(M, LY, W - 2 * M, LH, 20); x.fill();
+        x.strokeStyle = colLogro + '99'; x.lineWidth = 2; x.stroke();
+        let ix = M + 28;
+        if (med) { medallaDibujo(M + 70, LY + 58, 34, med); ix = M + 132; }
+        else {
+          // bandera a cuadros chica
+          for (let fy = 0; fy < 4; fy++) for (let fx = 0; fx < 4; fx++) { x.fillStyle = (fx + fy) % 2 ? '#0b0d12' : colLogro; x.fillRect(M + 30 + fx * 12, LY + 28 + fy * 12, 12, 12); }
+          ix = M + 108;
         }
+        x.fillStyle = med ? MEDALLA[med][0] : '#fff'; ajustar(t.logro.titulo, W - M - ix - 28, 44, '', DISP);
+        x.fillText(t.logro.titulo, ix, LY + 50);
+        x.fillStyle = 'rgba(255,255,255,0.75)'; ajustar(t.logro.sub, W - M - ix - 28, 24, '600', BODY);
+        x.fillText(t.logro.sub, ix, LY + 83);
+      }
+
+      // ---------- Dos cajas: General y Clase ----------
+      const bw = (W - 2 * M - 28) / 2, by = t.logro ? 902 : 800, bh = 190;
+      const puesto = (bx, titulo, fila, total) => {
+        const med = !fila.estadoEspecial && MEDALLA[fila.pos];
+        x.fillStyle = 'rgba(255,255,255,0.055)'; rect(bx, by, bw, bh, 22); x.fill();
+        x.strokeStyle = med ? med[1] : 'rgba(255,255,255,0.14)'; x.lineWidth = med ? 3 : 2; x.stroke();
+        x.save(); rect(bx, by, bw, bh, 22); x.clip(); x.fillStyle = med ? med[1] : ACC; x.fillRect(bx, by, bw, 7); x.restore();
+        x.fillStyle = 'rgba(255,255,255,0.65)'; ajustar(titulo, bw - 56, 26, '700', BODY);
+        x.fillText(titulo, bx + 28, by + 50);
         if (fila.estadoEspecial) {
           const motivo = labelEstadoEspecial(fila).label.split(' — ')[0];
-          x.fillStyle = '#ff4d5a'; ajustar(motivo, bw - 56, 64, '', DISP);
-          x.fillText(motivo, bx + 28, by + 166);
+          x.fillStyle = '#ff4d5a'; ajustar(motivo, bw - 56, 60, '', DISP);
+          x.fillText(motivo, bx + 28, by + 140);
           return;
         }
         const pt = fila.pos + '°';
-        x.fillStyle = medalla || '#fff'; x.font = `128px ${DISP}`;
-        x.fillText(pt, bx + 24, by + 182);
+        if (med) { const gp = x.createLinearGradient(0, by + 60, 0, by + 160); gp.addColorStop(0, med[0]); gp.addColorStop(1, med[1]); x.fillStyle = gp; }
+        else x.fillStyle = '#fff';
+        x.font = `108px ${DISP}`;
+        x.fillText(pt, bx + 24, by + 148);
         const pw = x.measureText(pt).width;
-        x.fillStyle = 'rgba(255,255,255,0.6)'; x.font = `500 34px ${BODY}`;
-        x.fillText(`de ${total}`, bx + 24 + pw + 16, by + 182);
-        const dif = fila.pos === 1 ? 'LÍDER' : fila.faltanPe ? `FALTAN ${fila.faltanPe} PE` : fila.dif ? `+${fmtInterval(fila.dif)} del 1°` : '';
-        if (dif) { x.fillStyle = fila.pos === 1 ? ACC : 'rgba(255,255,255,0.75)'; ajustar(dif, bw - 56, 26, '600', BODY); x.fillText(dif, bx + 28, by + 226); }
+        x.fillStyle = 'rgba(255,255,255,0.6)'; x.font = `500 32px ${BODY}`;
+        x.fillText(`de ${total}`, bx + 24 + pw + 14, by + 148);
+        const dif = fila.pos === 1 ? (total > 1 ? 'LÍDER' : '') : fila.faltanPe ? `FALTAN ${fila.faltanPe} PE` : fila.dif ? `+${fmtInterval(fila.dif)} del 1°` : '';
+        if (dif) { x.fillStyle = fila.pos === 1 ? (med ? med[0] : ACC) : 'rgba(255,255,255,0.75)'; ajustar(dif, bw - 56, 24, '600', BODY); x.fillText(dif, bx + 28, by + 176); }
       };
       puesto(M, t.esCircuito ? 'GENERAL CIRCUITO' : 'GENERAL', g, t.totalGeneral);
-      puesto(M + bw + 32, 'CLASE ' + String(g.clase).toUpperCase(), t.c, t.totalClase);
+      puesto(M + bw + 28, 'CLASE ' + String(g.clase).toUpperCase(), t.c, t.totalClase);
 
-      // Tiempo total (de la General)
-      let partes = [];
-      if (!g.estadoEspecial) {
-        partes.push(['TIEMPO', fmtInterval(g.tiempo)]);
-        if (g.peRango && g.peRango !== '—') partes.push(['', g.peRango]);
-        if (g.vel != null) partes.push(['', g.vel.toFixed(1) + ' km/h']);
-      } else if (g.msParcial != null) partes.push(['TIEMPO PARCIAL', fmtInterval(msToIntervalStrPublic(g.msParcial))]);
-      let px = M; const py = 1262;
-      partes.forEach(([lbl, val], i) => {
-        if (i) { x.fillStyle = ACC; x.fillRect(px + 4, py - 20, 8, 8); px += 30; }
-        if (lbl) { x.fillStyle = 'rgba(255,255,255,0.6)'; x.font = `600 26px ${BODY}`; x.fillText(lbl, px, py); px += x.measureText(lbl).width + 12; }
-        x.fillStyle = '#fff'; x.font = `700 ${i ? 28 : 36}px ${BODY}`; x.fillText(val, px, py); px += x.measureText(val).width + 18;
-      });
+      // ---------- Datos: tiempo, velocidad, PE / vuelta ----------
+      const datos = [];
+      if (!g.estadoEspecial) datos.push({ tipo: 'texto', lbl: 'TIEMPO TOTAL', val: fmtInterval(g.tiempo), sub: t.esCircuito ? (t.vuelta ? `${t.vuelta.total} VUELTAS` : '') : (g.peRango && g.peRango !== '—' ? g.peRango.replace('PE ', 'PE ') + ' SUMADAS' : '') });
+      else if (g.msParcial != null) datos.push({ tipo: 'texto', lbl: 'TIEMPO PARCIAL', val: fmtInterval(msToIntervalStrPublic(g.msParcial)), sub: '' });
+      if (g.vel != null) datos.push({ tipo: 'vel' });
+      if (t.vuelta) datos.push({ tipo: 'texto', lbl: 'MEJOR VUELTA', val: fmtInterval(msToIntervalStrPublic(t.vuelta.ms)), sub: `V${t.vuelta.num} · ${t.vuelta.posClase}° EN CLASE`, top: t.vuelta.posClase === 1 });
+      if (t.pe && !g.estadoEspecial) {
+        if (t.pe.ganClase) datos.push({ tipo: 'texto', lbl: 'PE GANADAS', val: String(t.pe.ganClase), sub: t.pe.ganGeneral ? `EN CLASE · ${t.pe.ganGeneral} SCRATCH` : 'EN SU CLASE', top: true });
+        else if (t.pe.mejor) datos.push({ tipo: 'texto', lbl: 'MEJOR PE', val: 'PE ' + t.pe.mejor.pe, sub: `${t.pe.mejor.posC}° EN CLASE` });
+      }
+      const dy = by + bh + 20, dh = 1272 - dy;
+      if (datos.length) {
+        const gap = 20, dw = (W - 2 * M - gap * (datos.length - 1)) / datos.length;
+        datos.forEach((dd, i) => {
+          const dx = M + i * (dw + gap);
+          x.fillStyle = 'rgba(255,255,255,0.045)'; rect(dx, dy, dw, dh, 18); x.fill();
+          x.strokeStyle = dd.top ? accA(0.8) : 'rgba(255,255,255,0.1)'; x.lineWidth = 2; x.stroke();
+          if (dd.tipo === 'vel') {
+            // Velocímetro
+            const cx = dx + dw / 2, cyy = dy + dh - 50, r = Math.min(dw / 2 - 34, cyy - dy - 42);
+            const frac = Math.max(0, Math.min(1, g.vel / t.velEscala));
+            x.lineCap = 'round';
+            x.strokeStyle = 'rgba(255,255,255,0.12)'; x.lineWidth = 14;
+            x.beginPath(); x.arc(cx, cyy, r, Math.PI, 2 * Math.PI); x.stroke();
+            const ga = x.createLinearGradient(cx - r, 0, cx + r, 0);
+            ga.addColorStop(0, accA(0.5)); ga.addColorStop(1, ACC);
+            x.strokeStyle = ga; x.beginPath(); x.arc(cx, cyy, r, Math.PI, Math.PI + Math.PI * frac); x.stroke();
+            x.lineCap = 'butt';
+            for (let k = 0; k <= 10; k++) {
+              const a = Math.PI + Math.PI * k / 10, r1 = r - 14, r2 = r - (k % 5 ? 22 : 30);
+              x.strokeStyle = 'rgba(255,255,255,0.35)'; x.lineWidth = k % 5 ? 2 : 3;
+              x.beginPath(); x.moveTo(cx + Math.cos(a) * r1, cyy + Math.sin(a) * r1); x.lineTo(cx + Math.cos(a) * r2, cyy + Math.sin(a) * r2); x.stroke();
+            }
+            const an = Math.PI + Math.PI * frac;
+            x.strokeStyle = '#fff'; x.lineWidth = 4; x.lineCap = 'round';
+            x.beginPath(); x.moveTo(cx, cyy); x.lineTo(cx + Math.cos(an) * (r - 24), cyy + Math.sin(an) * (r - 24)); x.stroke();
+            x.lineCap = 'butt';
+            x.fillStyle = ACC; x.beginPath(); x.arc(cx, cyy, 8, 0, Math.PI * 2); x.fill();
+            x.textAlign = 'center';
+            x.fillStyle = 'rgba(255,255,255,0.6)'; ajustar(t.velPosClase ? `VEL. PROMEDIO · ${t.velPosClase}° CLASE` : 'VEL. PROMEDIO', dw - 30, 18, '700', BODY);
+            x.fillText(t.velPosClase ? `VEL. PROMEDIO · ${t.velPosClase}° CLASE` : 'VEL. PROMEDIO', cx, dy + 26);
+            x.fillStyle = '#fff'; x.font = `700 32px ${BODY}`;
+            const vt = g.vel.toFixed(1), vw = x.measureText(vt).width;
+            x.font = `600 18px ${BODY}`; const kw = x.measureText(' KM/H').width;
+            x.textAlign = 'left';
+            x.font = `700 32px ${BODY}`; x.fillText(vt, cx - (vw + kw) / 2, cyy + 38);
+            x.fillStyle = 'rgba(255,255,255,0.6)'; x.font = `600 18px ${BODY}`; x.fillText(' KM/H', cx - (vw + kw) / 2 + vw, cyy + 38);
+            x.textAlign = 'left';
+            return;
+          }
+          x.fillStyle = 'rgba(255,255,255,0.6)'; ajustar(dd.lbl, dw - 40, 20, '700', BODY);
+          x.fillText(dd.lbl, dx + 22, dy + 34);
+          x.fillStyle = dd.top ? ACC : '#fff'; ajustar(dd.val, dw - 40, datos.length > 2 ? 40 : 46, '700', BODY);
+          x.fillText(dd.val, dx + 22, dy + dh / 2 + 22);
+          if (dd.sub) { x.fillStyle = 'rgba(255,255,255,0.65)'; ajustar(dd.sub, dw - 40, 19, '600', BODY); x.fillText(dd.sub, dx + 22, dy + dh - 22); }
+        });
+      }
 
-      // Pie: bandera a cuadros con el color elegido
+      // ---------- Pie: bandera a cuadros ----------
       const cuad = 14;
       for (let fila = 0; fila < 2; fila++) for (let col = 0; col * cuad < W; col++) {
         x.fillStyle = (fila + col) % 2 ? '#0b0d12' : ACC;
         x.fillRect(col * cuad, H - 2 * cuad + fila * cuad, cuad, cuad);
       }
-      x.font = `500 22px ${BODY}`; x.fillStyle = 'rgba(255,255,255,0.5)';
+      x.font = `500 21px ${BODY}`; x.fillStyle = 'rgba(255,255,255,0.5)';
       const ahora = new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-      x.fillText('amadesu.com', M, H - 46);
-      x.textAlign = 'right'; x.fillText('Resultados al ' + ahora, W - M, H - 46); x.textAlign = 'left';
+      x.fillText('amadesu.com', M, H - 44);
+      x.textAlign = 'right'; x.fillText('Resultados al ' + ahora, W - M, H - 44); x.textAlign = 'left';
       return cv;
     }
 
