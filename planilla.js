@@ -163,7 +163,7 @@ async function refrescarOtrasCopias() {
       const [filas, pen, ins] = await Promise.all([
         leerTiempos(recIds, null),
         todo(() => db().from('penalizaciones').select('id, inscripcion_id, recorrido_id, tiempo_penalizacion, motivo, created_at').in('recorrido_id', recIds).eq('tipo', 'tiempo').is('deleted_at', null).order('created_at')),
-        todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre), orden_salida').eq('rally_id', id).is('deleted_at', null).order('numero')),
+        todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre), orden_salida, created_at').eq('rally_id', id).is('deleted_at', null).order('numero')),
       ]);
       const tiempos = new Map(), penales = new Map();
       let ultimo = null;
@@ -346,7 +346,7 @@ async function cargarRally(rallyId) {
     }
     const [etapas, inscritos, cfg] = await Promise.all([
       db().from('etapas').select('id, numero, nombre, recorridos(id, numero, nombre, distancia_km, deleted_at)').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero'),
-      todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre), orden_salida').eq('rally_id', rallyId).is('deleted_at', null).order('numero')),
+      todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre), orden_salida, created_at').eq('rally_id', rallyId).is('deleted_at', null).order('numero')),
       db().from('planillas').select('config').eq('rally_id', rallyId).maybeSingle(),
     ]);
     if (etapas.error) throw etapas.error;
@@ -596,6 +596,13 @@ function enAlcance(f, pes) {
   return c;
 }
 
+// Orden de largada, igual que la Planilla de Inscripción: primero el puesto
+// que se acomodó a mano (orden_salida); a los que no tienen, en el orden en
+// que se cargaron; y si falta eso, por número.
+const cuando = i => (i.created_at ? Date.parse(i.created_at) : Infinity);
+const cmpLargada = (a, b) => ((a.ins.orden_salida ?? Infinity) - (b.ins.orden_salida ?? Infinity))
+  || ((cuando(a.ins) - cuando(b.ins)) || 0) || (a.ins.numero - b.ins.numero);
+
 // Por clase: los que completaron todas las PE del alcance, del menor tiempo al
 // mayor; después los que les faltan PE (más PE primero, y a igual cantidad el
 // menor tiempo); después abandono / no largó; al final los que no tienen nada.
@@ -605,7 +612,7 @@ function clasificar(alcance = estado.alcance) {
   for (const ins of estado.inscritos) { const f = calcular(ins); f.cl = enAlcance(f, pes); (grupos[f.clase] ||= []).push(f); }
   const rango = f => f.cl.especial ? 2 : f.cl.completa ? 0 : f.cl.conDatos ? 1 : 3;
   for (const lista of Object.values(grupos)) {
-    lista.sort((a, b) => rango(a) - rango(b) || (rango(a) === 0 ? a.cl.tiempo - b.cl.tiempo : rango(a) === 1 ? (b.cl.completas - a.cl.completas) || (a.cl.total + a.cl.penal - b.cl.total - b.cl.penal) : 0) || ((a.ins.orden_salida ?? Infinity) - (b.ins.orden_salida ?? Infinity)) || (a.ins.numero - b.ins.numero));
+    lista.sort((a, b) => rango(a) - rango(b) || (rango(a) === 0 ? a.cl.tiempo - b.cl.tiempo : rango(a) === 1 ? (b.cl.completas - a.cl.completas) || (a.cl.total + a.cl.penal - b.cl.total - b.cl.penal) : 0) || cmpLargada(a, b));
     let lider = null, previo = null;
     lista.forEach((f, i) => {
       f.psto = rango(f) <= 2 ? i + 1 : null;
@@ -818,7 +825,7 @@ function dibujar() {
     let lista = grupos[cl];
     if (estado.orden === 'numero') lista = [...lista].sort((a, b) => a.ins.numero - b.ins.numero);
     // Largada: el orden que se acomodó en la Planilla de Inscripción (orden_salida).
-    else if (estado.orden === 'largada') lista = [...lista].sort((a, b) => ((a.ins.orden_salida ?? Infinity) - (b.ins.orden_salida ?? Infinity)) || (a.ins.numero - b.ins.numero));
+    else if (estado.orden === 'largada') lista = [...lista].sort(cmpLargada);
     for (const f of lista) {
       nro++;
       const i = f.ins;

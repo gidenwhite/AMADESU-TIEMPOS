@@ -4,7 +4,7 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v20';
+const VERSION = 'amadesu-v21';
 const BASICOS = ['./', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
   './app.js', './app.css', './offline.js',
   // Ranking del campeonato (página pública; se ve el último guardado sin internet)
