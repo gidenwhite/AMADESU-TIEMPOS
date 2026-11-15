@@ -1,0 +1,10 @@
+# Archivos del repositorio que NO se publican en la web
+functions
+supabase
+worker.js
+wrangler.jsonc
+vista_previa.js
+.gitignore
+.assetsignore
+.git
+node_modules
