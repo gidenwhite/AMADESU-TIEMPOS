@@ -817,6 +817,8 @@ function dibujar() {
   clases.forEach((cl, ci) => {
     let lista = grupos[cl];
     if (estado.orden === 'numero') lista = [...lista].sort((a, b) => a.ins.numero - b.ins.numero);
+    // Largada: el orden que se acomodó en la Planilla de Inscripción (orden_salida).
+    else if (estado.orden === 'largada') lista = [...lista].sort((a, b) => ((a.ins.orden_salida ?? Infinity) - (b.ins.orden_salida ?? Infinity)) || (a.ins.numero - b.ins.numero));
     for (const f of lista) {
       nro++;
       const i = f.ins;
