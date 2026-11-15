@@ -3034,6 +3034,19 @@
         padding: 10px 36px 10px 12px;
       }
     }
+    /* Nº tocable en las tablas de Tiempos -> imagen de resultado */
+    .num-tarjeta { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; color: inherit; font: inherit; padding: 2px 6px; margin-left: -6px; border-radius: 6px; transition: background .15s; }
+    .num-tarjeta .ico { opacity: .55; }
+    .num-tarjeta:hover, .num-tarjeta:focus-visible { background: rgba(230,57,70,0.14); }
+    .num-tarjeta:hover .ico { opacity: 1; }
+    .tarjeta-fondo { position: fixed; inset: 0; z-index: 10050; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .tarjeta-caja { background: #12151c; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 14px; width: min(440px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 12px; }
+    .tarjeta-prev { aspect-ratio: 1080 / 1350; max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px); margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: center; background: #0b0d12; border-radius: 10px; overflow: hidden; color: #9aa3b2; font-family: var(--font-body); }
+    .tarjeta-prev img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .tarjeta-acciones { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    .tarjeta-btn { font-family: var(--font-body); font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; }
+    .tarjeta-btn.primario { background: var(--accent-primary); border-color: var(--accent-primary); }
+    .tarjeta-btn:disabled { opacity: .5; cursor: wait; }
   </style>
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#060c24" />
@@ -4572,7 +4585,7 @@
           const { label, color } = labelEstadoEspecial(r);
           return `<tr style="--i:${i};">
               <td><span style="font-family:var(--font-mono); font-size:15px; color:var(--text-dim); padding-left:6px;">—</span></td>
-              <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
+              <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">${numTarjeta(r)}</td>
               <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}${mostrarClase ? `<span class="clase-inline">${claseBadge(r.clase)}</span>` : ''}</td>
               <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
               ${mostrarClase ? `<td class="col-clase">${claseBadge(r.clase)}</td>` : ''}
@@ -4589,7 +4602,7 @@
           : `<span style="font-family:var(--font-mono); font-size:15px; color:var(--text-muted); padding-left:6px;">${pos}</span>`;
         return `<tr style="${rowStyle}--i:${i};">
               <td>${posCell}</td>
-              <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">#${r.num}</td>
+              <td style="font-family:var(--font-mono); color:var(--accent-primary); font-weight:700;">${numTarjeta(r)}</td>
               <td class="col-nombre" style="font-weight:600;">${r.name}${r.navName ? `<span class="nav-inline">${r.navName}</span>` : ''}${mostrarClase ? `<span class="clase-inline">${claseBadge(r.clase)}</span>` : ''}</td>
               <td class="col-nav" style="color:var(--text-muted);">${r.navName || '—'}</td>
               ${mostrarClase ? `<td class="col-clase">${claseBadge(r.clase)}</td>` : ''}
@@ -4601,6 +4614,209 @@
       }).join('')}</tbody>
         </table></div>`;
     }
+
+    // ==========================================
+    // TARJETA DE RESULTADO: tocando el Nº de un auto en cualquier tabla de
+    // Tiempos se arma una imagen (PNG 1080x1350, formato de post/historia)
+    // con su puesto en la GENERAL y en su CLASE -- siempre de la General del
+    // rally completa, sin los filtros de la pantalla -- sobre la imagen del
+    // rally o circuito. Se dibuja en un <canvas>, en el propio navegador.
+    // ==========================================
+    function numTarjeta(r) {
+      if (!r.insId) return `#${r.num}`;
+      return `<button type="button" class="num-tarjeta" data-tarjeta="${r.insId}" title="Imagen con su puesto para descargar">#${r.num}<svg class="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></button>`;
+    }
+
+    function datosTarjeta(insId) {
+      const d = window.tiemposAccordionData;
+      if (!d) return null;
+      const { generalFilas } = armarEntradasRally(d.etapas, d.tiemposRally, d.esCircuito, d.penalMap);
+      const general = clasificarSinCategoria(generalFilas);
+      const g = general.find(r => r.insId === insId);
+      if (!g) return null;
+      const clase = agruparPorCategoriaYClasificar(generalFilas)[g.clase] || [];
+      return {
+        g, c: clase.find(r => r.insId === insId) || g,
+        totalGeneral: general.length, totalClase: clase.length,
+        rally: allRallies.find(r => r.id === d.rallyId) || { nombre: d.rallyNombre },
+        esCircuito: d.esCircuito
+      };
+    }
+
+    function cargarImagenTarjeta(src, cors = true) {
+      return new Promise(res => {
+        if (!src) return res(null);
+        const img = new Image();
+        if (cors) img.crossOrigin = 'anonymous';
+        img.onload = () => res(img);
+        img.onerror = () => res(null);
+        // Parámetro propio: que el navegador no reuse la copia que bajó la
+        // tarjeta del inicio sin permiso CORS (el canvas no se podría guardar).
+        img.src = cors ? src + (src.includes('?') ? '&' : '?') + 'tarjeta=1' : src;
+        setTimeout(() => res(null), 8000);
+      });
+    }
+
+    async function dibujarTarjeta(t) {
+      const W = 1080, H = 1350, M = 64;
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      const x = cv.getContext('2d');
+      const DISP = '"Russo One", "Barlow Condensed", sans-serif';
+      const BODY = '"Chakra Petch", sans-serif';
+      try { await Promise.all([document.fonts.load('64px "Russo One"'), document.fonts.load('700 40px "Chakra Petch"'), document.fonts.load('500 40px "Chakra Petch"')]); } catch (e) { }
+      const [foto, escudo] = await Promise.all([cargarImagenTarjeta(t.rally.imagen_url), cargarImagenTarjeta('icons/amadesu_escudo.png', false)]);
+      const caja = (bx, by, bw, bh, rad) => { x.beginPath(); if (x.roundRect) x.roundRect(bx, by, bw, bh, rad); else x.rect(bx, by, bw, bh); };
+      // Achica la letra hasta que el texto entre en el ancho
+      const ajustar = (txt, max, size, peso, fam) => {
+        let s = size;
+        do { x.font = `${peso} ${s}px ${fam}`.trim(); s -= 2; } while (x.measureText(txt).width > max && s > 14);
+      };
+
+      // Fondo + imagen del rally (recortada para llenar la parte de arriba)
+      x.fillStyle = '#0b0d12'; x.fillRect(0, 0, W, H);
+      const FOTO_H = 680;
+      if (foto) {
+        const esc = Math.max(W / foto.width, FOTO_H / foto.height);
+        const fw = foto.width * esc, fh = foto.height * esc;
+        x.drawImage(foto, (W - fw) / 2, (FOTO_H - fh) / 2, fw, fh);
+      } else {
+        const gf = x.createLinearGradient(0, 0, W, FOTO_H);
+        gf.addColorStop(0, '#4a1017'); gf.addColorStop(1, '#0b0d12');
+        x.fillStyle = gf; x.fillRect(0, 0, W, FOTO_H);
+      }
+      let gr = x.createLinearGradient(0, 0, 0, 300);
+      gr.addColorStop(0, 'rgba(11,13,18,0.9)'); gr.addColorStop(0.5, 'rgba(11,13,18,0.6)'); gr.addColorStop(1, 'rgba(11,13,18,0)');
+      x.fillStyle = gr; x.fillRect(0, 0, W, 300);
+      gr = x.createLinearGradient(0, 300, 0, FOTO_H);
+      gr.addColorStop(0, 'rgba(11,13,18,0)'); gr.addColorStop(0.55, 'rgba(11,13,18,0.82)'); gr.addColorStop(1, 'rgba(11,13,18,1)');
+      x.fillStyle = gr; x.fillRect(0, 300, W, FOTO_H - 300);
+
+      // Encabezado: escudo + marca
+      const tx = M + (escudo ? 136 : 0);
+      if (escudo) { const eh = 96, ew = escudo.width * eh / escudo.height; x.drawImage(escudo, M, 50, ew, eh); }
+      x.fillStyle = '#fff'; x.font = `34px ${DISP}`;
+      x.fillText('AMADESU RALLYS', tx, 108);
+      x.fillStyle = '#E63946'; x.font = `700 22px ${BODY}`;
+      x.fillText('RESULTADO', tx, 140);
+
+      // Rally o circuito
+      const fmtF = s => s ? new Date(String(s).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      const nombreRally = String(t.rally.nombre || '').toUpperCase();
+      const lugar = [t.rally.ciudad, fmtF(t.rally.fecha_inicio)].filter(Boolean).join(' · ').toUpperCase();
+      x.fillStyle = '#E63946'; x.fillRect(M, 612, 90, 8);
+      x.fillStyle = '#fff'; ajustar(nombreRally, W - 2 * M, 66, '', DISP);
+      x.fillText(nombreRally, M, 694);
+      if (lugar) { x.fillStyle = 'rgba(255,255,255,0.7)'; ajustar(lugar, W - 2 * M, 30, '500', BODY); x.fillText(lugar, M, 742); }
+
+      // Nº + piloto / navegante
+      const g = t.g, Y = 796;
+      const numTxt = '#' + g.num;
+      ajustar(numTxt, 260, 76, '', DISP);
+      const nw = Math.max(170, x.measureText(numTxt).width + 56);
+      x.fillStyle = '#E63946'; caja(M, Y, nw, 130, 18); x.fill();
+      x.fillStyle = '#fff'; x.textAlign = 'center';
+      x.fillText(numTxt, M + nw / 2, Y + 92);
+      x.textAlign = 'left';
+      const nx = M + nw + 32, nmax = W - M - nx;
+      const piloto = String(g.name || '').toUpperCase();
+      x.fillStyle = '#fff'; ajustar(piloto, nmax, 50, '700', BODY);
+      x.fillText(piloto, nx, Y + (g.navName ? 58 : 82));
+      if (g.navName) {
+        const nav = 'NAV. ' + String(g.navName).toUpperCase();
+        x.fillStyle = 'rgba(255,255,255,0.65)'; ajustar(nav, nmax, 32, '500', BODY); x.fillText(nav, nx, Y + 108);
+      }
+
+      // Dos cajas: General y Clase
+      const colorPos = p => p === 1 ? '#FFD166' : p === 2 ? '#D7DEE6' : p === 3 ? '#E0975A' : '#fff';
+      const bw = (W - 2 * M - 32) / 2, by = 974, bh = 236;
+      const puesto = (bx, titulo, fila, total) => {
+        x.fillStyle = 'rgba(255,255,255,0.06)'; caja(bx, by, bw, bh, 22); x.fill();
+        x.strokeStyle = 'rgba(255,255,255,0.14)'; x.lineWidth = 2; x.stroke();
+        x.fillStyle = 'rgba(255,255,255,0.6)'; ajustar(titulo, bw - 56, 28, '700', BODY);
+        x.fillText(titulo, bx + 28, by + 52);
+        if (fila.estadoEspecial) {
+          const motivo = labelEstadoEspecial(fila).label.split(' — ')[0];
+          x.fillStyle = '#ff4d5a'; ajustar(motivo, bw - 56, 64, '', DISP);
+          x.fillText(motivo, bx + 28, by + 160);
+          return;
+        }
+        const pt = fila.pos + '°';
+        x.fillStyle = colorPos(fila.pos); x.font = `130px ${DISP}`;
+        x.fillText(pt, bx + 24, by + 188);
+        const pw = x.measureText(pt).width;
+        x.fillStyle = 'rgba(255,255,255,0.6)'; x.font = `500 34px ${BODY}`;
+        x.fillText(`de ${total}`, bx + 24 + pw + 16, by + 188);
+      };
+      puesto(M, t.esCircuito ? 'GENERAL CIRCUITO' : 'GENERAL', g, t.totalGeneral);
+      puesto(M + bw + 32, 'CLASE ' + String(g.clase).toUpperCase(), t.c, t.totalClase);
+
+      // Tiempo y diferencia (de la General)
+      let linea = '';
+      if (!g.estadoEspecial) {
+        linea = 'TIEMPO ' + fmtInterval(g.tiempo);
+        if (g.faltanPe) linea += `  ·  FALTAN ${g.faltanPe} PE`;
+        else if (g.dif) linea += '  ·  +' + fmtInterval(g.dif) + ' DEL 1°';
+      } else if (g.msParcial != null) linea = 'TIEMPO PARCIAL ' + fmtInterval(msToIntervalStrPublic(g.msParcial));
+      if (linea) { x.fillStyle = '#fff'; ajustar(linea, W - 2 * M, 34, '600', BODY); x.fillText(linea, M, 1268); }
+
+      // Pie
+      x.fillStyle = '#E63946'; x.fillRect(0, H - 14, W, 14);
+      x.font = `500 22px ${BODY}`; x.fillStyle = 'rgba(255,255,255,0.5)';
+      const ahora = new Date().toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      x.fillText('amadesu.com', M, H - 36);
+      x.textAlign = 'right'; x.fillText('Resultados al ' + ahora, W - M, H - 36); x.textAlign = 'left';
+      return cv;
+    }
+
+    async function abrirTarjeta(insId) {
+      const t = datosTarjeta(insId);
+      if (!t) { alert('Este auto todavía no tiene tiempo en la General.'); return; }
+      document.getElementById('tarjeta-fondo')?.remove();
+      const f = document.createElement('div');
+      f.id = 'tarjeta-fondo'; f.className = 'tarjeta-fondo';
+      f.innerHTML = `<div class="tarjeta-caja" role="dialog" aria-modal="true" aria-label="Imagen de resultado">
+          <div class="tarjeta-prev"><span>Armando la imagen…</span></div>
+          <div class="tarjeta-acciones">
+            <button type="button" class="tarjeta-btn" data-cerrar>Cerrar</button>
+            <button type="button" class="tarjeta-btn" data-compartir hidden>Compartir</button>
+            <button type="button" class="tarjeta-btn primario" data-descargar disabled>Descargar imagen</button>
+          </div>
+        </div>`;
+      const cerrar = () => { f.remove(); document.removeEventListener('keydown', esc); };
+      const esc = e => { if (e.key === 'Escape') cerrar(); };
+      document.addEventListener('keydown', esc);
+      f.addEventListener('click', e => { if (e.target === f || e.target.closest('[data-cerrar]')) cerrar(); });
+      document.body.appendChild(f);
+      let blob, nombre;
+      try {
+        const cv = await dibujarTarjeta(t);
+        blob = await new Promise((ok, mal) => cv.toBlob(b => b ? ok(b) : mal(new Error('sin imagen')), 'image/png'));
+        const limpio = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        nombre = `${limpio(t.rally.nombre)}_N${limpio(t.g.num)}_${limpio(t.g.name)}.png`;
+      } catch (e) {
+        f.querySelector('.tarjeta-prev').innerHTML = '<span>No se pudo armar la imagen.</span>';
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      f.querySelector('.tarjeta-prev').innerHTML = `<img src="${url}" alt="Resultado del Nº ${escPrintText(String(t.g.num))}">`;
+      const bajar = f.querySelector('[data-descargar]');
+      bajar.disabled = false;
+      bajar.onclick = () => { const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); };
+      const archivo = new File([blob], nombre, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+        const comp = f.querySelector('[data-compartir]');
+        comp.hidden = false;
+        comp.onclick = () => navigator.share({ files: [archivo], title: t.rally.nombre || 'Resultado' }).catch(() => { });
+      }
+    }
+
+    document.addEventListener('click', e => {
+      const b = e.target.closest('.num-tarjeta');
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      abrirTarjeta(b.dataset.tarjeta);
+    });
 
     // Mini gráfico de brechas por categoría, directo en el acordeón de
     // Tiempos (no solo en el modal de Stats) -- de un vistazo, qué tan
@@ -5286,6 +5502,7 @@
 
       const filasValidas = validos.map((e, i) => ({
         pos: i + 1,
+        insId: e.inscripcion_id,
         num: e.inscripcion?.numero || '-',
         name: e.inscripcion?.piloto ? `${e.inscripcion.piloto.nombre} ${e.inscripcion.piloto.apellido}` : 'Desconocido',
         navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
@@ -5302,6 +5519,7 @@
         navName: e.inscripcion?.navegante ? `${e.inscripcion.navegante.nombre} ${e.inscripcion.navegante.apellido}` : null,
         peRango: e.peRango,
         clase: e.inscripcion?.categoria?.nombre || 'Sin Clase',
+        insId: e.inscripcion_id,
         estadoEspecial: e.estado || 'pendiente',
         vueltasCompletadas: e.vueltasCompletadas,
         vueltasRequeridas: e.vueltasRequeridas,
@@ -5478,16 +5696,9 @@
       return min === max ? `PE ${min}` : `PE ${min}-${max}`;
     }
 
-    // mangaFilter solo se aplica dentro del panel "Vueltas" (ver más abajo) --
-    // Clasificación/Shakedown y General siguen mostrando todas las mangas juntas.
-    // campFilter es el id (uuid) del ámbito de campeonato elegido en el selector.
-    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, mangaFilter, penalMap, campFilter) {
-      const pasaFiltro = (ins) => {
-        if (catFilter && catFilter !== 'ALL' && (ins?.categoria?.nombre || 'Sin Clase') !== catFilter) return false;
-        if (campFilter && campFilter !== 'ALL' && !(ins?.ambitos_campeonato || []).some(ac => ac.ambito_campeonato_id === campFilter)) return false;
-        return true;
-      };
-
+    // Entradas por PE y filas de la General (suma de todas las PE) -- la usan
+    // el acordeón de Tiempos (con filtros) y la tarjeta de resultado (sin filtros).
+    function armarEntradasRally(etapas, tiemposRally, esCircuito, penalMap, pasaFiltro = () => true) {
       const porRecorridoInscripcion = {};
       tiemposRally.forEach(t => {
         if (!pasaFiltro(t.inscripcion)) return;
@@ -5534,6 +5745,33 @@
           return entrada;
         });
 
+      // --- GENERAL (suma de todas las PEs de todas las etapas, por inscripción) ---
+      // Rango de PEs con tiempo cargado por inscripción (ej. "PE 1-5"), solo
+      // para esta sección -- se muestra en la columna previa a "Tiempo".
+      const peNumerosPorInscripcion = {};
+      entradas.forEach(e => {
+        const peNum = peNumeroPorRecorrido[e.recorrido_id];
+        if (!peNum || e.ms == null) return;
+        if (!peNumerosPorInscripcion[e.inscripcion_id]) peNumerosPorInscripcion[e.inscripcion_id] = new Set();
+        peNumerosPorInscripcion[e.inscripcion_id].add(peNum);
+      });
+      const generalFilas = acumularEntradas(entradas)
+        .map(g => ({ ...g, peRango: formatearRangoPE(peNumerosPorInscripcion[g.inscripcion_id]), peCount: peNumerosPorInscripcion[g.inscripcion_id]?.size || 0 }));
+      return { entradas, peNumeroPorRecorrido, generalFilas };
+    }
+
+    // mangaFilter solo se aplica dentro del panel "Vueltas" (ver más abajo) --
+    // Clasificación/Shakedown y General siguen mostrando todas las mangas juntas.
+    // campFilter es el id (uuid) del ámbito de campeonato elegido en el selector.
+    function construirAcordeonTiempos(etapas, tiemposRally, shakeFilas, catFilter, esCircuito, mangas, mangaFilter, penalMap, campFilter) {
+      const pasaFiltro = (ins) => {
+        if (catFilter && catFilter !== 'ALL' && (ins?.categoria?.nombre || 'Sin Clase') !== catFilter) return false;
+        if (campFilter && campFilter !== 'ALL' && !(ins?.ambitos_campeonato || []).some(ac => ac.ambito_campeonato_id === campFilter)) return false;
+        return true;
+      };
+
+      const { entradas, peNumeroPorRecorrido, generalFilas } = armarEntradasRally(etapas, tiemposRally, esCircuito, penalMap, pasaFiltro);
+
       let html = '';
 
       // --- SHAKEDOWN / CLASIFICACIÓN ---
@@ -5560,18 +5798,7 @@
         html += accordionItem('shakedown', shakeLabel, 'acc-header-shakedown', shakeBodyHtml);
       }
 
-      // --- GENERAL (suma de todas las PEs de todas las etapas, por inscripción) ---
-      // Rango de PEs con tiempo cargado por inscripción (ej. "PE 1-5"), solo
-      // para esta sección -- se muestra en la columna previa a "Tiempo".
-      const peNumerosPorInscripcion = {};
-      entradas.forEach(e => {
-        const peNum = peNumeroPorRecorrido[e.recorrido_id];
-        if (!peNum || e.ms == null) return;
-        if (!peNumerosPorInscripcion[e.inscripcion_id]) peNumerosPorInscripcion[e.inscripcion_id] = new Set();
-        peNumerosPorInscripcion[e.inscripcion_id].add(peNum);
-      });
-      const generalFilas = acumularEntradas(entradas)
-        .map(g => ({ ...g, peRango: formatearRangoPE(peNumerosPorInscripcion[g.inscripcion_id]), peCount: peNumerosPorInscripcion[g.inscripcion_id]?.size || 0 }));
+      // --- GENERAL (ver armarEntradasRally) ---
       const generalLabel = esCircuito ? 'Tiempo General Circuito' : 'General';
       let generalHtml;
       if (generalFilas.length > 0) {
