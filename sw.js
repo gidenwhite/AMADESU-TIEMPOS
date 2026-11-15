@@ -4,9 +4,11 @@
 //   versión publicada; la copia guardada solo se usa si no hay conexión.
 // - Los datos en vivo (tiempos, boletines...) NUNCA se guardan: van directo.
 // - Recibe y muestra las notificaciones push.
-const VERSION = 'amadesu-v15';
+const VERSION = 'amadesu-v19';
 const BASICOS = ['./', './info.html', './sin_internet.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
   './app.js', './app.css', './offline.js',
+  // Ranking del campeonato (página pública; se ve el último guardado sin internet)
+  './ranking.html', './ranking.js', './ranking.css', './ranking_comun.js', './icons/amadesu_escudo.png',
   // Planilla de Tiempos: se abre y se carga sin internet (los datos van en cola)
   './planilla.html', './planilla.js', './planilla.css', './supabase_config.js',
   // Planilla de Inscripción: igual, se abre y se carga sin internet

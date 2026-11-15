@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ranking del Campeonato — AMADESU RALLYS</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="icons/favicon-32.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@600;700&family=Russo+One&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="planilla.css" />
+  <link rel="stylesheet" href="ranking_admin.css" />
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" defer></script>
+  <script type="module" src="ranking_admin.js"></script>
+</head>
+
+<body>
+  <header class="pl-barra">
+    <a href="admin_dashboard.html" class="pl-volver" title="Volver al panel">←</a>
+    <div class="pl-barra-titulo">
+      <b>Ranking del Campeonato</b>
+      <span id="rk-sub">Cargando…</span>
+    </div>
+    <select id="rk-camp" class="pl-control" aria-label="Campeonato" hidden></select>
+    <div class="pl-herr">
+      <button type="button" class="pl-btn" id="rk-nuevo" title="Crear otro campeonato">＋ Nuevo campeonato</button>
+      <button type="button" class="pl-btn" id="rk-config" title="Título, fechas, orden de clases y publicar">⚙ Datos y fechas</button>
+      <button type="button" class="pl-btn" id="rk-subir" title="Cargar tu Excel de ranking (hojas RANKING PILOTOS y RANKING NAVEGANTES)">⬆ Subir Excel</button>
+      <input type="file" id="rk-archivo" accept=".xlsx" hidden>
+      <button type="button" class="pl-btn" id="rk-excel">⬇ Descargar Excel</button>
+      <a class="pl-btn" id="rk-ver" href="ranking.html" target="_blank" rel="noopener">Ver página pública ↗</a>
+    </div>
+    <div class="pl-estado" id="pl-estado" aria-live="polite"></div>
+  </header>
+
+  <nav class="rka-tabs" id="rka-tabs" hidden>
+    <button type="button" data-rol="piloto" class="activo">Pilotos</button>
+    <button type="button" data-rol="navegante">Navegantes</button>
+    <button type="button" class="pl-btn rka-nueva-clase" id="rk-nueva-clase">＋ Agregar a una clase</button>
+    <label class="rka-buscar"><input id="rk-buscar" class="pl-control" type="search" placeholder="Buscar nombre…" autocomplete="off"></label>
+  </nav>
+
+  <main class="pl-marco rka-marco" id="rk-marco">
+    <div class="pl-cargando">Cargando…</div>
+  </main>
+
+  <div class="pl-toast" id="pl-toast" role="status"></div>
+</body>
+
+</html>

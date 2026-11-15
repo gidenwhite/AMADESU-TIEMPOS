@@ -147,6 +147,13 @@ function pintarBotones() {
     b.onclick = instalar;
     c.appendChild(b);
   }
+  // Ranking del campeonato (pilotos y navegantes), al lado de las Novedades.
+  const r = document.createElement('a');
+  r.className = 'app-btn app-btn-ranking'; r.href = 'ranking.html';
+  r.setAttribute('aria-label', 'Ranking del campeonato');
+  if (/\/ranking(\.html)?$/.test(location.pathname)) r.setAttribute('aria-current', 'page');
+  r.innerHTML = `${ico(ICONOS.trofeo, 18)}<span class="app-btn-txt">Ranking</span>`;
+  c.appendChild(r);
   // La campanita abre las Novedades (se ve en cualquier navegador); desde ahí
   // se activan los avisos en el celular.
   const b = document.createElement('button');

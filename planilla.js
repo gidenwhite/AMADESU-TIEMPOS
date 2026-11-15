@@ -163,7 +163,7 @@ async function refrescarOtrasCopias() {
       const [filas, pen, ins] = await Promise.all([
         leerTiempos(recIds, null),
         todo(() => db().from('penalizaciones').select('id, inscripcion_id, recorrido_id, tiempo_penalizacion, motivo, created_at').in('recorrido_id', recIds).eq('tipo', 'tiempo').is('deleted_at', null).order('created_at')),
-        todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre)').eq('rally_id', id).is('deleted_at', null).order('numero')),
+        todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre), orden_salida').eq('rally_id', id).is('deleted_at', null).order('numero')),
       ]);
       const tiempos = new Map(), penales = new Map();
       let ultimo = null;
@@ -346,7 +346,7 @@ async function cargarRally(rallyId) {
     }
     const [etapas, inscritos, cfg] = await Promise.all([
       db().from('etapas').select('id, numero, nombre, recorridos(id, numero, nombre, distancia_km, deleted_at)').eq('rally_id', rallyId).eq('es_shakedown', false).is('deleted_at', null).order('numero'),
-      todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre)').eq('rally_id', rallyId).is('deleted_at', null).order('numero')),
+      todo(() => db().from('inscripciones').select('id, numero, piloto:pilotos(nombre, apellido), navegante:navegantes(nombre, apellido), categoria:categorias(nombre, codigo, orden), asociacion:asociaciones(nombre), orden_salida').eq('rally_id', rallyId).is('deleted_at', null).order('numero')),
       db().from('planillas').select('config').eq('rally_id', rallyId).maybeSingle(),
     ]);
     if (etapas.error) throw etapas.error;
@@ -605,7 +605,7 @@ function clasificar(alcance = estado.alcance) {
   for (const ins of estado.inscritos) { const f = calcular(ins); f.cl = enAlcance(f, pes); (grupos[f.clase] ||= []).push(f); }
   const rango = f => f.cl.especial ? 2 : f.cl.completa ? 0 : f.cl.conDatos ? 1 : 3;
   for (const lista of Object.values(grupos)) {
-    lista.sort((a, b) => rango(a) - rango(b) || (rango(a) === 0 ? a.cl.tiempo - b.cl.tiempo : rango(a) === 1 ? (b.cl.completas - a.cl.completas) || (a.cl.total + a.cl.penal - b.cl.total - b.cl.penal) : 0) || (a.ins.numero - b.ins.numero));
+    lista.sort((a, b) => rango(a) - rango(b) || (rango(a) === 0 ? a.cl.tiempo - b.cl.tiempo : rango(a) === 1 ? (b.cl.completas - a.cl.completas) || (a.cl.total + a.cl.penal - b.cl.total - b.cl.penal) : 0) || ((a.ins.orden_salida ?? Infinity) - (b.ins.orden_salida ?? Infinity)) || (a.ins.numero - b.ins.numero));
     let lider = null, previo = null;
     lista.forEach((f, i) => {
       f.psto = rango(f) <= 2 ? i + 1 : null;
@@ -1535,16 +1535,23 @@ const momento = () => new Date().toLocaleString('es-BO', { day: '2-digit', month
 
 async function copiarLista() {
   if (!estado.rally || !estado.pes.length) return;
-  const lineas = [`🏁 *${estado.rally.nombre.toUpperCase()}*`, `Clasificación ${nombreAlcance() === 'General' ? 'general' : nombreAlcance()} por clase · ${momento()}`];
-  for (const { clase, filas } of clasificacionPorClase()) {
+  const grupos = clasificacionPorClase();
+  // Sin ningún tiempo todavía: sale el orden de largada (el de la Planilla de Inscripción).
+  const hayTiempos = grupos.some(g => g.filas.some(f => f.conDatos));
+  const lineas = [`🏁 *${estado.rally.nombre.toUpperCase()}*`, hayTiempos
+    ? `Clasificación ${nombreAlcance() === 'General' ? 'general' : nombreAlcance()} por clase · ${momento()}`
+    : `Orden de largada por clase · ${momento()}`];
+  for (const { clase, filas } of grupos) {
     lineas.push('', `*${clase}*`);
-    for (const f of filas) {
-      if (!f.conDatos) continue; // sin ningún tiempo cargado todavía
+    const sinTiempo = [];
+    filas.forEach((f, k) => {
+      if (!hayTiempos) return lineas.push(`${k + 1}. #${f.ins.numero} ${nombresFila(f.ins)}`);
+      if (!f.conDatos) return sinTiempo.push(`#${f.ins.numero} ${nombresFila(f.ins)}`);
       const dif = f.difPrimero != null ? ` (+${verDuracion(f.difPrimero)})` : '';
       const pen = f.cl.penal ? ` [pen. ${verPenal(f.cl.penal)}]` : '';
       lineas.push(`${f.psto ?? '-'}. #${f.ins.numero} ${nombresFila(f.ins)} — ${tiempoFila(f)}${f.cl.completa ? dif + pen : ''}`);
-    }
-    if (!filas.some(f => f.conDatos)) lineas.push('(todavía sin tiempos)');
+    });
+    if (sinTiempo.length) lineas.push('_Sin tiempo todavía:_', ...sinTiempo.map(t => `· ${t}`));
   }
   const texto = lineas.join('\n');
   try { await navigator.clipboard.writeText(texto); }
@@ -1553,7 +1560,7 @@ async function copiarLista() {
     t.value = texto; t.style.cssText = 'position:fixed; opacity:0;';
     document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
   }
-  toast('📋 Clasificación copiada: pegala en WhatsApp o donde quieras.');
+  toast(hayTiempos ? '📋 Clasificación copiada: pegala en WhatsApp o donde quieras.' : '📋 Orden de largada copiado (todavía no hay tiempos): pegalo en WhatsApp o donde quieras.');
 }
 
 // PDF con el mismo formato que el Excel: encabezado con logos y títulos, tabla

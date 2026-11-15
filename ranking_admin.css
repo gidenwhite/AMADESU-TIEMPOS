@@ -1,0 +1,67 @@
+/* Ranking del Campeonato — administración (estilo de la Planilla) */
+.rka-tabs { position: sticky; top: 0; z-index: 40; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; background: rgba(10, 10, 10, 0.96); border-bottom: 1px solid var(--borde); }
+.rka-tabs [data-rol] { border: 1px solid var(--borde); background: var(--sup); color: var(--muted); border-radius: 9px; padding: 8px 18px; font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
+.rka-tabs [data-rol].activo { background: #E63946; border-color: #E63946; color: #fff; }
+.rka-buscar { margin-left: auto; }
+.rka-marco { padding: 12px 16px 60px; }
+.rka-hoja { overflow: auto; border: 1px solid var(--borde); border-radius: 12px; max-height: calc(100vh - 170px); background: #fff; }
+.rka-tabla { border-collapse: separate; border-spacing: 0; font-family: 'Barlow', sans-serif; font-size: 13px; color: #111; min-width: 100%; }
+.rka-tabla th, .rka-tabla td { border-right: 1px solid #d6d6d6; border-bottom: 1px solid #d6d6d6; padding: 0; text-align: center; white-space: nowrap; }
+.rka-tabla thead th { position: sticky; top: 0; z-index: 3; background: #000; color: #fff; font-weight: 700; padding: 6px 6px; font-size: 11px; letter-spacing: 0.03em; }
+.rka-tabla thead tr:nth-child(2) th { top: 44px; }
+.rka-tabla thead th.fe { background: #1f1f1f; font-size: 12px; white-space: normal; min-width: 120px; line-height: 1.1; height: 44px; }
+.rka-tabla thead th.fe small { display: block; font-weight: 500; opacity: 0.6; font-size: 10px; margin-top: 2px; }
+.rka-tabla thead th.fe1 { background: #2b2b2b; }
+.rka-tabla thead th.tot { background: #3a3a3a; }
+.rka-tabla td.fe1 { background: #f7f9fc; }
+.rka-tabla td.tot { background: #eceff3; font-weight: 700; padding: 0 8px; min-width: 46px; }
+.rka-tabla td.c-total { background: #dce6f2; font-weight: 800; font-size: 15px; padding: 0 10px; position: sticky; right: 64px; }
+.rka-tabla th.c-total { right: 64px; z-index: 4; }
+.rka-tabla .c-acc { position: sticky; right: 0; background: #fff; width: 64px; min-width: 64px; max-width: 64px; box-sizing: border-box; }
+.rka-tabla td.c-total, .rka-tabla th.c-total { box-shadow: -2px 0 0 #9aa7b8; }
+.rka-tabla th.c-acc { z-index: 4; background: #000; }
+.rka-tabla td.c-acc button { border: 0; background: transparent; cursor: pointer; font-size: 14px; padding: 6px 3px; opacity: 0.5; }
+.rka-tabla td.c-acc button:hover { opacity: 1; }
+/* Columnas fijas a la izquierda */
+.rka-tabla .c-psto { position: sticky; left: 0; z-index: 2; background: #fff; width: 44px; font-weight: 800; }
+.rka-tabla th.c-psto { z-index: 5; background: #000; }
+.rka-tabla .c-nom, .rka-tabla td:nth-child(4) { position: sticky; left: 44px; z-index: 2; background: #fff; }
+.rka-tabla thead th.c-nom { z-index: 5; background: #000; min-width: 230px; }
+.rka-tabla tbody tr[data-id] td:nth-child(4) { box-shadow: 2px 0 0 #bdbdbd; }
+.rka-tabla input { width: 100%; border: 0; background: transparent; font: inherit; color: inherit; padding: 7px 6px; text-align: center; outline: none; }
+.rka-tabla input.nom { text-align: left; font-weight: 700; min-width: 230px; }
+.rka-tabla input.pt { width: 52px; }
+.rka-tabla td:nth-child(2) input { width: 58px; }
+.rka-tabla td:nth-child(3) input { width: 96px; }
+.rka-tabla input:focus { background: #fff6c2; box-shadow: inset 0 0 0 2px #1f4e79; }
+.rka-tabla tbody tr[data-id]:hover td { background-color: #f3f7ff; }
+.rka-tabla tr.p1 td.c-psto { background: #FFD166; }
+.rka-tabla tr.p2 td.c-psto { background: #dfe5ee; }
+.rka-tabla tr.p3 td.c-psto { background: #f0c49c; }
+.rka-tabla tr.pend td.c-psto { box-shadow: inset 4px 0 0 #f59e0b; }
+.rka-clase td { background: #f2f2f2 !important; text-align: left; padding: 8px 10px !important; position: sticky; left: 0; }
+.rka-clase b { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; letter-spacing: 0.02em; }
+.rka-clase span { color: #777; font-weight: 600; margin-left: 6px; }
+.rka-mas { margin-left: 14px; border: 1px dashed #999; background: #fff; border-radius: 7px; padding: 3px 10px; font: inherit; font-weight: 700; font-size: 12px; cursor: pointer; color: #1f4e79; }
+.rka-mas:hover { border-style: solid; }
+.rka-nada { padding: 30px !important; color: #777; }
+.rka-inicio { max-width: 640px; margin: 40px auto; text-align: center; }
+.rka-inicio b { font-size: 18px; color: var(--txt); }
+.rka-inicio p { color: var(--muted); line-height: 1.5; }
+
+/* Diálogo de fechas */
+.rka-fecha { display: grid; grid-template-columns: 22px 1fr 1fr auto auto auto; gap: 6px; align-items: center; margin-top: 8px; }
+.rka-fecha .n { color: var(--muted); font-weight: 700; text-align: center; }
+.rka-fecha input, .rka-fecha select { width: 100%; background: #0a0a0a; color: var(--txt); border: 1px solid var(--borde); border-radius: 8px; padding: 8px; font: inherit; font-size: 13px; min-width: 0; }
+.rka-fecha .pl-btn { padding: 7px 9px; }
+.rka-chk { display: flex !important; align-items: center; gap: 8px; text-transform: none !important; letter-spacing: 0 !important; font-size: 14px !important; color: var(--txt) !important; margin-top: 16px !important; }
+.rka-peligro { margin-right: auto; color: #ff8a8a; border-color: #6b1c1c; }
+.pl-toast.mal { border-color: #E63946; color: #ffb3b8; }
+
+@media (max-width: 700px) {
+  .rka-fecha { grid-template-columns: 22px 1fr auto auto auto; }
+  .rka-fecha select { grid-column: 2 / -1; grid-row: 2; }
+  .rka-buscar { margin-left: 0; width: 100%; }
+  .rka-buscar input { width: 100%; }
+  .rka-hoja { max-height: none; }
+}

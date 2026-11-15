@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Ranking del Campeonato — AMADESU RALLYS</title>
+  <meta name="description" content="Ranking de pilotos y navegantes del campeonato AMADESU, por clase y fecha a fecha." />
+  <link rel="canonical" href="https://amadesu.com/ranking" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="AMADESU RALLYS" />
+  <meta property="og:title" content="Ranking del Campeonato — AMADESU RALLYS" />
+  <meta property="og:description" content="Pilotos y navegantes, por clase, fecha a fecha." />
+  <meta property="og:url" content="https://amadesu.com/ranking" />
+  <meta property="og:image" content="https://amadesu.com/icons/icon-512.png" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="icons/favicon-32.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Chakra+Petch:wght@400;500;600;700&family=Russo+One&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="ranking.css" />
+  <link rel="stylesheet" href="app.css" />
+  <script type="module" src="ranking.js"></script>
+  <script type="module" src="app.js"></script>
+  <script src="offline.js" defer></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <a href="./" class="brand" title="Volver al inicio">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+          <line x1="4" y1="22" x2="4" y2="15"></line>
+        </svg>
+      </div>
+      <div class="brand-text">AMADESU<span>RALLY SYSTEM</span></div>
+    </a>
+    <div class="app-acciones" id="app-acciones"></div>
+  </header>
+
+  <main class="rk">
+    <section class="rk-hero">
+      <div class="rk-hero-in">
+        <a href="./" class="rk-volver">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          Carreras
+        </a>
+        <div class="rk-kicker"><span class="rk-cuadros" aria-hidden="true"></span> Ranking del campeonato</div>
+        <h1 id="rk-titulo">Cargando ranking…</h1>
+        <p id="rk-sub"></p>
+        <select id="rk-camp" class="rk-select" aria-label="Campeonato" hidden></select>
+      </div>
+    </section>
+
+    <section class="rk-controles" id="rk-controles" hidden>
+      <div class="rk-tabs" role="tablist" aria-label="Ranking de">
+        <button type="button" role="tab" data-rol="piloto" class="activo">Pilotos</button>
+        <button type="button" role="tab" data-rol="navegante">Navegantes</button>
+      </div>
+      <label class="rk-buscar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="rk-buscar" type="search" placeholder="Buscar piloto o navegante" autocomplete="off" />
+      </label>
+      <div class="rk-clases" id="rk-clases" role="group" aria-label="Clase"></div>
+    </section>
+
+    <div class="rk-cuerpo" id="rk-cuerpo"></div>
+    <p class="rk-nota" id="rk-nota" hidden></p>
+  </main>
+
+  <footer class="rk-pie">AMADESU RALLYS · <a href="./">amadesu.com</a></footer>
+</body>
+
+</html>

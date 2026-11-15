@@ -34,6 +34,16 @@
 .in-tabla td.c-quitar { min-width: 44px; border-right-color: transparent !important; background: transparent; }
 .in-tabla td.c-quitar button { background: transparent; border: none; cursor: pointer; font-size: 16px; opacity: 0.35; padding: 6px; }
 .in-tabla tr:hover td.c-quitar button { opacity: 0.9; }
+/* ▲▼ orden de largada dentro de la clase */
+.in-tabla td.c-quitar { white-space: nowrap; }
+.in-tabla td.c-quitar button.mov { font-size: 12px; padding: 4px 5px; color: #1f4e79; opacity: 0.55; }
+.in-tabla td.c-quitar button.mov:disabled { opacity: 0.12 !important; cursor: default; }
+.in-tabla td.c-quitar button.mov:hover:not(:disabled) { background: #dbe8f5; border-radius: 4px; }
+.in-tabla td.ord { cursor: text; }
+.in-tabla td.ord:hover { outline: 2px dashed #7fa7d1; outline-offset: -3px; }
+.in-tabla td.ord input { width: 3.2em; text-align: center; font: inherit; font-weight: 700; border: 2px solid #1f4e79; border-radius: 3px; padding: 1px; }
+.in-tabla tr.movida td { animation: in-movida 0.9s ease-out; }
+@keyframes in-movida { from { background: #fff3b0; } }
 
 /* Estados de cada fila */
 .in-tabla tr.borrador td { background: #fafafa; }

@@ -92,6 +92,7 @@ function estadoBarra() {
   const lista = pendientes();
   const errores = lista.filter(x => x.error).length;
   const enEquipo = lista.filter(x => !x.error && (x.op === 'borrar' || completa(x.fila))).length;
+  const ordenPend = lista.some(x => !x.error && x.op === 'orden');
   const subiendo = [...estado.guardando.values()].filter(v => v === 'guardando').length;
   const offline = !enLinea();
   if (estado.sinSesion && !offline) {
@@ -103,10 +104,10 @@ function estadoBarra() {
   }
   $('pl-estado').innerHTML = [
     offline ? `<span class="sin-red">📴 Sin conexión${enEquipo ? ` · <b>${enEquipo} fila${enEquipo > 1 ? 's' : ''} guardada${enEquipo > 1 ? 's' : ''} en este equipo</b> — se suben solas cuando vuelva internet` : ' · podés seguir cargando, todo se guarda en este equipo'}</span>` : '',
-    !offline && enEquipo && !subiendo ? `<span class="sin-red">⏳ ${enEquipo} fila${enEquipo > 1 ? 's' : ''} por subir… <button type="button" class="pl-btn" id="pl-sync" style="padding:3px 10px;">Subir ahora</button></span>` : '',
+    !offline && (enEquipo || ordenPend) && !subiendo ? `<span class="sin-red">⏳ ${enEquipo ? `${enEquipo} fila${enEquipo > 1 ? 's' : ''}` : 'Orden de largada'} por subir… <button type="button" class="pl-btn" id="pl-sync" style="padding:3px 10px;">Subir ahora</button></span>` : '',
     subiendo ? `<span>⏳ Guardando ${subiendo}…</span>` : '',
     errores ? `<span class="mal">⚠ ${errores} fila${errores > 1 ? 's' : ''} con problema (en rojo): tocá el aviso de la fila para ver qué pasa</span>` : '',
-    !offline && !subiendo && !errores && !enEquipo && estado.ultimoGuardado ? `<span class="ok">✓ Sincronizado · ${estado.ultimoGuardado}</span>` : '',
+    !offline && !subiendo && !errores && !enEquipo && !ordenPend && estado.ultimoGuardado ? `<span class="ok">✓ Sincronizado · ${estado.ultimoGuardado}</span>` : '',
     estado.copiaDe ? `<span>Mostrando lo guardado en este equipo (${estado.copiaDe})</span>` : '',
     `<span>${estado.filas.filter(completa).length} inscritos</span>`,
   ].join('');
@@ -149,6 +150,7 @@ function desdeServidor(i) {
     pais: i.piloto?.pais && i.piloto.pais !== 'N/A' ? i.piloto.pais : '',
     ciudad: i.asociacion?.nombre || '',
     amb: (i.ambitos || []).map(a => a.ambito_campeonato_id),
+    orden: i.orden_salida ?? null, // orden de largada dentro de la clase
     creado: i.created_at ? Date.parse(i.created_at) : Date.now(), enServidor: true,
   };
 }
@@ -158,16 +160,21 @@ function aplicarPendientes() {
   for (const x of pendientes()) {
     const i = estado.filas.findIndex(f => f.id === x.id);
     if (x.op === 'borrar') { if (i >= 0) estado.filas.splice(i, 1); continue; }
+    if (x.op === 'orden') continue;
     if (!x.fila) continue;
     if (i >= 0) estado.filas[i] = { ...estado.filas[i], ...x.fila };
     else estado.filas.push({ ...x.fila });
   }
+  // El orden de largada sin subir gana sobre el del servidor.
+  const o = pendDe(ID_ORDEN);
+  if (o?.ids) o.ids.forEach((id, k) => { const f = estado.filas.find(z => z.id === id); if (f) f.orden = k + 1; });
 }
 
-// Orden de la hoja: válidas agrupadas por clase; las incompletas al final.
+// Orden de la hoja: válidas agrupadas por clase y, dentro de la clase, por
+// orden de largada (se acomoda con ▲▼); las incompletas al final.
 function ordenadas() {
   const validas = estado.filas.filter(completa);
-  const porClase = [...validas].sort((a, b) => cmpClase(a, b) || a.creado - b.creado);
+  const porClase = [...validas].sort((a, b) => cmpClase(a, b) || (a.orden ?? Infinity) - (b.orden ?? Infinity) || a.creado - b.creado);
   const psto = new Map(), nro = new Map();
   let anterior = null, n = 0;
   porClase.forEach((f, i) => {
@@ -302,7 +309,7 @@ async function cargarRally(rallyId) {
 
 async function traerInscritos() {
   const filas = await todo(() => db().from('inscripciones')
-    .select('id, numero, categoria_id, created_at, piloto:pilotos(nombre, apellido, pais), navegante:navegantes(nombre, apellido), asociacion:asociaciones(nombre), ambitos:inscripcion_ambitos_campeonato(ambito_campeonato_id)')
+    .select('id, numero, categoria_id, orden_salida, created_at, piloto:pilotos(nombre, apellido, pais), navegante:navegantes(nombre, apellido), asociacion:asociaciones(nombre), ambitos:inscripcion_ambitos_campeonato(ambito_campeonato_id)')
     .eq('rally_id', estado.rally.id).is('deleted_at', null).order('created_at'));
   // La fila que se está escribiendo no se pisa.
   const enEdicion = estado.editando && estado.activa ? estado.filas.find(f => f.id === estado.activa.id) : null;
@@ -368,6 +375,8 @@ function cfg() {
     fecha: i.fecha || '',
     hora: i.hora || '',
     mostrarCiudad: i.mostrar_ciudad !== false,
+    // Título de esa columna: 'Ciudad' o 'Asociación' (el dato es el mismo).
+    tituloCiudad: i.titulo_ciudad === 'Asociación' ? 'Asociación' : 'Ciudad',
     papel: i.papel === 'oficio' ? 'oficio' : 'carta',
     firmas: (i.firmas && i.firmas.length ? i.firmas : DEF_INSC.firmas).slice(0, 3),
   };
@@ -408,7 +417,7 @@ function marcaFila(f) {
   return '';
 }
 
-function celdas(f, psto, nro) {
+function celdas(f, psto, nro, sube, baja) {
   const c = cfg();
   const marca = marcaFila(f);
   const p = pendDe(f.id);
@@ -416,14 +425,15 @@ function celdas(f, psto, nro) {
   if (marca === 'error') pstoTxt = '⚠ ver';
   else if (marca === 'borrador') pstoTxt = !f.numero ? 'falta Nº' : !f.cat ? 'falta clase' : 'falta piloto';
   return `<tr data-id="${f.id}" data-num="${esc(f.numero || '')}" class="${marca}" ${p?.error ? `title="${esc(p.error)}"` : ''}>
-    <td class="c-psto" ${marca === 'error' ? 'data-ver-error="1"' : ''}>${esc(pstoTxt)}</td><td class="c-nro">${nro ?? ''}</td>
+    ${(() => { const ord = psto != null && marca !== 'error' && estado.orden === 'clase'; const t = 'Tocá y escribí el número para cambiar el orden de largada';
+      return `<td class="c-psto${ord ? ' ord' : ''}" ${ord ? `data-ord="psto" title="${t} (puesto en toda la lista)"` : ''} ${marca === 'error' ? 'data-ver-error="1"' : ''}>${esc(pstoTxt)}</td><td class="c-nro${ord ? ' ord' : ''}" ${ord ? `data-ord="nro" title="${t} (puesto dentro de la clase)"` : ''}>${nro ?? ''}</td>`; })()}
     <td class="ed" tabindex="-1" data-c="num">${esc(f.numero || '')}</td>
     <td class="ed" tabindex="-1" data-c="cat">${esc(codigoClase(f))}</td>
     <td class="ed" tabindex="-1" data-c="pil">${esc(f.piloto || '')}</td>
     <td class="ed" tabindex="-1" data-c="nav">${esc(f.nav || '')}</td>
     ${c.mostrarCiudad ? `<td class="ed" tabindex="-1" data-c="ciu">${esc(f.ciudad || '')}</td>` : ''}
     ${estado.ambitos.map(a => `<td class="amb ${(f.amb || []).includes(a.id) ? 'si' : ''}" tabindex="-1" data-a="${a.id}"><span class="caja"></span></td>`).join('')}
-    <td class="c-quitar"><button type="button" data-quitar="${f.id}" title="Borrar esta fila">🗑</button></td>
+    <td class="c-quitar">${sube !== undefined ? `<button type="button" class="mov" data-mover="${f.id}" data-dir="-1" title="Larga antes (Alt+↑)" ${sube ? '' : 'disabled'}>▲</button><button type="button" class="mov" data-mover="${f.id}" data-dir="1" title="Larga después (Alt+↓)" ${baja ? '' : 'disabled'}>▼</button>` : ''}<button type="button" data-quitar="${f.id}" title="Borrar esta fila">🗑</button></td>
   </tr>`;
 }
 
@@ -438,7 +448,7 @@ function dibujar() {
   // data-col = posición de la columna en el cuerpo (para resaltar fila y columna).
   const doble = estado.ambitos.length > 0;
   const rs = doble ? ' rowspan="2"' : '';
-  const fijas = ['Puesto', 'N°', 'N° de coche', 'Clase', 'Piloto', 'Navegante'].concat(c.mostrarCiudad ? ['Ciudad'] : []);
+  const fijas = ['Puesto', 'N°', 'N° de coche', 'Clase', 'Piloto', 'Navegante'].concat(c.mostrarCiudad ? [c.tituloCiudad] : []);
   let cab = `<tr class="r1">${fijas.map((t, i) => `<th${rs} data-col="${i}" class="${i === 4 || i === 5 ? 'pil' : ''}">${t}</th>`).join('')}`;
   if (doble) cab += `<th class="grupo" colspan="${estado.ambitos.length}">CAMPEONATO</th>`;
   cab += `<th${rs} class="c-quitar"></th></tr>`;
@@ -448,12 +458,16 @@ function dibujar() {
   }).join('')}</tr>`;
 
   let cuerpo = '', anterior = null;
-  for (const f of o.lista) {
+  const porClaseVista = estado.orden === 'clase';
+  o.lista.forEach((f, k) => {
     const cl = nombreClase(f);
-    if (estado.orden === 'clase' && anterior !== null && cl !== anterior) cuerpo += `<tr class="sep"><td colspan="${nCols}"></td></tr>`;
+    if (porClaseVista && anterior !== null && cl !== anterior) cuerpo += `<tr class="sep"><td colspan="${nCols}"></td></tr>`;
     anterior = cl;
-    cuerpo += celdas(f, o.psto.get(f.id), o.nro.get(f.id));
-  }
+    // ▲▼ solo dentro de la misma clase.
+    const sube = porClaseVista ? k > 0 && nombreClase(o.lista[k - 1]) === cl : undefined;
+    const baja = porClaseVista ? k < o.lista.length - 1 && nombreClase(o.lista[k + 1]) === cl : undefined;
+    cuerpo += celdas(f, o.psto.get(f.id), o.nro.get(f.id), sube, baja);
+  });
   if (o.borradores.length) {
     if (cuerpo) cuerpo += `<tr class="sep"><td colspan="${nCols}"></td></tr>`;
     cuerpo += o.borradores.map(f => celdas(f)).join('');
@@ -705,6 +719,83 @@ async function quitarFila(id) {
 }
 
 // ------------------------------------------------------------------
+// Orden de largada: quién sale primero, segundo... dentro de cada clase.
+// Se acomoda a mano antes de la carrera; en la Planilla de Tiempos se usa
+// mientras no hay tiempos (después se ordena sola por resultado).
+// ------------------------------------------------------------------
+const ID_ORDEN = '__orden__';
+// Posiciones (en toda la lista) que ocupa la clase de esa fila.
+function rangoClase(lista, k) {
+  const cl = nombreClase(lista[k]);
+  let ini = k, fin = k;
+  while (ini > 0 && nombreClase(lista[ini - 1]) === cl) ini--;
+  while (fin < lista.length - 1 && nombreClase(lista[fin + 1]) === cl) fin++;
+  return [ini, fin];
+}
+function moverFila(id, dir) {
+  if (estado.orden !== 'clase') return toast('Para acomodar el orden de largada, mostrá la hoja "Por clase".', true);
+  const lista = ordenadas().porClase;
+  const k = lista.findIndex(f => f.id === id);
+  if (k < 0) return;
+  const [ini, fin] = rangoClase(lista, k);
+  if (k + dir < ini || k + dir > fin) return;
+  reubicar(lista, k, k + dir);
+}
+// Escribiendo el número: "psto" = puesto en toda la lista, "nro" = puesto en la clase.
+function ponerPuesto(id, tipo, n) {
+  const lista = ordenadas().porClase;
+  const k = lista.findIndex(f => f.id === id);
+  if (k < 0) return;
+  const [ini, fin] = rangoClase(lista, k);
+  const pedido = tipo === 'psto' ? n - 1 : ini + n - 1;
+  const j = Math.max(ini, Math.min(fin, pedido));
+  if (j !== pedido) toast(tipo === 'psto'
+    ? `El puesto ${n} es de otra clase: ${lista[k].piloto} queda ${j === ini ? 'primero' : 'último'} de ${nombreClase(lista[k])} (puesto ${j + 1}).`
+    : `${nombreClase(lista[k])} tiene ${fin - ini + 1} autos: queda ${j === ini ? 'primero' : 'último'}.`);
+  if (j !== k) reubicar(lista, k, j); else dibujar();
+}
+function reubicar(lista, k, j) {
+  const id = lista[k].id;
+  lista.splice(j, 0, lista.splice(k, 1)[0]);
+  lista.forEach((f, n) => { f.orden = n + 1; });
+  const p = leerPend();
+  p[clavePend(ID_ORDEN)] = { rally: estado.rally.id, id: ID_ORDEN, op: 'orden', ids: lista.map(f => f.id), ts: Date.now(), error: null };
+  escribirPend(p);
+  guardarCopiaLocal(); dibujar();
+  // Sigue seleccionada la misma fila (para seguir moviéndola con Alt+↑/↓).
+  if (estado.activa?.id === id) { const td = celdaDe(estado.activa); if (td) seleccionar(td); }
+  document.querySelector(`.in-tabla tr[data-id="${CSS.escape(id)}"]`)?.classList.add('movida');
+  // Se sube un momento después (si se mueve varias veces seguidas, una sola vez).
+  clearTimeout(estado.timerOrden);
+  estado.timerOrden = setTimeout(() => guardar(ID_ORDEN), 900);
+}
+
+function editarPuesto(td) {
+  if (estado.editando) return;
+  const id = td.closest('tr').dataset.id, tipo = td.dataset.ord;
+  const antes = td.textContent.trim();
+  estado.editando = true;
+  td.innerHTML = `<input type="text" inputmode="numeric" autocomplete="off" value="${esc(antes)}">`;
+  const inp = td.querySelector('input');
+  inp.focus(); inp.select();
+  let listo = false;
+  const fin = aplicar => {
+    if (listo) return; listo = true;
+    estado.editando = false;
+    const v = inp.value.trim();
+    if (!aplicar || v === antes || v === '') return dibujar();
+    if (!/^\d{1,4}$/.test(v) || +v < 1) { toast('Escribí el puesto con un número: 1, 2, 3…', true); return dibujar(); }
+    ponerPuesto(id, tipo, +v);
+  };
+  inp.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); fin(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); fin(false); }
+  });
+  inp.addEventListener('blur', () => fin(true));
+}
+
+// ------------------------------------------------------------------
 // Guardar en el servidor (una cola por fila, para no pisarse)
 // ------------------------------------------------------------------
 const cadenas = new Map();
@@ -723,6 +814,9 @@ async function guardarAhora(id) {
   try {
     if (x.op === 'borrar') {
       const { error } = await supabase.rpc('planilla_inscripcion_borrar', { p_id: id });
+      if (error) throw error;
+    } else if (x.op === 'orden') {
+      const { error } = await supabase.rpc('planilla_inscripcion_ordenar', { p_rally_id: estado.rally.id, p_ids: x.ids });
       if (error) throw error;
     } else {
       const f = x.fila;
@@ -762,6 +856,12 @@ async function guardarAhora(id) {
       // reintenta; si no se puede, se pide iniciar sesión. La fila no se pierde.
       if (!reintentoSesion && await renovarSesion()) { reintentoSesion = true; const ok = await guardarAhora(id); reintentoSesion = false; return ok; }
       estado.sinSesion = true;
+    }
+    else if (x.op === 'orden') {
+      quitarPend(id);
+      const falta = e?.code === 'PGRST202' || e?.code === '42883' || /could not find the function|does not exist/i.test(String(e?.message || ''));
+      toast(falta ? 'Para guardar el orden de largada falta ejecutar el script 75_orden_de_largada.sql en Supabase.' : 'No se guardó el orden de largada: ' + (e.message || e), true);
+      return false;
     }
     else if (x.op === 'borrar') {
       // No se pudo borrar (por ejemplo, ya tiene tiempos): la fila vuelve a aparecer.
@@ -811,7 +911,8 @@ async function renovarSesion() {
 
 async function sincronizar() {
   if (sincronizando || !estado.rally || !enLinea()) { estadoBarra(); return; }
-  const lista = pendientes().filter(x => !x.error && (x.op === 'borrar' || completa(x.fila)));
+  const lista = pendientes().filter(x => !x.error && (x.op === 'borrar' || x.op === 'orden' || completa(x.fila)))
+    .sort((a, b) => (a.op === 'orden') - (b.op === 'orden'));
   if (!lista.length) { estadoBarra(); return; }
   // Antes de subir, que la sesión esté vigente (si se abrió sin internet puede haber vencido).
   if (!(await renovarSesion())) { estado.sinSesion = true; estadoBarra(); return; }
@@ -819,7 +920,7 @@ async function sincronizar() {
   sincronizando = true;
   let subidas = 0;
   for (const x of lista) {
-    if (await guardar(x.id) === true) subidas++;
+    if (await guardar(x.id) === true && x.op !== 'orden') subidas++;
     if (!enLinea()) break;
   }
   sincronizando = false;
@@ -873,7 +974,7 @@ function abrirConfig() {
   if (!enLinea()) return toast('Para cambiar el encabezado y las firmas hace falta internet.', true);
   const c = cfg();
   const propio = !!estado.cfgInsc;
-  const b = JSON.parse(JSON.stringify({ titulo_lista: c.tituloLista, fecha: c.fecha, hora: c.hora, mostrar_ciudad: c.mostrarCiudad, papel: c.papel, firmas: c.firmas }));
+  const b = JSON.parse(JSON.stringify({ titulo_lista: c.tituloLista, fecha: c.fecha, hora: c.hora, mostrar_ciudad: c.mostrarCiudad, titulo_ciudad: c.tituloCiudad, papel: c.papel, firmas: c.firmas }));
   const d = dialogo(`
     <h3>Encabezado y firmas</h3>
     <p>Los <b>títulos y logos</b> son los mismos de la Planilla de Tiempos (se cambian en su ⚙). Acá van las opciones de la lista de inscritos.</p>
@@ -881,7 +982,9 @@ function abrirConfig() {
     <label>Título de la lista</label><input type="text" id="in-c-titulo" value="${esc(b.titulo_lista)}">
     <div class="fila"><div><label>Fecha de publicación</label><input type="text" id="in-c-fecha" placeholder="Vacío = la fecha del día (${esc(fechaHoy())})" value="${esc(b.fecha)}"></div>
     <div><label>Hora de publicación</label><input type="text" id="in-c-hora" placeholder="Vacío = la hora al descargar" value="${esc(b.hora)}"></div></div>
-    <label class="chk"><input type="checkbox" id="in-c-ciudad" ${b.mostrar_ciudad ? 'checked' : ''}> Mostrar la columna <b>CIUDAD</b></label>
+    <label class="chk"><input type="checkbox" id="in-c-ciudad" ${b.mostrar_ciudad ? 'checked' : ''}> Mostrar la columna de <b>ciudad / asociación</b></label>
+    <label>Título de esa columna</label>
+    <select id="in-c-titulo-ciudad"><option value="Ciudad" ${b.titulo_ciudad !== 'Asociación' ? 'selected' : ''}>CIUDAD</option><option value="Asociación" ${b.titulo_ciudad === 'Asociación' ? 'selected' : ''}>ASOCIACIÓN</option></select>
     <label>Hoja para imprimir (vertical)</label>
     <select id="in-c-papel"><option value="carta" ${b.papel === 'carta' ? 'selected' : ''}>Carta (21,6 × 27,9 cm)</option><option value="oficio" ${b.papel === 'oficio' ? 'selected' : ''}>Oficio (21,6 × 33 cm)</option></select>
     <div id="in-c-firmas"></div>
@@ -898,6 +1001,7 @@ function abrirConfig() {
     b.fecha = d.querySelector('#in-c-fecha').value.trim();
     b.hora = d.querySelector('#in-c-hora').value.trim();
     b.mostrar_ciudad = d.querySelector('#in-c-ciudad').checked;
+    b.titulo_ciudad = d.querySelector('#in-c-titulo-ciudad').value;
     b.papel = d.querySelector('#in-c-papel').value;
     return b;
   };
@@ -998,7 +1102,7 @@ async function descargarExcel() {
     if (hh) { hora.value = ((+hh[1] * 60 + +hh[2]) * 60 + (+hh[3] || 0)) / 86400; hora.numFmt = 'h:mm'; } else hora.value = textoHora(c);
     hora.font = F('Cambria', 12, { italic: true }); hora.alignment = { horizontal: 'left', vertical: 'middle' };
 
-    const titulos = [['Psto.', 11], ['Nº', 11], ['Nº DE COCHE', 12], ['CLASE', 11], ['PILOTO / NAVEGANTE', 14], [c.mostrarCiudad ? 'CIUDAD' : '', 12], ['', 11]];
+    const titulos = [['Psto.', 11], ['Nº', 11], ['Nº DE COCHE', 12], ['CLASE', 11], ['PILOTO / NAVEGANTE', 14], [c.mostrarCiudad ? c.tituloCiudad.toUpperCase() : '', 12], ['', 11]];
     titulos.forEach(([t, s], i) => {
       const cel = ws.getCell(8, i + 1);
       cel.value = t || null; cel.font = F('Cambria', s, { bold: true, color: { argb: 'FFFFFFFF' } });
@@ -1098,6 +1202,134 @@ async function descargarExcel() {
     toast('No se pudo generar el Excel: ' + (e.message || e), true);
   } finally {
     btn.disabled = false; btn.textContent = '⬇ Descargar Excel';
+  }
+}
+
+// ------------------------------------------------------------------
+// Copiar lista y PDF (mismo orden que la hoja: clase y orden de largada)
+// ------------------------------------------------------------------
+async function copiarTexto(texto) {
+  try { await navigator.clipboard.writeText(texto); }
+  catch (e) {
+    const t = document.createElement('textarea');
+    t.value = texto; t.style.cssText = 'position:fixed; opacity:0;';
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+  }
+}
+async function copiarLista() {
+  if (!estado.rally) return;
+  const o = ordenadas();
+  if (!o.porClase.length) return toast('Todavía no hay inscritos.', true);
+  const c = cfg();
+  const lineas = [`🏁 *${estado.rally.nombre.toUpperCase()}*`, `*${c.tituloLista}* · ${textoFecha(c).replace(/^Fecha Publicación: /, '')}`];
+  let anterior = null;
+  for (const f of o.porClase) {
+    const cl = nombreClase(f);
+    if (cl !== anterior) { lineas.push('', `*${cl}*`); anterior = cl; }
+    lineas.push(`${o.nro.get(f.id)}. #${f.numero} ${f.piloto}${f.nav ? ' / ' + f.nav : ''}`);
+  }
+  await copiarTexto(lineas.join('\n'));
+  toast('📋 Lista copiada: pegala en WhatsApp o donde quieras.');
+}
+
+async function imagenParaPdf(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const blob = await r.blob();
+    const data = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(blob); });
+    if (!data) return null;
+    const dim = await new Promise(res => { const im = new Image(); im.onload = () => res({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => res(null); im.src = data; });
+    return dim ? { data, ...dim, formato: /png/.test(blob.type) ? 'PNG' : 'JPEG' } : null;
+  } catch (e) { return null; }
+}
+
+// PDF con el formato del Excel: logos y títulos, fecha, título de la lista
+// resaltado, tabla negra, fila gris entre clases y las firmas.
+async function descargarPdf() {
+  if (!window.jspdf?.jsPDF) return toast('Todavía está cargando el generador de PDF, probá en un segundo.', true);
+  if (!estado.rally) return;
+  const o = ordenadas();
+  if (!o.porClase.length) return toast('Todavía no hay inscritos.', true);
+  const btn = $('in-pdf'); btn.disabled = true; btn.textContent = 'Generando…';
+  try {
+    const c = cfg();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: c.papel === 'oficio' ? [216, 330] : 'letter' });
+    const ancho = doc.internal.pageSize.getWidth(), alto = doc.internal.pageSize.getHeight(), M = 10;
+    const caja = async (url, x, y, w, h) => {
+      const im = await imagenParaPdf(url);
+      if (!im) return;
+      const k = Math.min(w / im.w, h / im.h), iw = im.w * k, ih = im.h * k;
+      try { doc.addImage(im.data, im.formato, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); } catch (e) { }
+    };
+    const dz = disenoCabecera(c);
+    if (dz.ev[0]) await caja(dz.ev[0].url, M, 6, 46, 26);
+    for (const [i, f] of dz.fijos.entries()) await caja(f.url, ancho - M - 46 + (i === 1 ? 24 : 0), i === 2 ? 20 : 5, i === 2 ? 46 : 22, i === 2 ? 12 : 13);
+    doc.setFont('times', 'bold'); doc.setFontSize(12.5);
+    let y = 11;
+    for (const t of c.titulos.filter(Boolean)) {
+      const l = doc.splitTextToSize(t, ancho - 2 * M - 100);
+      doc.text(l, ancho / 2, y, { align: 'center' });
+      y += 5.2 * l.length;
+    }
+    y = Math.max(y, 36);
+    doc.setFont('times', 'normal'); doc.setFontSize(10);
+    doc.text(textoFecha(c), M, y);
+    doc.setFont('times', 'italic'); doc.text(`Hora de publicación: ${textoHora(c)}`, ancho - M, y, { align: 'right' });
+    y += 4;
+    doc.setFont('times', 'bold'); doc.setFontSize(14);
+    const tl = doc.getTextWidth(c.tituloLista) + 10;
+    doc.setFillColor(255, 255, 153); doc.rect((ancho - tl) / 2, y, tl, 7.5, 'F');
+    doc.text(c.tituloLista, ancho / 2, y + 5.4, { align: 'center' });
+    y += 10;
+
+    const cols = [['Psto.', 10], ['Nº', 9], ['Nº DE COCHE', 16], ['CLASE', 20], ['PILOTO / NAVEGANTE', 92]].concat(c.mostrarCiudad ? [[c.tituloCiudad.toUpperCase(), 28]] : []);
+    const escala = (ancho - 2 * M) / cols.reduce((a, x) => a + x[1], 0);
+    const body = [], tipos = [];
+    let anterior = null;
+    for (const f of o.porClase) {
+      const cl = nombreClase(f);
+      if (anterior !== null && cl !== anterior) { body.push(cols.map(() => '')); tipos.push('sep'); }
+      anterior = cl;
+      const fila = [o.psto.get(f.id), o.nro.get(f.id), f.numero, cl, f.nav ? `${f.piloto} // ${f.nav}` : f.piloto];
+      if (c.mostrarCiudad) fila.push(f.ciudad || '');
+      body.push(fila); tipos.push('fila');
+    }
+    doc.autoTable({
+      startY: y, head: [cols.map(x => x[0])], body,
+      theme: 'grid', margin: { left: M, right: M, bottom: 14 },
+      styles: { font: 'times', fontSize: 10.5, cellPadding: 1.4, halign: 'center', valign: 'middle', lineColor: [90, 90, 90], lineWidth: 0.2, textColor: 0, overflow: 'linebreak' },
+      headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold', fontSize: 9.5 },
+      columnStyles: Object.fromEntries(cols.map((x, i) => [i, { cellWidth: x[1] * escala, ...(i <= 1 ? { fontStyle: 'bold' } : {}), ...(i === 2 ? { fontSize: 13 } : {}) }])),
+      didParseCell: dd => {
+        if (dd.section === 'body' && tipos[dd.row.index] === 'sep') { dd.cell.styles.fillColor = [242, 242, 242]; dd.cell.styles.minCellHeight = 4; }
+      },
+    });
+
+    let yf = doc.lastAutoTable.finalY + 24;
+    if (yf > alto - 22) { doc.addPage(); yf = 40; }
+    const firmas = c.firmas.filter(fi => fi.nombre || fi.cargo);
+    for (const [k, fi] of firmas.entries()) {
+      const cx = ancho * (firmas.length === 1 ? 0.5 : firmas.length === 2 ? [0.28, 0.72][k] : [0.18, 0.5, 0.82][k]);
+      if (fi.img) await caja(urlImagen(fi.img), cx - 22, yf - 20, 44, 18);
+      doc.setDrawColor(0); doc.setLineWidth(0.3); doc.line(cx - 30, yf, cx + 30, yf);
+      doc.setFont('times', 'normal'); doc.setFontSize(10); doc.text(fi.nombre || '', cx, yf + 4.5, { align: 'center' });
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.text(doc.splitTextToSize(fi.cargo || '', 62), cx, yf + 9, { align: 'center' });
+    }
+    const paginas = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= paginas; i++) {
+      doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110);
+      doc.text(`AMADESU RALLYS — ${c.tituloLista}`, M, alto - 5);
+      doc.text(`Página ${i} de ${paginas}`, ancho - M, alto - 5, { align: 'right' });
+      doc.setTextColor(0);
+    }
+    doc.save(`${c.tituloLista.replace(/[\\/:*?"<>|]/g, '')} - ${estado.rally.nombre.replace(/[\\/:*?"<>|]/g, '')}.pdf`);
+    toast(o.borradores.length ? `📄 PDF descargado. ${o.borradores.length} fila(s) incompleta(s) no salen.` : '📄 PDF descargado.', !!o.borradores.length);
+  } catch (e) {
+    toast('No se pudo generar el PDF: ' + (e.message || e), true);
+  } finally {
+    btn.disabled = false; btn.textContent = '📄 PDF';
   }
 }
 
@@ -1374,7 +1606,7 @@ async function descargarPlantilla() {
   wb.creator = 'AMADESU RALLYS';
   const ws = wb.addWorksheet('INSCRIPCION', { views: [{ state: 'frozen', ySplit: 3 }] });
   const listas = wb.addWorksheet('LISTAS', { state: 'hidden' });
-  const cols = [['PUESTO', 9], ['N°', 7], ['N° DE COCHE', 13], ['CLASE', 16], ['PILOTO', 38], ['NAVEGANTE', 38]].concat(c.mostrarCiudad ? [['CIUDAD', 18]] : []).concat(estado.ambitos.map(a => [a.codigo, 10]));
+  const cols = [['PUESTO', 9], ['N°', 7], ['N° DE COCHE', 13], ['CLASE', 16], ['PILOTO', 38], ['NAVEGANTE', 38]].concat(c.mostrarCiudad ? [[c.tituloCiudad.toUpperCase(), 18]] : []).concat(estado.ambitos.map(a => [a.codigo, 10]));
   ws.columns = cols.map(([, w]) => ({ width: w }));
   ws.mergeCells(1, 1, 1, cols.length);
   ws.getCell('A1').value = `PLANILLA DE INSCRIPCIÓN — ${estado.rally.nombre.toUpperCase()}`;
@@ -1441,6 +1673,8 @@ document.addEventListener('paste', e => {
 // Eventos
 // ------------------------------------------------------------------
 $('pl-marco').addEventListener('click', e => {
+  const mv = e.target.closest('[data-mover]'); if (mv) return moverFila(mv.dataset.mover, +mv.dataset.dir);
+  const od = e.target.closest('td.ord'); if (od) { if (!od.querySelector('input')) editarPuesto(od); return; }
   const q = e.target.closest('[data-quitar]'); if (q) return quitarFila(q.dataset.quitar);
   const th = e.target.closest('[data-amb-todos]'); if (th) return marcarTodos(th.dataset.ambTodos);
   const err = e.target.closest('[data-ver-error]'); if (err) return verError(err.closest('tr').dataset.id);
@@ -1459,7 +1693,8 @@ document.addEventListener('keydown', e => {
   if (!td) return;
   const flechas = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
   const esAmb = td.classList.contains('amb');
-  if (flechas[e.key]) { e.preventDefault(); mover(...flechas[e.key]); }
+  if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && estado.activa.id !== 'nueva') { e.preventDefault(); moverFila(estado.activa.id, e.key === 'ArrowUp' ? -1 : 1); }
+  else if (flechas[e.key]) { e.preventDefault(); mover(...flechas[e.key]); }
   else if (e.key === 'Tab') { e.preventDefault(); mover(e.shiftKey ? -1 : 1, 0); }
   else if (esAmb && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); alternarAmbito(estado.activa.id, td.dataset.a); }
   else if (esAmb) return;
@@ -1484,6 +1719,8 @@ $('pl-ir').addEventListener('keydown', e => {
   $('pl-ir').value = '';
 });
 $('pl-excel').onclick = descargarExcel;
+$('in-copiar').onclick = copiarLista;
+$('in-pdf').onclick = descargarPdf;
 $('pl-config').onclick = abrirConfig;
 $('in-plantilla').onclick = descargarPlantilla;
 $('in-subir').onclick = () => { if (!estado.rally) return toast('Elegí primero el rally.', true); $('in-archivo').click(); };

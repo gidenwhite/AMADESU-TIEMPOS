@@ -440,7 +440,7 @@
   /* Logo a la izquierda y botones a la derecha, en la misma fila. */
   .topbar:has(> .app-acciones:not(:empty))>.brand {
     align-self: flex-start;
-    max-width: calc(100% - 100px);
+    max-width: calc(100% - 150px);
   }
 
   .app-btn {
@@ -465,6 +465,11 @@
     animation: none;
   }
 }
+
+/* Ranking del campeonato (al lado de Novedades) */
+.app-btn-ranking { text-decoration: none; color: var(--status-finished, #FFD166); border-color: rgba(255, 209, 102, 0.35); }
+.app-btn-ranking:hover { background: rgba(255, 209, 102, 0.12); }
+.app-btn-ranking[aria-current="page"] { background: rgba(255, 209, 102, 0.16); border-color: rgba(255, 209, 102, 0.6); }
 
 /* Novedades: número de no leídas en la campanita y el panel */
 .app-btn-avisos .app-badge {
