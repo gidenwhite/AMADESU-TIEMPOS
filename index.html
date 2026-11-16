@@ -3056,6 +3056,53 @@
     .tarjeta-btn { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-body); font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; }
     .tarjeta-btn.primario { background: var(--accent-primary); border-color: var(--accent-primary); }
     .tarjeta-btn:disabled { opacity: .5; cursor: wait; }
+    /* Navegador por pasos de Tiempos (General / Etapas) */
+    .vn-paso { border: 1px solid rgba(255,255,255,0.1); background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)); border-radius: 16px; padding: 18px; margin-bottom: 16px; animation: vnEntra .22s ease-out; }
+    @keyframes vnEntra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .vn-paso { animation: none; } }
+    .vn-titulo { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 18px; color: var(--text-main); margin-bottom: 14px; letter-spacing: .02em; }
+    .vn-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-primary); color: #fff; font-size: 14px; flex: none; }
+    .vn-cabeza { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .vn-cabeza .vn-titulo { margin-bottom: 0; }
+    .vn-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .vn-op { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 18px; border-radius: 14px; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text-main); cursor: pointer; font-family: var(--font-body); transition: border-color .15s, background .15s, transform .1s; }
+    .vn-op:hover, .vn-op:focus-visible { border-color: var(--accent-primary); background: rgba(230,57,70,0.1); }
+    .vn-op:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+    .vn-op:active { transform: scale(0.985); }
+    .vn-ico { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 12px; background: rgba(230,57,70,0.14); color: var(--accent-primary); flex: none; }
+    .vn-txt { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+    .vn-txt b { font-family: var(--font-display); font-weight: 400; font-size: 19px; letter-spacing: .02em; }
+    .vn-txt small { color: var(--text-muted); font-size: 13px; }
+    .vn-flecha { color: var(--text-muted); flex: none; }
+    .vn-op:hover .vn-flecha { color: var(--accent-primary); }
+    .vn-todas { margin-bottom: 14px; }
+    .vn-sub { font-family: var(--font-body); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin-bottom: 10px; }
+    .vn-clases { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+    .vn-clase { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.1); border-left: 5px solid var(--c); background: rgba(255,255,255,0.035); color: var(--text-main); cursor: pointer; font-family: var(--font-body); text-align: left; transition: background .15s, border-color .15s, transform .1s; }
+    .vn-clase b { font-size: 16px; color: var(--c); }
+    .vn-clase small { font-size: 12px; color: var(--text-muted); }
+    .vn-clase:hover, .vn-clase:focus-visible { background: rgba(255,255,255,0.08); border-color: var(--c); }
+    .vn-clase:active { transform: scale(0.97); }
+    .vn-volver { display: inline-flex; align-items: center; gap: 4px; padding: 9px 14px 9px 10px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.08); color: #fff; font-family: var(--font-body); font-weight: 700; font-size: 14px; cursor: pointer; flex: none; }
+    .vn-volver:hover, .vn-volver:focus-visible { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.4); }
+    .vn-barra { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 14px; border-radius: 14px; background: rgba(18,21,28,0.94); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+    .vn-miga { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-family: var(--font-body); color: var(--text-muted); font-size: 14px; }
+    .vn-miga b { font-family: var(--font-display); font-weight: 400; font-size: 17px; color: var(--text-main); letter-spacing: .02em; }
+    .vn-miga i { font-style: normal; opacity: .6; }
+    .vn-miga small { font-size: 12px; }
+    .vn-cambiar { padding: 9px 14px; border-radius: 999px; border: 1.5px solid var(--accent-primary); background: transparent; color: var(--accent-primary); font-family: var(--font-body); font-weight: 700; font-size: 13px; cursor: pointer; flex: none; }
+    .vn-cambiar:hover, .vn-cambiar:focus-visible { background: rgba(230,57,70,0.14); }
+    .vista-acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    @media (max-width: 640px) {
+      .vn-paso { padding: 14px; }
+      .vn-opciones { grid-template-columns: 1fr; }
+      .vn-op { padding: 14px; }
+      .vn-ico { width: 44px; height: 44px; }
+      .vn-titulo { font-size: 16px; }
+      .vn-clases { grid-template-columns: repeat(2, 1fr); }
+      .vn-barra { gap: 8px; padding: 8px; }
+      .vn-cambiar { padding: 8px 12px; }
+    }
   </style>
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#060c24" />
@@ -4396,8 +4443,8 @@
       if (elegirMsg) elegirMsg.style.display = 'none';
       vistaCat.style.display = mostrarMix ? 'none' : '';
       vistaMix.style.display = mostrarMix ? '' : 'none';
-      btnCat.classList.toggle('active', !mostrarMix);
-      btnMix.classList.toggle('active', mostrarMix);
+      btnCat?.classList.toggle('active', !mostrarMix);
+      btnMix?.classList.toggle('active', mostrarMix);
     };
 
     // Cambia qué PE (o "todas") se ve dentro de una Etapa -- cada opción ya
@@ -4431,6 +4478,113 @@
       if (btnCat) btnCat.classList.toggle('active', !mostrarMix);
       if (btnMix) btnMix.classList.toggle('active', mostrarMix);
     };
+
+    // ==========================================
+    // NAVEGADOR POR PASOS de General y de cada Etapa:
+    //   1) ¿Por Clase o General?  2) ¿Todas las clases o una?  3) resultados
+    // con una barra "← Volver" siempre a la vista. Lo elegido se guarda por
+    // panel (General / cada Etapa) en navVistas, así un refresco en vivo de
+    // los tiempos no te devuelve al paso 1. Se reinicia al abrir otro rally.
+    // ==========================================
+    const navVistas = new Map();
+    const NAV_ICO = {
+      clase: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+      general: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>',
+      todas: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>',
+      volver: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>',
+      ir: '<svg class="vn-flecha" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
+    };
+
+    function navEstado(key) {
+      if (!navVistas.has(key)) navVistas.set(key, { paso: 'tipo', vista: null, clase: null });
+      return navVistas.get(key);
+    }
+
+    function pintarNavVista(grupo) {
+      const st = navEstado(grupo.dataset.nav);
+      const nav = grupo.querySelector(':scope > .vista-nav');
+      const res = grupo.querySelector(':scope > .vista-resultados');
+      if (!nav || !res) return;
+      const cat = res.querySelector(':scope > [data-vista="cat"]');
+      const mix = res.querySelector(':scope > [data-vista="mix"]');
+      const bloques = cat ? [...cat.querySelectorAll(':scope > [data-clase]')] : [];
+      const clases = bloques.map(b => ({ nombre: b.dataset.clase, autos: b.querySelectorAll('tbody tr').length }));
+      // La clase elegida ya no está (otra PE, otro filtro): volver a elegir
+      if (st.paso === 'ver' && st.vista === 'cat' && st.clase && !clases.some(c => c.nombre === st.clase)) st.paso = 'clase';
+      // Con una sola clase no hace falta preguntar cuál
+      if (st.paso === 'clase' && clases.length === 1) { st.paso = 'ver'; st.clase = null; }
+
+      res.style.display = st.paso === 'ver' ? '' : 'none';
+      const totalAutos = clases.reduce((a, c) => a + c.autos, 0);
+
+      if (st.paso === 'tipo') {
+        nav.innerHTML = `<div class="vn-paso">
+            <div class="vn-titulo"><span class="vn-num">1</span>¿Cómo querés ver los tiempos?</div>
+            <div class="vn-opciones">
+              <button type="button" class="vn-op" data-nav-ir="cat"><span class="vn-ico">${NAV_ICO.clase}</span><span class="vn-txt"><b>Por Clase</b><small>Cada clase con su tabla y sus puestos</small></span>${NAV_ICO.ir}</button>
+              <button type="button" class="vn-op" data-nav-ir="mix"><span class="vn-ico">${NAV_ICO.general}</span><span class="vn-txt"><b>General</b><small>Todos los autos juntos (${totalAutos})</small></span>${NAV_ICO.ir}</button>
+            </div>
+          </div>`;
+      } else if (st.paso === 'clase') {
+        nav.innerHTML = `<div class="vn-paso">
+            <div class="vn-cabeza">
+              <button type="button" class="vn-volver" data-nav-ir="volver">${NAV_ICO.volver}Volver</button>
+              <div class="vn-titulo"><span class="vn-num">2</span>¿Qué clase querés ver?</div>
+            </div>
+            <button type="button" class="vn-op vn-todas" data-nav-ir="todas"><span class="vn-ico">${NAV_ICO.todas}</span><span class="vn-txt"><b>Todas las clases</b><small>${clases.length} clases · ${totalAutos} autos</small></span>${NAV_ICO.ir}</button>
+            <div class="vn-sub">o elegí una sola:</div>
+            <div class="vn-clases">
+              ${clases.map(c => `<button type="button" class="vn-clase" style="--c:${categoriaColorFor(c.nombre)}" data-nav-ir="clase" data-clase="${escPrintText(c.nombre)}"><b>${escPrintText(c.nombre)}</b><small>${c.autos} auto${c.autos === 1 ? '' : 's'}</small></button>`).join('')}
+            </div>
+          </div>`;
+      } else {
+        const miga = st.vista === 'mix'
+          ? '<b>General</b><small>todos juntos</small>'
+          : `<span>Por Clase</span><i>›</i>${st.clase ? `<b style="color:${categoriaColorFor(st.clase)}">${escPrintText(st.clase)}</b>` : '<b>Todas las clases</b>'}`;
+        nav.innerHTML = `<div class="vn-barra">
+            <button type="button" class="vn-volver" data-nav-ir="volver">${NAV_ICO.volver}Volver</button>
+            <div class="vn-miga">${miga}</div>
+            <button type="button" class="vn-cambiar" data-nav-ir="inicio">Cambiar</button>
+          </div>`;
+        if (cat) cat.style.display = st.vista === 'cat' ? '' : 'none';
+        if (mix) mix.style.display = st.vista === 'mix' ? '' : 'none';
+        bloques.forEach(b => { b.style.display = (st.vista === 'cat' && st.clase && b.dataset.clase !== st.clase) ? 'none' : ''; });
+      }
+    }
+
+    function pintarTodasLasNav(key) {
+      document.querySelectorAll(key ? `#tiempos-accordion .vista-grupo[data-nav="${key}"]` : '#tiempos-accordion .vista-grupo').forEach(pintarNavVista);
+    }
+
+    document.addEventListener('click', e => {
+      const b = e.target.closest('[data-nav-ir]');
+      const grupo = b && b.closest('.vista-grupo');
+      if (!grupo) return;
+      const key = grupo.dataset.nav, st = navEstado(key), ir = b.dataset.navIr;
+      if (ir === 'cat') { st.vista = 'cat'; st.paso = 'clase'; }
+      else if (ir === 'mix') { st.vista = 'mix'; st.clase = null; st.paso = 'ver'; }
+      else if (ir === 'todas') { st.clase = null; st.paso = 'ver'; }
+      else if (ir === 'clase') { st.clase = b.dataset.clase; st.paso = 'ver'; }
+      else if (ir === 'inicio') { st.paso = 'tipo'; st.clase = null; }
+      else if (ir === 'volver') {
+        if (st.paso === 'ver' && st.vista === 'cat' && grupo.querySelectorAll('.vista-resultados [data-vista="cat"] > [data-clase]').length > 1) st.paso = 'clase';
+        else { st.paso = 'tipo'; st.clase = null; }
+      }
+      pintarTodasLasNav(key);
+      // Que el paso nuevo quede a la vista (en el celular el panel es largo)
+      const caja = document.getElementById('tiempos-accordion');
+      if (caja) {
+        const arriba = grupo.getBoundingClientRect().top - caja.getBoundingClientRect().top;
+        if (arriba < 0 || arriba > caja.clientHeight * 0.6) caja.scrollBy({ top: arriba - 12, behavior: 'smooth' });
+      }
+    });
+
+    // Cada vez que se arma (o se refresca) el acordeón de Tiempos, se pinta
+    // el paso en que estaba cada panel.
+    (() => {
+      const caja = document.getElementById('tiempos-accordion');
+      if (caja) new MutationObserver(() => pintarTodasLasNav()).observe(caja, { childList: true });
+    })();
 
     // Antes de reconstruir el acordeón (refrescarTiempos), guarda qué vista
     // tenía elegida cada quien -- General, Shakedown y cada Etapa (PE elegida
@@ -5643,6 +5797,7 @@
 
       let hayTablas = false;
       containerEl.querySelectorAll('h4, table').forEach(node => {
+        if (!elementoVisibleHasta(node, containerEl)) return; // clase no elegida
         if (node.tagName === 'TABLE') {
           hayTablas = true;
           asegurarEspacio(20);
@@ -5833,7 +5988,7 @@
       return ordenarClases(cats, ordenRally).map(cat => {
         const catColor = categoriaColorFor(cat);
         return `
-        <div style="margin-bottom: 16px;">
+        <div style="margin-bottom: 16px;" data-clase="${escPrintText(cat)}">
           <h4 style="margin-bottom:8px; color: ${catColor}; font-size: 14px; display:flex; align-items:center; gap:6px;">${iconCategory}${cat}</h4>
           ${buildGapBarChart(byCat[cat], catColor)}
           ${buildResultTable(byCat[cat])}
@@ -6054,17 +6209,17 @@
       if (generalFilas.length > 0) {
         const generalByCat = agruparPorCategoriaYClasificar(generalFilas);
         const generalMezclado = clasificarSinCategoria(generalFilas);
-        // De entrada se ve "Por Clase"; "Ver General" queda a un toque.
-        generalHtml = `
-          <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-            <button type="button" class="stats-view-tab active" id="general-vista-btn-cat" onclick="window.toggleVistaGeneral('cat')" style="padding:8px 14px; font-size:12px;">Por Clase</button>
-            <button type="button" class="stats-view-tab" id="general-vista-btn-mix" onclick="window.toggleVistaGeneral('mix')" style="padding:8px 14px; font-size:12px;">Ver General</button>
-            ${botonDescargarPdf('#acc-wrap-general', generalLabel)}
+        // Primero se elige (pasos): Por Clase o General -> todas las clases
+        // o una -> resultados. Ver pintarNavVista.
+        generalHtml = `<div class="vista-grupo" data-nav="general">
+          <div class="vista-nav"></div>
+          <div class="vista-resultados" style="display:none;">
+            <div class="vista-acciones">${botonDescargarPdf('#acc-wrap-general', generalLabel)}</div>
+            ${avisoTarjeta}
+            <div id="general-vista-cat" data-vista="cat" data-vista-label="Por Clase">${renderCategoriasHtml(generalByCat, !esCircuito)}</div>
+            <div id="general-vista-mix" data-vista="mix" data-vista-label="General" style="display:none;">${buildGapBarChart(generalMezclado)}${buildResultTable(generalMezclado, true)}</div>
           </div>
-          ${avisoTarjeta}
-          <div id="general-vista-cat" data-vista-label="Por Clase">${renderCategoriasHtml(generalByCat, !esCircuito)}</div>
-          <div id="general-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(generalMezclado)}${buildResultTable(generalMezclado, true)}</div>
-        `;
+        </div>`;
       } else {
         generalHtml = '<p class="acc-empty">Sin tiempos registrados aún.</p>';
       }
@@ -6133,8 +6288,8 @@
         // --- RALLY CLÁSICO: Etapas ---
         // Un selector de PE ("Todas las PE" o una en particular) + el toggle
         // Por Clase/General -- reemplaza los paneles PE1, PE2... sueltos
-        // de antes (quedaban duplicados con esto). Ninguna tabla se muestra
-        // hasta que se elige una vista, igual que en "General".
+        // de antes (quedaban duplicados con esto). Igual que en "General",
+        // primero se elige la vista por pasos (ver pintarNavVista).
         etapas.forEach(etapa => {
           const recorridoIdsEtapa = etapa.recorridos.map(r => r.id);
           const entradasEtapa = entradas.filter(e => recorridoIdsEtapa.includes(e.recorrido_id));
@@ -6171,15 +6326,14 @@
               // atributo onclick="" que usa comillas dobles; si acá también
               // fueran dobles, cortarían el atributo HTML a la mitad.
               const wrapDeEsteBloque = `#etapa-pe-wrap-${etapaId} [data-pe='${op.value}']`;
-              return `<div class="etapa-vista-pe" data-pe="${op.value}" style="${display}">
-                <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-                  <button type="button" class="stats-view-tab active etapa-vista-btn-cat" onclick="window.toggleVistaEtapa('${etapaId}','${op.value}','cat')" style="padding:8px 14px; font-size:12px;">Por Clase</button>
-                  <button type="button" class="stats-view-tab etapa-vista-btn-mix" onclick="window.toggleVistaEtapa('${etapaId}','${op.value}','mix')" style="padding:8px 14px; font-size:12px;">Ver General</button>
-                  ${botonDescargarPdf(wrapDeEsteBloque, `ETAPA: ${escPrintText(etapa.nombre)} — ${escPrintText(op.label)}`)}
+              return `<div class="etapa-vista-pe vista-grupo" data-nav="etapa-${etapaId}" data-pe="${op.value}" style="${display}">
+                <div class="vista-nav"></div>
+                <div class="vista-resultados" style="display:none;">
+                  <div class="vista-acciones">${botonDescargarPdf(wrapDeEsteBloque, `ETAPA: ${escPrintText(etapa.nombre)} — ${escPrintText(op.label)}`)}</div>
+                  ${avisoTarjeta}
+                  <div class="etapa-vista-cat" data-vista="cat" data-vista-label="Por Clase">${renderCategoriasHtml(porClase, true)}</div>
+                  <div class="etapa-vista-mix" data-vista="mix" data-vista-label="General" style="display:none;">${buildGapBarChart(mezclado)}${buildResultTable(mezclado, true)}</div>
                 </div>
-                ${avisoTarjeta}
-                <div class="etapa-vista-cat" data-vista-label="Por Clase">${renderCategoriasHtml(porClase, true)}</div>
-                <div class="etapa-vista-mix" data-vista-label="General" style="display:none;">${buildGapBarChart(mezclado)}${buildResultTable(mezclado, true)}</div>
               </div>`;
             }).join('');
 
@@ -6432,6 +6586,7 @@
       document.getElementById('btn-tiempos-pdf').style.display = 'none';
       document.getElementById('tiempos-ultima-actualizacion').textContent = '';
       window.tiemposVueltaMangaFilter = 'ALL';
+      navVistas.clear();
       window.showGlobalLoader();
 
       try {
